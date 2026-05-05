@@ -30,13 +30,13 @@
     {%- endif %}
   {%- endblock og_image %}
   <meta name="twitter:card" content="summary">
-  <link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
+  <link rel="canonical" href="{{ current_url | default(value=config.base_url) | safe }}">
 
   {# Self-hosted fonts. Preload the two highest-frequency files (configured
      by consumer's [extra.font_preload]); the rest load via fonts.css. #}
   {%- if config.extra.font_preload %}
     {%- for font in config.extra.font_preload %}
-  <link rel="preload" href="{{ font }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ font | safe }}" as="font" type="font/woff2" crossorigin>
     {%- endfor %}
   {%- endif %}
   <link rel="stylesheet" href="/css/fonts.css">
