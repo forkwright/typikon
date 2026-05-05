@@ -1,0 +1,29 @@
+# Typikon CI pipeline.
+#
+# Typikon is a Zola theme + agentic substrate, not a Rust workspace. The
+# forge's default Rust gate (cargo fmt + check + clippy + nextest + lint)
+# does not apply. A sentinel stage keeps the forge post-receive hook
+# honest while the real typikon gate is being assembled.
+#
+# Phase 5 of the v1 plan replaces these stages with:
+#
+#     stages = ["zola-check", "zola-build", "csp-enforce", "lychee",
+#               "pa11y", "playwright-smoke"]
+#
+# At that point the [stages.<name>] blocks below grow concrete cmd /
+# timeout_secs entries pointing at bin/typikon-check sub-commands.
+
+[pipeline]
+stages = ["checkout-ok"]
+
+[stages.checkout-ok]
+cmd = "true"
+timeout_secs = 10
+
+# Independent verifier replays the main pipeline's claims in a fresh
+# worktree. Typikon's pipeline currently makes no claims to replay (the
+# sentinel stage is literally `true`), and the verifier's default build
+# probe (`cargo check --all-features --tests`) fails because typikon has
+# no Cargo workspace. Disable until Phase 5 ships real stages.
+[verifier]
+enabled = false
