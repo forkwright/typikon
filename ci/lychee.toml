@@ -66,8 +66,5 @@ method = "get"
 # User-agent. Some sites block default lychee UA; identify ourselves.
 user_agent = "typikon-ci/1.0 (https://github.com/forkwright/typikon)"
 
-# Skip checking links inside code blocks — those are illustrative.
-exclude_path = []
-
 # Verbose enough for CI logs but not overwhelming.
 verbose = "info"
