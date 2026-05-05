@@ -1,8 +1,10 @@
 {# Typikon base template — shared shell for every page in a consumer site.
    Boundaries:
    - No inline <script>, <style>, or on*= handlers anywhere. Strict CSP enforces.
-   - Site-specific brand strings come from config.toml [extra]; defaults guard.
-   - Nav structure comes from config.extra.nav_items; consumer overrides.
+   - Page-vs-section discrimination is delegated via Tera blocks: page.html
+     and section.html override `title_text`, `description_text`, etc.
+     base.html does not access `page.*` or `section.*` directly so it works
+     in every rendering context.
 #}
 <!DOCTYPE html>
 <html lang="{{ lang | default(value="en") }}">
@@ -12,26 +14,26 @@
   <meta name="theme-color" content="{{ config.extra.theme_color | default(value="#F7F3E8") }}">
   <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 
-  {%- set page_title = page.extra.seo_title | default(value=page.title) | default(value=section.title) -%}
   {%- set site_title = config.title | default(value="") -%}
-  {%- set page_description = page.description | default(value=section.description) | default(value=config.description) -%}
-  {%- set og_image = page.extra.og_image | default(value=config.extra.og_image) -%}
+  {%- set default_description = config.description | default(value="") -%}
 
-  <title>{% if page_title and site_title %}{{ page_title }} - {{ site_title }}{% elif page_title %}{{ page_title }}{% else %}{{ site_title }}{% endif %}</title>
-  <meta name="description" content="{{ page_description | default(value="") }}">
+  <title>{% block title %}{{ site_title }}{% endblock title %}</title>
+  <meta name="description" content="{% block description %}{{ default_description }}{% endblock description %}">
 
-  <meta property="og:title" content="{% if page_title and site_title %}{{ page_title }} - {{ site_title }}{% elif page_title %}{{ page_title }}{% else %}{{ site_title }}{% endif %}">
-  <meta property="og:description" content="{{ page_description | default(value="") }}">
-  <meta property="og:type" content="{% if page.extra.og_type %}{{ page.extra.og_type }}{% else %}website{% endif %}">
+  <meta property="og:title" content="{% block og_title %}{{ site_title }}{% endblock og_title %}">
+  <meta property="og:description" content="{% block og_description %}{{ default_description }}{% endblock og_description %}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock og_type %}">
   <meta property="og:locale" content="{{ config.extra.og_locale | default(value="en_US") }}">
-  {%- if og_image %}
-  <meta property="og:image" content="{{ get_url(path=og_image, trailing_slash=false) }}">
-  {%- endif %}
-  <meta name="twitter:card" content="summary{% if og_image %}_large_image{% endif %}">
+  {% block og_image -%}
+    {%- if config.extra.og_image %}
+  <meta property="og:image" content="{{ get_url(path=config.extra.og_image, trailing_slash=false) }}">
+    {%- endif %}
+  {%- endblock og_image %}
+  <meta name="twitter:card" content="summary">
   <link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
 
-  {# Self-hosted fonts (Phase 2 fills the WOFF2 + @font-face). Preload the
-     two highest-frequency files; the rest load via fonts.css. #}
+  {# Self-hosted fonts. Preload the two highest-frequency files (configured
+     by consumer's [extra.font_preload]); the rest load via fonts.css. #}
   {%- if config.extra.font_preload %}
     {%- for font in config.extra.font_preload %}
   <link rel="preload" href="{{ font }}" as="font" type="font/woff2" crossorigin>
@@ -42,7 +44,7 @@
 
   {% block head_extra %}{% endblock head_extra %}
 </head>
-<body{% if page.extra.body_class %} class="{{ page.extra.body_class }}"{% elif section.extra.body_class %} class="{{ section.extra.body_class }}"{% endif %}>
+<body{% block body_class %}{% endblock body_class %}>
   <a href="#main" class="sr-only">Skip to content</a>
 
   {% block nav %}{% include "partials/nav.html" %}{% endblock nav %}

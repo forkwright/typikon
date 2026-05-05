@@ -3,6 +3,23 @@
    `template = "..."` or per-section by shipping `<section>/page.html`. #}
 {% extends "base.html" %}
 
+{% block title %}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock title %}
+{% block og_title %}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock og_title %}
+
+{% block description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock description %}
+{% block og_description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock og_description %}
+
+{% block og_type %}{{ page.extra.og_type | default(value="article") }}{% endblock og_type %}
+
+{% block og_image %}
+{%- set og_image = page.extra.og_image | default(value=config.extra.og_image | default(value="")) -%}
+{%- if og_image %}
+  <meta property="og:image" content="{{ get_url(path=og_image, trailing_slash=false) }}">
+{%- endif %}
+{% endblock og_image %}
+
+{% block body_class %}{% if page.extra.body_class %} class="{{ page.extra.body_class }}"{% endif %}{% endblock body_class %}
+
 {% block content %}
 {{ page.content | safe }}
 {% endblock content %}
