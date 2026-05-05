@@ -35,7 +35,7 @@
   --bg-accent: #F0EBE0;   /* shadow on rag paper */
   --text: #1C1917;
   --text-mid: #44403C;
-  --text-light: #78716C;
+  --text-light: #6B6661;  /* tightened from #78716C to satisfy WCAG 2.1 AA contrast (4.5:1) on the archival-paper bg */
   --rule: #D6D3CD;
   
   /* Default brand accents — ardent's iron-mordanted botanical dye palette.
