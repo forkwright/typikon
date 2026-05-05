@@ -41,6 +41,21 @@ exclude = [
   # (returns 429 regardless of cadence). The links work for visitors;
   # this is link-checker reality, not link rot.
   "^https?://(www\\.)?instagram\\.com/",
+  # Buttondown's embed-subscribe endpoint is a form-action POST URL,
+  # not GET-resolvable. lychee gets 404 on GET; visitors POST and it
+  # works. Will go away when typikon#1 (Rust newsletter) lands.
+  "^https://buttondown\\.com/api/emails/embed-subscribe/",
+]
+
+# Don't scan these source files for links (they reference the site's
+# own canonical URLs which don't resolve pre-deploy).
+exclude_path = [
+  # atom.xml self-references config.base_url/atom.xml in its <id> tag;
+  # pre-cutover the live site has no atom.xml so it returns 404. Post-
+  # cutover the link works. Skip scanning the feed source entirely;
+  # the rendered HTML pages reference atom.xml indirectly via <link>
+  # tags which lychee resolves locally via --root-dir.
+  "atom.xml",
 ]
 
 # Method per host. lychee defaults to HEAD, falls back to GET on 405.
