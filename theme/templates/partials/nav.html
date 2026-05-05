@@ -1,0 +1,16 @@
+{# Site navigation. Items come from config.extra.nav_items in the consumer's
+   config.toml. Each item: { url, label, greek (optional) }.
+   Logo: config.extra.logo_path + config.extra.brand_name + config.extra.brand_greek.
+#}
+<nav aria-label="Main navigation">
+  <a href="/" class="logo" aria-label="{{ config.extra.brand_name | default(value=config.title) }} home"
+     {%- if config.extra.brand_greek %} data-greek="{{ config.extra.brand_greek }}"{% endif %}>
+    {%- if config.extra.logo_path %}<img src="{{ get_url(path=config.extra.logo_path, trailing_slash=false) }}" alt="{{ config.extra.brand_name | default(value=config.title) }} logo" class="logo-mark" width="44" height="44">{% endif %}
+    <span>{{ config.extra.brand_name | default(value=config.title) }}</span>
+  </a>
+  <div class="nav-links">
+    {%- for item in config.extra.nav_items | default(value=[]) %}
+    <a href="{{ item.url }}"{% if item.greek %} data-greek="{{ item.greek }}"{% endif %}><span>{{ item.label }}</span></a>
+    {%- endfor %}
+  </div>
+</nav>

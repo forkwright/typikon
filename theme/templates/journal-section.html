@@ -1,0 +1,52 @@
+{# Journal section template. Renders the section's prose content, then
+   auto-lists every entry under the section sorted by date descending.
+
+   Consumer journal section _index.md sets:
+     +++
+     template = "journal-section.html"
+     sort_by = "date"
+     [extra]
+     greek = "Ἡ̔μερολόγιον"
+     +++
+
+   Each entry's frontmatter must include:
+     - date (ISO 8601)
+     - title
+     - extra.components (string, e.g. "ardere · presence · the question")
+     - extra.words      (string, e.g. "~480 words")
+   See schemas/journal-entry.schema.json.
+#}
+{% extends "base.html" %}
+
+{% block content %}
+{%- if section.extra.greek %}
+<h1 data-greek="{{ section.extra.greek }}"><span>{{ section.title }}</span></h1>
+{%- else %}
+<h1>{{ section.title }}</h1>
+{%- endif %}
+
+{{ section.content | safe }}
+
+<ul class="journal-list">
+{%- for entry in section.pages %}
+  <li>
+    <a href="{{ entry.permalink }}">
+      <span class="entry-name">{{ entry.title }}</span>
+      {%- if entry.date %}
+      <span class="entry-date-inline">{{ entry.date | date(format="%Y-%m-%d") }}</span>
+      {%- endif %}
+      {%- if entry.extra.components %}
+      <span class="entry-components">{{ entry.extra.components }}</span>
+      {%- endif %}
+      {%- if entry.extra.words %}
+      <span class="entry-words">{{ entry.extra.words }}</span>
+      {%- endif %}
+    </a>
+  </li>
+{%- endfor %}
+</ul>
+
+{%- if section.extra.list_caption %}
+<p class="specs">{{ section.extra.list_caption }}</p>
+{%- endif %}
+{% endblock content %}

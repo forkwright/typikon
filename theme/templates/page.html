@@ -1,0 +1,8 @@
+{# Default page template. Renders the page's markdown content inside the
+   shared base shell. Consumers can override per-page via frontmatter
+   `template = "..."` or per-section by shipping `<section>/page.html`. #}
+{% extends "base.html" %}
+
+{% block content %}
+{{ page.content | safe }}
+{% endblock content %}

@@ -1,0 +1,96 @@
+/* Self-hosted fonts. WOFF2 files land in theme/static/fonts/ during Phase 2.
+ *
+ * Phase 1 placeholder: declare @font-face blocks pointing at expected paths.
+ * Phase 2 commits the actual subsetted WOFF2 files (Cormorant Garamond,
+ * Spectral, IBM Plex Mono — OFL-1.1) and validates the unicode-range coverage.
+ *
+ * Until Phase 2 lands, browsers will fall back to the system fonts named in
+ * style.css (Garamond, Georgia, monospace). The strict CSP `font-src 'self'`
+ * already blocks any external font CDN.
+ */
+
+/* Cormorant Garamond — display */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/cormorant-garamond-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/cormorant-garamond-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/cormorant-garamond-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/cormorant-garamond-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+
+/* Spectral — body */
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-500-italic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+}
+
+/* IBM Plex Mono — specs */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF;
+}

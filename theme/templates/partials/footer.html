@@ -1,0 +1,14 @@
+{# Footer. Brand line, footer links, optional Greek motto.
+   Inputs from config.extra: brand_name, brand_greek, footer_links (list of {url,label}).
+#}
+<footer>
+  <p class="footer-brand">{{ config.extra.brand_name | default(value=config.title) }}{%- if config.extra.brand_greek %} · <span lang="el" translate="no">{{ config.extra.brand_greek }}</span>{% endif %}</p>
+  {%- if config.extra.footer_links %}
+  <p class="footer-links">
+    {%- for link in config.extra.footer_links -%}
+      {%- if not loop.first %} · {% endif -%}
+      <a href="{{ link.url }}"{% if link.rel %} rel="{{ link.rel }}"{% endif %}>{{ link.label }}</a>
+    {%- endfor %}
+  </p>
+  {%- endif %}
+</footer>

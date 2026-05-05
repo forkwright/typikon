@@ -1,0 +1,1225 @@
+/*
+ * Typikon — fleet web-property substrate
+ * Dark academia × Japanese workwear
+ *
+ * Default fonts: Cormorant Garamond (display), Spectral (body), IBM Plex Mono (specs)
+ * Default scale: 1.2 ratio, 16px base, 1.625 line-height
+ *
+ * Consumers override the design tokens (colors, fonts, scale) by redeclaring
+ * the relevant `:root` custom properties in their own CSS file loaded after
+ * this one (config.toml [extra] consumer_css = "css/site.css", referenced from
+ * base.html). Do not edit the tokens here for site-specific work — fork by
+ * override, not by mutation.
+ */
+
+:root {
+  /* Typography scale (1.2 ratio) */
+  --step--2: 0.694rem;
+  --step--1: 0.833rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.44rem;
+  --step-3: 1.728rem;
+  --step-4: 2.074rem;
+  
+  /* Spacing (based on line-height) */
+  --space-unit: 1.625rem;
+  --space-xs: calc(var(--space-unit) * 0.25);
+  --space-s: calc(var(--space-unit) * 0.5);
+  --space-m: var(--space-unit);
+  --space-l: calc(var(--space-unit) * 2);
+  --space-xl: calc(var(--space-unit) * 3);
+  
+  /* Colors - warmer, CineStill palette */
+  --bg: #F7F3E8;          /* archival cotton rag paper */
+  --bg-accent: #F0EBE0;   /* shadow on rag paper */
+  --text: #1C1917;
+  --text-mid: #44403C;
+  --text-light: #78716C;
+  --rule: #D6D3CD;
+  
+  /* Default brand accents — ardent's iron-mordanted botanical dye palette.
+     Other typikon consumers should redeclare these (or rename them) in
+     site-specific CSS. Class hooks like .swatch-aima / .dye-entry-aima are
+     ardent-specific shapes that can stay unused on other sites. */
+  --aima: #581523;
+  --aima-aged: #4A1A1A;
+  --thanatochromia: #2C1B3A;
+  --thanatochromia-aged: #382838;
+  --aporia: #5C8E63;
+  --aporia-aged: #4A7A5A;
+  --natural: #8B5A2B;
+  --natural-aged: #5C3A1F;
+  
+  /* Fonts */
+  --font-display: 'Cormorant Garamond', Garamond, serif;   /* 16th c. philosophical text */
+  --font-body: 'Spectral', Georgia, serif;                  /* bookish warmth */
+  --font-mono: 'IBM Plex Mono', monospace;                  /* craft precision */
+  
+  /* Layout */
+  --max-width: 780px;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.625;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  background: var(--bg);
+  color: var(--text);
+  padding: var(--space-l) var(--space-m);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* === NAVIGATION === */
+nav {
+  max-width: var(--max-width);
+  margin: 0 auto var(--space-xl);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: var(--space-s);
+  border-bottom: 1px solid var(--text);
+}
+
+.logo {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text);
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+}
+
+.logo-mark {
+  height: 2.2em;
+  width: auto;
+  align-self: flex-end;
+  margin-bottom: -0.2em;
+}
+
+.logo span {
+  transition: opacity 0.3s ease;
+}
+
+.logo::after {
+  content: attr(data-greek);
+  position: absolute;
+  left: 3em;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  font-size: var(--step--2);
+}
+
+.logo:hover::after {
+  opacity: 1;
+}
+
+.logo:hover span {
+  opacity: 0;
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-l);
+}
+
+.nav-links a {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: color 0.2s ease;
+  position: relative;
+}
+
+/* Greek text on hover - fade English out, Greek in */
+.nav-links a span {
+  transition: opacity 0.3s ease;
+}
+
+.nav-links a::after {
+  content: attr(data-greek);
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.nav-links a:hover::after {
+  opacity: 1;
+}
+
+.nav-links a:hover span {
+  opacity: 0;
+}
+
+/* Nav links get dye colors on hover */
+.nav-links a:nth-child(1):hover { color: var(--aima); }
+.nav-links a:nth-child(2):hover { color: var(--thanatochromia); }
+.nav-links a:nth-child(3):hover { color: var(--aporia); }
+.nav-links a:nth-child(4):hover { color: var(--text-mid); }
+.nav-links a:nth-child(5):hover { color: var(--natural); }
+.nav-links a:nth-child(6):hover { color: var(--text); }
+
+/* === MAIN === */
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+
+/* === TYPOGRAPHY === */
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: var(--space-m);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-top: var(--space-l);
+  margin-bottom: var(--space-s);
+  padding-top: var(--space-m);
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+
+/* Greek text on h2 hover */
+h2[data-greek] span {
+  transition: opacity 0.3s ease;
+}
+
+h2[data-greek]::after {
+  content: attr(data-greek);
+  position: absolute;
+  left: 0;
+  top: var(--space-m);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+h2[data-greek]:hover::after {
+  opacity: 1;
+}
+
+h2[data-greek]:hover span {
+  opacity: 0;
+}
+
+h3 {
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  font-weight: 600;
+  margin-top: var(--space-m);
+  margin-bottom: var(--space-xs);
+}
+
+p {
+  margin-bottom: var(--space-m);
+}
+
+em {
+  font-style: italic;
+}
+
+strong {
+  font-weight: 600;
+}
+
+a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--aima);
+}
+
+/* === HOME PAGE === */
+
+/* Hide top nav on home page */
+.home-page > nav {
+  display: none;
+}
+
+.home-page footer {
+  display: none;
+}
+
+.home {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-s);
+}
+
+.home-logo {
+  width: 120px;
+  height: auto;
+  margin-bottom: var(--space-xs);
+}
+
+.home-tagline {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.4;
+  max-width: 100%;
+  margin: 0;
+  color: var(--text);
+  position: relative;
+  min-height: 2.8em;
+}
+
+.home-tagline span {
+  display: block;
+  transition: opacity 0.4s ease;
+}
+
+.home-truth {
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 400px;
+}
+
+.dye-marks {
+  display: flex;
+  gap: var(--space-s);
+  margin-top: var(--space-m);
+}
+
+.mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.mark:hover {
+  transform: scale(1.5);
+}
+
+.mark-aima { background: var(--aima); }
+.mark-thanatochromia { background: var(--thanatochromia); }
+.mark-aporia { background: var(--aporia); }
+
+/* Background transitions on mark hover */
+.home-page {
+  transition: background 0.5s ease;
+}
+
+.home-page:has(.mark-aima:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #E8D5D0 50%, #D4B8B0 100%);
+}
+
+.home-page:has(.mark-thanatochromia:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #DDD8E8 50%, #C8C0D8 100%);
+}
+
+.home-page:has(.mark-aporia:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #D8E8D8 50%, #C0D8C0 100%);
+}
+
+/* Home nav below content */
+.home-nav {
+  display: flex;
+  gap: var(--space-m);
+  margin-top: var(--space-s);
+  padding-top: var(--space-s);
+  border-top: 1px solid var(--rule);
+}
+
+.home-nav a {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--text-light);
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  transition: color 0.2s ease;
+  position: relative;
+}
+
+/* Greek text on hover */
+.home-nav a span {
+  transition: opacity 0.3s ease;
+}
+
+.home-nav a::after {
+  content: attr(data-greek);
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.home-nav a:hover::after {
+  opacity: 1;
+}
+
+.home-nav a:hover span {
+  opacity: 0;
+}
+
+.home-sub {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  margin-bottom: var(--space-xl);
+}
+
+.home-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text);
+  padding: var(--space-s) var(--space-m);
+  border: 1px solid var(--text);
+}
+
+.home-link:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* === PRODUCTS & JOURNAL LIST === */
+.products-list,
+.journal-list {
+  list-style: none;
+}
+
+.products-list li,
+.journal-list li {
+  border-bottom: 1px solid var(--rule);
+}
+
+.products-list a,
+.journal-list a {
+  display: flex;
+  align-items: baseline;
+  padding: var(--space-m) 0;
+  text-decoration: none;
+  gap: var(--space-s);
+}
+
+.products-list a:hover,
+.journal-list a:hover {
+  color: var(--aima);
+}
+
+.product-name,
+.entry-name {
+  font-family: var(--font-body);
+  font-size: var(--step-1);
+}
+
+.entry-date-inline {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+}
+
+.product-materials,
+.entry-components {
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  color: var(--text-light);
+  flex: 1;
+}
+
+.product-price,
+.entry-words {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--text-light);
+  margin-left: auto;
+}
+
+/* === PRODUCT PAGE === */
+.product-header {
+  margin-bottom: var(--space-l);
+  padding-bottom: var(--space-m);
+  border-bottom: 1px solid var(--rule);
+}
+
+.product-price-large {
+  font-family: var(--font-mono);
+  font-size: var(--step-1);
+  color: var(--text-mid);
+  margin-top: var(--space-xs);
+}
+
+.product-shipping {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  margin: var(--space-2xs) 0 0 0;
+  letter-spacing: 0.02em;
+}
+
+.product-intro {
+  font-size: var(--step-1);
+  color: var(--text-mid);
+  margin-bottom: var(--space-l);
+}
+
+.product-images {
+  margin: var(--space-l) 0;
+  padding: var(--space-xl) var(--space-m);
+  background: var(--bg-accent);
+  border: 1px solid var(--rule);
+  text-align: center;
+}
+
+.image-placeholder {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.image-placeholder-list {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  margin: var(--space-xs) 0 0 var(--space-m);
+  padding: 0;
+  list-style: disc;
+}
+
+.image-placeholder-list li {
+  margin: var(--space-3xs) 0;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-m) 0;
+  font-size: var(--step--1);
+}
+
+th, td {
+  text-align: left;
+  padding: var(--space-xs) var(--space-s);
+  border-bottom: 1px solid var(--rule);
+}
+
+th {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+/* Size selector */
+.purchase-box {
+  margin: var(--space-l) 0;
+  padding: var(--space-m);
+  background: var(--bg-accent);
+  border: 1px solid var(--rule);
+}
+
+.purchase-box label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  margin-bottom: var(--space-xs);
+}
+
+.purchase-box select {
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  padding: var(--space-xs) var(--space-s);
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  width: 100%;
+  max-width: 140px;
+  margin-bottom: var(--space-m);
+}
+
+.buy-btn {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--bg);
+  background: var(--text);
+  padding: var(--space-s) var(--space-m);
+  border: none;
+  cursor: pointer;
+}
+
+.buy-btn:hover {
+  background: var(--aima);
+}
+
+/* Specs line */
+.specs {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+  margin-top: var(--space-l);
+  padding-top: var(--space-m);
+  border-top: 1px solid var(--rule);
+}
+
+/* === DYES === */
+.dye-entry {
+  margin: var(--space-l) 0;
+  padding: var(--space-m);
+  border: 1px solid var(--rule);
+  transition: background 0.3s ease;
+}
+
+/* Each dye entry gets its own color background */
+.dye-entry-aima {
+  background: linear-gradient(145deg, 
+    rgba(88, 21, 35, 0.06) 0%, 
+    rgba(88, 21, 35, 0.12) 50%,
+    rgba(88, 21, 35, 0.08) 100%);
+}
+
+.dye-entry-thanatochromia {
+  background: linear-gradient(145deg, 
+    rgba(44, 27, 58, 0.06) 0%, 
+    rgba(44, 27, 58, 0.12) 50%,
+    rgba(44, 27, 58, 0.08) 100%);
+}
+
+.dye-entry-aporia {
+  background: linear-gradient(145deg, 
+    rgba(92, 142, 99, 0.06) 0%, 
+    rgba(92, 142, 99, 0.12) 50%,
+    rgba(92, 142, 99, 0.08) 100%);
+}
+
+.dye-entry h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.dye-greek {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--step--1);
+  color: var(--text-mid);
+  display: block;
+  margin-bottom: var(--space-s);
+}
+
+.dye-swatch {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  height: 0.75rem;
+  margin: var(--space-s) 0;
+  border: 1px solid var(--rule);
+}
+
+.swatch-aima { background: linear-gradient(to right, var(--aima), var(--aima-aged)); }
+.swatch-thanatochromia { background: linear-gradient(to right, var(--thanatochromia), var(--thanatochromia-aged)); }
+.swatch-aporia { background: linear-gradient(to right, var(--aporia), var(--aporia-aged)); }
+.swatch-natural { background: linear-gradient(to right, var(--natural), var(--natural-aged)); }
+
+/* === FOOTER === */
+footer {
+  max-width: var(--max-width);
+  margin: var(--space-xl) auto 0;
+  width: 100%;
+  padding-top: var(--space-s);
+  border-top: 1px solid var(--text);
+}
+
+footer p {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  margin: 0;
+}
+
+/* === RESPONSIVE === */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .nav-links {
+    gap: var(--space-s);
+  }
+  
+  .home-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  html {
+    font-size: 15px;
+  }
+  
+  body {
+    padding: var(--space-m);
+  }
+  
+  nav {
+    flex-direction: column;
+    gap: var(--space-s);
+    align-items: flex-start;
+  }
+  
+  .nav-links {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: var(--space-xs) var(--space-s);
+    justify-content: start;
+  }
+  
+  .nav-links a,
+  .home-nav a {
+    padding: var(--space-xs) 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .home-tagline {
+    font-size: var(--step-1);
+  }
+  
+  .triad-mark {
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: var(--step-2);
+    line-height: 1.3;
+  }
+  
+  .home-tagline {
+    font-size: var(--step-0);
+    line-height: 1.4;
+  }
+  
+  .home-nav {
+    gap: var(--space-s);
+  }
+}
+
+/* === HOME TAGLINE HOVER === */
+.home .home-tagline[data-alt]::after {
+  content: attr(data-alt);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 50%;
+  margin-top: -0.6em;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  white-space: nowrap;
+  font-style: italic;
+  font-size: var(--step-2);
+  color: var(--text);
+}
+
+.home .home-tagline[data-alt]:hover::after {
+  opacity: 1;
+}
+
+.home .home-tagline:hover span {
+  opacity: 0;
+}
+
+/* === 404 PAGE === */
+.error-page {
+  text-align: center;
+  padding: var(--space-xl) 0;
+}
+
+.error-page h1 {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-l);
+}
+
+.error-page p {
+  color: var(--text-mid);
+  margin-bottom: var(--space-s);
+}
+
+.back-link {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--text);
+}
+
+/* === DYE PRONUNCIATION === */
+.dye-pronunciation {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  letter-spacing: 0.05em;
+  margin-top: var(--space-3xs);
+  opacity: 0.7;
+}
+
+/* === LAUNCH NOTIFICATION === */
+.launch-note {
+  color: var(--text-mid);
+  margin-bottom: var(--space-s);
+}
+
+.notify-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  padding: var(--space-xs) var(--space-m);
+  border: 1px solid var(--rule);
+  transition: all 0.2s ease;
+}
+
+.notify-link:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* === JOURNAL === */
+.journal-entries {
+  margin-top: var(--space-l);
+}
+
+.journal-entry {
+  padding-bottom: var(--space-l);
+  margin-bottom: var(--space-l);
+  border-bottom: 1px solid var(--rule);
+}
+
+.journal-entry:last-of-type {
+  border-bottom: none;
+}
+
+.entry-title {
+  font-family: var(--font-body);
+  font-size: var(--step-1);
+  font-weight: 400;
+  margin-bottom: var(--space-xs);
+}
+
+.entry-date {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  margin-bottom: var(--space-s);
+}
+
+/* Journal entry header (individual entry pages) */
+.entry-header {
+  margin-bottom: var(--space-l);
+  padding-bottom: var(--space-m);
+  border-bottom: 1px solid var(--rule);
+}
+
+.entry-header h1 {
+  margin-bottom: var(--space-xs);
+}
+
+.entry-header .entry-components {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  letter-spacing: 0.05em;
+  margin: 0;
+  flex: none;
+}
+
+.entry-header .entry-components a {
+  color: var(--text-light);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.entry-header .entry-components a:hover {
+  color: var(--aima);
+}
+
+/* === LEXICON === */
+main hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: var(--space-l) 0;
+}
+
+.entry-image {
+  margin: var(--space-m) 0;
+}
+
+.entry-image img {
+  max-width: 100%;
+  height: auto;
+}
+
+.entry-image figcaption {
+  font-size: var(--step--1);
+  color: var(--text-light);
+  margin-top: var(--space-xs);
+}
+
+/* === INGREDIENT NOTE === */
+.ingredient-note {
+  font-style: italic;
+  color: var(--text-mid);
+  line-height: 1.8;
+}
+
+/* === TRIAD MARK (HOME) === */
+.triad-mark {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  text-decoration: none;
+  margin: var(--space-xs) 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  min-height: 1.5em;
+}
+
+/* Greek/English - English ALWAYS hidden except on settled hover */
+.triad-word .english {
+  display: none !important;
+}
+
+.triad-mark.cycling .triad-word .english {
+  display: none !important;
+}
+
+.triad-mark.settled .triad-word {
+  position: relative;
+  display: inline-block;
+}
+
+.triad-mark.settled .triad-word .english {
+  display: block !important;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  white-space: nowrap;
+}
+
+.triad-mark.settled .triad-word .greek {
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.triad-mark.settled .triad-word:hover .english {
+  opacity: 1;
+}
+
+.triad-mark.settled .triad-word:hover .greek {
+  opacity: 0;
+}
+
+/* Cycling state (initial) */
+.triad-mark.cycling .triad-word {
+  position: absolute;
+  opacity: 0;
+}
+
+.triad-mark.cycling .triad-dot {
+  display: none;
+}
+
+.triad-mark.cycling .triad-1 {
+  animation: triadCycle 1.8s ease-in-out;
+  animation-delay: 0s;
+}
+
+.triad-mark.cycling .triad-2 {
+  animation: triadCycle 1.8s ease-in-out;
+  animation-delay: 1.8s;
+}
+
+.triad-mark.cycling .triad-3 {
+  animation: triadCycle 1.8s ease-in-out;
+  animation-delay: 3.6s;
+}
+
+@keyframes triadCycle {
+  0% { opacity: 0; }
+  15%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Settled state (after cycling) */
+.triad-mark.settled .triad-word {
+  position: static;
+  opacity: 1 !important;
+  animation: none !important;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.5s ease;
+}
+
+/* Override cycling animations when settled */
+.triad-mark.settled .triad-1,
+.triad-mark.settled .triad-2,
+.triad-mark.settled .triad-3 {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+.triad-mark.settled .triad-word:hover {
+  transform: scale(1.05);
+}
+
+.triad-mark.settled .triad-dot {
+  display: inline;
+  margin: 0 0.5em;
+  color: var(--text-light);
+  opacity: 1;
+}
+
+/* Colors */
+.triad-1 { color: var(--aima); }
+.triad-2 { color: var(--thanatochromia); }
+.triad-3 { color: var(--aporia); }
+
+/* Background color shift on hover (only when settled, using :has) */
+.home-page::before,
+.home-page::after,
+.home > .triad-mark::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-page::before {
+  background: linear-gradient(180deg, rgba(88, 21, 35, 0.15) 0%, rgba(88, 21, 35, 0.3) 50%, rgba(88, 21, 35, 0.45) 100%);
+}
+
+.home-page::after {
+  background: linear-gradient(180deg, rgba(44, 27, 58, 0.18) 0%, rgba(44, 27, 58, 0.35) 50%, rgba(44, 27, 58, 0.5) 100%);
+}
+
+.home > .triad-mark::after {
+  background: linear-gradient(180deg, rgba(92, 142, 99, 0.15) 0%, rgba(92, 142, 99, 0.3) 50%, rgba(92, 142, 99, 0.45) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-1:hover)::before {
+  opacity: 1;
+}
+
+.home-page:has(.triad-mark.settled .triad-2:hover)::after {
+  opacity: 1;
+}
+
+.home-page:has(.triad-mark.settled .triad-3:hover) .triad-mark::after {
+  opacity: 1;
+}
+
+/* === FOOTER IMPROVEMENTS === */
+.footer-brand {
+  margin-bottom: var(--space-xs);
+}
+
+.footer-links {
+  font-size: var(--step--2);
+  margin-bottom: var(--space-xs);
+}
+
+.footer-links a {
+  color: var(--text-light);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--text);
+}
+
+.footer-address {
+  font-size: var(--step--2);
+  color: var(--text-light);
+}
+
+/* Buttondown subscribe form */
+.buttondown-form {
+  display: flex;
+  gap: var(--space-s);
+  margin-top: var(--space-m);
+  max-width: 400px;
+}
+
+.buttondown-form input[type="email"] {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  padding: var(--space-xs) var(--space-s);
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.buttondown-form input[type="email"]::placeholder {
+  color: var(--text-light);
+}
+
+.buttondown-form button {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-m);
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+}
+
+.buttondown-form button:hover {
+  opacity: 0.8;
+}
+
+/* === TRIAD HOVER BACKGROUND EFFECTS === */
+/* Only apply when triad is settled - this is the key to avoiding conflicts */
+.home-page {
+  transition: background 0.6s ease;
+}
+
+/* Individual word hover effects - only when settled */
+.home-page:has(.triad-mark.settled .triad-1:hover) {
+  background: linear-gradient(135deg, 
+    rgba(88, 21, 35, 0.08) 0%, 
+    rgba(88, 21, 35, 0.04) 50%, 
+    rgba(248, 243, 232, 1) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-2:hover) {
+  background: linear-gradient(135deg, 
+    rgba(44, 27, 58, 0.1) 0%, 
+    rgba(44, 27, 58, 0.05) 50%, 
+    rgba(248, 243, 232, 1) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-3:hover) {
+  background: linear-gradient(135deg, 
+    rgba(92, 142, 99, 0.08) 0%, 
+    rgba(92, 142, 99, 0.04) 50%, 
+    rgba(248, 243, 232, 1) 100%);
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

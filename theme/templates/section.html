@@ -1,0 +1,6 @@
+{# Default section template. Renders the section index's markdown content. #}
+{% extends "base.html" %}
+
+{% block content %}
+{{ section.content | safe }}
+{% endblock content %}
