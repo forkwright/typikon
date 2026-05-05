@@ -1,0 +1,25 @@
+# Cloudflare Pages redirects (typikon template).
+#
+# Copied to a consumer site's root as `_redirects` by typikon-init.
+# Sites edit the instance, never this template.
+#
+# Format (Cloudflare Pages):
+#   <source> <destination> [<status>]
+#
+# Common cases the template ships disabled by default. Uncomment and edit
+# to match the consumer's domain, then commit.
+
+# Apex enforcement — point the wildcard at the canonical apex host.
+# Replace example.com with the consumer's apex.
+# https://www.example.com/* https://example.com/:splat 301
+
+# Trailing-slash normalization — Cloudflare Pages handles this on its
+# own when files end in /index.html, but explicit rules can be added
+# for ambiguous paths.
+
+# Legacy path retirements — when a path is removed, redirect to a
+# meaningful destination instead of returning 404.
+# /old-path /new-path 301
+
+# Hard-404 paths — for destinations that should not be served at all.
+# /admin/* /404 410

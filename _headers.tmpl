@@ -1,0 +1,48 @@
+# Cloudflare Pages headers (typikon strict baseline).
+#
+# This file is a TEMPLATE. typikon-init copies it to a consumer site's root
+# as `_headers`, which Cloudflare Pages serves verbatim. Sites edit the
+# instance, never this template.
+#
+# The strict CSP enforced here is load-bearing for the typikon design:
+#   - script-src 'self'        — no inline <script>, no third-party JS.
+#                                 The CSP-enforce CI gate (Phase 5) fails
+#                                 builds containing inline scripts so this
+#                                 directive cannot be silently weakened.
+#   - style-src 'self'         — no inline <style>, no inline style="..." .
+#                                 Same enforcement as scripts.
+#   - font-src 'self'          — fonts are self-hosted under /fonts/.
+#                                 Blocks Google Fonts and any other CDN.
+#   - form-action allowlist    — only the explicit third-party form
+#                                 destinations the consumer needs. Edit
+#                                 the instance, not this template.
+#
+# When a consumer adds a third-party form action (a new payment link, a
+# new newsletter service), the form-action list grows in the consumer's
+# _headers and the change goes through the standard PR flow against that
+# consumer site — not against typikon. Typikon's role is to enforce the
+# default-deny posture; per-site allowlist deltas are consumer business.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self' https://buttondown.com https://buy.stripe.com; base-uri 'self'; frame-ancestors 'none'
+
+# Long-cache for content-addressable static assets.
+# Cloudflare Pages adds the cache-busting query string in production
+# automatically; consumers can layer asset-fingerprinting on top later.
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/img/*
+  Cache-Control: public, max-age=2592000, immutable
