@@ -7,16 +7,17 @@
 # Runs every available gate stage in order, fail-fast. Stages currently
 # implemented are listed below; Phase 5 of the typikon v1 plan adds the rest.
 #
-# Implemented (Phase 4):
+# Stages (fail-fast, emitted as JSONL):
 #     1. typikon-validate        frontmatter against JSON Schema
 #     2. zola check              internal links + asset references
 #     3. zola build              clean build with no warnings
-#
-# Pending (Phase 5):
 #     4. csp-enforce             grep public/ for inline script/style/on*= handlers
-#     5. lychee                  external link integrity
-#     6. pa11y                   WCAG 2.1 AA accessibility
-#     7. playwright              per-route smoke assertions
+#     5. lychee                  external link integrity (requires lychee binary)
+#     6. pa11y                   WCAG 2.1 AA accessibility (requires pa11y-ci)
+#     7. playwright              per-route smoke assertions (requires npx + tests/smoke/*.spec.ts)
+#
+# Stages 5-7 emit `skip` when the underlying tool isn't installed; CI
+# always has them, local dev may not.
 #
 # Output:
 #     One JSONL line per stage on stdout:
@@ -87,12 +88,58 @@ else
     emit "zola-build" "skip" 0 "zola binary not found on PATH"
 fi
 
-# Stage 4-7 — Phase 5 fills these in. Emit `skip` so the JSONL stream
-# documents what is *expected* to exist; agents reading the output can
-# distinguish "not yet implemented" from "passed".
-emit "csp-enforce"      "skip" 0 "Phase 5"
-emit "lychee"           "skip" 0 "Phase 5"
-emit "pa11y"            "skip" 0 "Phase 5"
-emit "playwright-smoke" "skip" 0 "Phase 5"
+# Stage 4 — CSP enforcement against built public/.
+if [[ -d public ]]; then
+    run_stage "csp-enforce" "$TYPIKON_ROOT/ci/csp-enforce.sh" "$ROOT/public" || FAIL=1
+else
+    emit "csp-enforce" "skip" 0 "no public/ dir (zola-build did not run)"
+fi
+
+# Stage 5 — external links via lychee. Skip if binary absent.
+if command -v lychee >/dev/null 2>&1; then
+    if [[ -d public ]]; then
+        run_stage "lychee" lychee --config "$TYPIKON_ROOT/ci/lychee.toml" public || FAIL=1
+    else
+        emit "lychee" "skip" 0 "no public/ dir"
+    fi
+else
+    emit "lychee" "skip" 0 "lychee binary not on PATH (install: cargo install lychee or curl release)"
+fi
+
+# Stage 6 — pa11y a11y. Requires the built public/ to be served; we spin
+# up a quick http.server in the background. Skip if pa11y-ci not present.
+if command -v pa11y-ci >/dev/null 2>&1; then
+    if [[ -d public ]]; then
+        cd public && python3 -m http.server 8080 >"$LOGDIR/server.log" 2>&1 &
+        SRV_PID=$!
+        cd "$ROOT"
+        sleep 1
+        run_stage "pa11y" pa11y-ci --config "$TYPIKON_ROOT/ci/pa11y.config.js" || FAIL=1
+        kill "$SRV_PID" 2>/dev/null || true
+    else
+        emit "pa11y" "skip" 0 "no public/ dir"
+    fi
+else
+    emit "pa11y" "skip" 0 "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
+fi
+
+# Stage 7 — Playwright smoke tests, only when consumer ships any *.spec.ts
+# under tests/smoke/.
+if [[ -d "$ROOT/tests/smoke" ]] && find "$ROOT/tests/smoke" -name '*.spec.ts' -print -quit | grep -q .; then
+    if command -v npx >/dev/null 2>&1; then
+        cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$ROOT/playwright.config.ts"
+        cd public && python3 -m http.server 8080 >"$LOGDIR/pw-server.log" 2>&1 &
+        PW_PID=$!
+        cd "$ROOT"
+        sleep 1
+        run_stage "playwright-smoke" npx playwright test || FAIL=1
+        kill "$PW_PID" 2>/dev/null || true
+        rm -f "$ROOT/playwright.config.ts"
+    else
+        emit "playwright-smoke" "skip" 0 "npx not on PATH"
+    fi
+else
+    emit "playwright-smoke" "skip" 0 "no tests/smoke/*.spec.ts"
+fi
 
 exit "$FAIL"

@@ -1,0 +1,54 @@
+# lychee external-link checker config for typikon-consuming sites.
+# https://github.com/lycheeverse/lychee
+#
+# Scope: external HTTP/HTTPS links found in built HTML under public/.
+# Internal links are checked by `zola check` (Phase 5 stage 2).
+
+# How many concurrent requests. Wikipedia tolerates 3-4; pushing higher
+# triggers rate-limit responses that look like link rot but aren't.
+max_concurrency = 4
+
+# Cache successful checks between CI runs to avoid hammering targets.
+# CI workflows persist .lychee_cache/ across runs.
+cache = true
+max_cache_age = "7d"
+
+# Network behavior.
+timeout = 10
+max_retries = 3
+retry_wait_time = 5
+
+# Treat these statuses as success (no link rot).
+# Stripe's buy.stripe.com endpoints reject HEAD requests with 405; the
+# URL is still valid and clicking it redirects to checkout. Same for
+# Buttondown's embed-subscribe POST endpoint.
+accept = [200, 204, 206, 301, 302, 303, 307, 308, 405]
+
+# Don't follow these — they're known to be rate-limit-heavy or
+# protocol-mismatched.
+exclude = [
+  "^mailto:",
+  "^tel:",
+  "^sms:",
+  # Localhost / loopback (forge URLs in dev configs).
+  "^https?://127\\.0\\.0\\.1",
+  "^https?://localhost",
+  # Stripe checkout URLs respond fine to clicks but reject HEAD.
+  # Already covered by `accept = 405`, but explicit skip avoids the
+  # round-trip entirely on every CI run.
+  "^https://buy\\.stripe\\.com/",
+]
+
+# Method per host. lychee defaults to HEAD, falls back to GET on 405.
+# We force GET on hosts known to require it (Wikipedia rate-limits HEAD
+# more aggressively than GET, oddly).
+method = "get"
+
+# User-agent. Some sites block default lychee UA; identify ourselves.
+user_agent = "typikon-ci/1.0 (https://github.com/forkwright/typikon)"
+
+# Skip checking links inside code blocks — those are illustrative.
+exclude_path = []
+
+# Verbose enough for CI logs but not overwhelming.
+verbose = "info"

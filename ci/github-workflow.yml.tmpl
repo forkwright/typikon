@@ -1,0 +1,105 @@
+# GitHub Actions workflow for typikon-consuming sites.
+#
+# This file is a TEMPLATE. typikon-init copies it to a consumer site as
+# .github/workflows/deploy.yml during scaffolding, substituting the two
+# placeholders below.
+#
+# Placeholders (typikon-init replaces during scaffolding):
+#   {{ PROJECT_NAME }}   — Cloudflare Pages project slug (e.g. ardent-site)
+#   {{ ZOLA_VERSION }}   — pinned Zola version (current: 0.22.1)
+#
+# After substitution the workflow performs the strict gate, then deploys
+# to Cloudflare Pages on green pushes to main.
+#
+# Secrets the consumer must set in GitHub repo settings:
+#   - CLOUDFLARE_API_TOKEN
+#   - CLOUDFLARE_ACCOUNT_ID
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  gate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive  # Pulls typikon as theme/
+
+      # ── Tooling install ────────────────────────────────────────
+      - name: Install Zola
+        run: |
+          curl -L "https://github.com/getzola/zola/releases/download/v{{ ZOLA_VERSION }}/zola-v{{ ZOLA_VERSION }}-x86_64-unknown-linux-gnu.tar.gz" \
+            -o zola.tar.gz
+          tar -xzf zola.tar.gz
+          sudo mv zola /usr/local/bin/
+          zola --version
+
+      - name: Install Python deps for typikon-validate
+        run: |
+          python3 -m pip install --user jsonschema
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pa11y-ci, lychee, playwright
+        run: |
+          npm install -g pa11y-ci@latest @playwright/test@latest
+          npx playwright install --with-deps chromium
+          curl -L https://github.com/lycheeverse/lychee/releases/latest/download/lychee-x86_64-unknown-linux-gnu.tar.gz \
+            -o lychee.tar.gz
+          tar -xzf lychee.tar.gz
+          sudo mv lychee /usr/local/bin/
+
+      # ── Strict gate ────────────────────────────────────────────
+      - name: typikon-validate (frontmatter schemas)
+        run: theme/bin/typikon-validate .
+
+      - name: zola check (internal links + assets)
+        run: zola check
+
+      - name: zola build
+        run: zola build
+
+      - name: csp-enforce (no inline script/style/handlers)
+        run: theme/ci/csp-enforce.sh public/
+
+      - name: lychee (external links)
+        run: lychee --config theme/ci/lychee.toml public/
+
+      - name: Serve public/ for browser-based gates
+        run: |
+          cd public && python3 -m http.server 8080 &
+          echo $! > /tmp/server.pid
+          sleep 2
+
+      - name: pa11y (WCAG 2.1 AA)
+        run: pa11y-ci --config theme/ci/pa11y.config.js
+
+      - name: playwright (per-route smoke)
+        if: ${{ hashFiles('tests/smoke/**/*.spec.ts') != '' }}
+        run: |
+          cp theme/ci/playwright.config.ts ./playwright.config.ts
+          npx playwright test
+
+      - name: Tear down static server
+        if: always()
+        run: |
+          kill "$(cat /tmp/server.pid 2>/dev/null)" 2>/dev/null || true
+
+      # ── Deploy on green pushes to main only ───────────────────
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install -g wrangler
+          wrangler pages deploy public --project-name={{ PROJECT_NAME }}

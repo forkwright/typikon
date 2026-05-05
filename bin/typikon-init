@@ -113,6 +113,19 @@ copy_template() {
 copy_template "$TYPIKON_ROOT/_headers.tmpl" "_headers"
 copy_template "$TYPIKON_ROOT/_redirects.tmpl" "_redirects"
 
+# GitHub Actions workflow — substitute placeholders during copy.
+ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-0.22.1}"
+mkdir -p .github/workflows
+if [[ ! -e .github/workflows/deploy.yml ]]; then
+    sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
+        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
+        "$TYPIKON_ROOT/ci/github-workflow.yml.tmpl" \
+        > .github/workflows/deploy.yml
+    echo "create .github/workflows/deploy.yml (from ci/github-workflow.yml.tmpl)" >&2
+else
+    echo "skip   .github/workflows/deploy.yml (exists)" >&2
+fi
+
 write_if_absent ".gitignore" "$(cat <<'GITIGNORE'
 public/
 .zola-cache/
