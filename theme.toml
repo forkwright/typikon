@@ -1,0 +1,21 @@
+# Zola theme manifest
+
+name = "typikon"
+description = "Fleet web-property substrate — Zola theme, frontmatter schemas, agentic scaffolding, strict CI gates"
+license = "AGPL-3.0-or-later"
+homepage = "https://github.com/forkwright/typikon"
+min_version = "0.22.0"
+
+[author]
+name = "Cody Kickertz"
+homepage = "https://github.com/forkwright"
+
+[original]
+author = "Cody Kickertz"
+homepage = "https://github.com/forkwright/typikon"
+repo = "https://github.com/forkwright/typikon"
+
+# typikon does not provide a config.toml override surface yet.
+# Consumers configure brand-specific values in their own config.toml [extra] block.
+# When primitives need parameterization, schema goes in schemas/, default goes here.
+[extra]

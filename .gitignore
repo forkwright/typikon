@@ -1,0 +1,31 @@
+# Zola build output (consumers, not theme itself)
+public/
+.zola-cache/
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Test artifacts
+test-results/
+playwright-report/
+.playwright/
+node_modules/
+.lychee_cache/
+
+# Local-only
+*.local
+.env
+.env.local
+
+# Font sources (subsetting workspace; commit only subsetted WOFF2)
+fonts-src/
+*.ttf
+*.otf
+*.woff
+
+# Allow only the subsetted WOFF2 we ship
+!theme/static/fonts/*.woff2
