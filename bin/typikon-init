@@ -13,7 +13,7 @@
 #     ├── .git/                     (git init, remotes set: origin=forge, github=mirror)
 #     ├── .gitignore                (zola public/, editor crud)
 #     ├── .kanon-ci.toml            (sentinel pipeline; consumers replace with real gate)
-#     ├── theme/                    (git submodule -> forkwright/typikon)
+#     ├── themes/typikon/           (git submodule -> forkwright/typikon)
 #     ├── config.toml               (Zola config with placeholder [extra])
 #     ├── content/_index.md         (homepage stub)
 #     ├── content/about.md          (placeholder)
@@ -76,10 +76,11 @@ if [[ ! -d .git ]]; then
 fi
 
 # Theme submodule (or refresh if already present).
-if [[ ! -d theme/.git && ! -f theme/theme.toml ]]; then
-    git submodule add "$THEME_REPO" theme
+if [[ ! -d themes/typikon/.git && ! -f themes/typikon/theme.toml ]]; then
+    mkdir -p themes
+    git submodule add "$THEME_REPO" themes/typikon
 else
-    (cd theme && git pull --ff-only origin main 2>/dev/null) || true
+    (cd themes/typikon && git pull --ff-only origin main 2>/dev/null) || true
 fi
 
 # Idempotent file writes — only create if absent. Consumer-edited content stays.
@@ -258,7 +259,7 @@ Run \`bin/typikon-validate .\` from the typikon checkout to verify.
 
 ## Locked decisions
 
-- **Theme**: \`forkwright/typikon\` via git submodule under \`theme/\`.
+- **Theme**: \`forkwright/typikon\` via git submodule under \`themes/typikon/\`.
 - **Forge-primary**: \`origin\` is the forkwright forge; \`github\` is mirror.
 - **Strict CSP**: enforced via \`_headers\`. No inline scripts/styles anywhere.
 - **Self-hosted fonts**: served from \`/fonts/\` at first-party origin.
@@ -266,8 +267,8 @@ Run \`bin/typikon-validate .\` from the typikon checkout to verify.
 ## Refreshing the theme
 
 \`\`\`
-cd theme && git pull --ff-only origin main && cd ..
-git add theme && git commit -m "chore: bump typikon to <sha>"
+cd themes/typikon && git pull --ff-only origin main && cd ../..
+git add themes/typikon && git commit -m "chore: bump typikon to <sha>"
 \`\`\`
 EOF
 )

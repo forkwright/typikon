@@ -12,10 +12,9 @@ This repository is optimized for agentic operation. Humans should not need to de
 
 ```
 typikon/
-├── theme/                  # Zola theme (consumed by sites)
-│   ├── templates/          # Tera templates: base, page, section, journal
-│   ├── static/             # css, js, fonts (self-hosted WOFF2)
-│   └── sass/               # design tokens, type scale, layout primitives
+├── templates/              # Tera templates: base, page, section, journal
+├── static/                 # css, js, fonts (self-hosted WOFF2)
+├── sass/                   # design tokens, type scale, layout primitives
 ├── schemas/                # JSON Schema per content type
 ├── scaffolds/              # content templates copied by typikon-init
 ├── bin/                    # typikon-init, typikon-validate, typikon-check
@@ -39,9 +38,9 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 ## Locked decisions
 
 - **Static SSG**: Zola 0.22.x. No JavaScript build step, no Node toolchain, no npm in the deploy path.
-- **Theme distribution**: git submodule under consumer's `theme/`. (Zola has no theme registry; submodule is current best practice.)
+- **Theme distribution**: git submodule under consumer's `themes/typikon/`. (Zola has no theme registry; submodule is current best practice.)
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on any inline script, style, or `on*=` handler.
-- **Self-hosted fonts**: WOFF2 under `theme/static/fonts/`. Zero external CDN at visitor runtime. OFL families only.
+- **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime. OFL families only.
 - **Forge-primary**: `origin` points at the forkwright forge (`http://127.0.0.1:7878/forkwright/typikon.git`). GitHub is push-mirror only via `kanon forge set-mirror`.
 - **License**: AGPL-3.0-or-later. Matches dioptron, aletheia. AI-training prohibition in NOTICE.
 
@@ -51,7 +50,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 2. **Use the scaffolder.** `bin/typikon-init <type>` produces valid scaffolded content. Do not hand-write frontmatter.
 3. **Validate before push.** `bin/typikon-validate` exits 1 on any frontmatter violation with JSONL output (file path, JSON pointer). Run it in your loop.
 4. **Run the gate.** `bin/typikon-check` runs the full CI sequence locally. If it fails, fix; do not push to bypass.
-5. **No inline scripts or styles.** Anywhere. The CSP gate enforces this. Extract to `theme/static/js/` or `theme/static/css/`.
+5. **No inline scripts or styles.** Anywhere. The CSP gate enforces this. Extract to `static/js/` or `static/css/`.
 6. **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema; don't fork the theme.
 
 ## Boundaries

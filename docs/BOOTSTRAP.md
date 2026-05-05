@@ -23,7 +23,7 @@ Behavior (anticipated):
 
 1. Create destination directory if missing.
 2. Initialize git, `git remote add origin http://127.0.0.1:7878/forkwright/<site-name>.git`, `git remote add github git@github.com:forkwright/<site-name>.git`.
-3. Add typikon as a submodule under `theme/`.
+3. Add typikon as a submodule under `themes/typikon/`.
 4. Write `config.toml` with `theme = "typikon"` and a stub `[extra]` block keyed for the consumer.
 5. Copy `scaffolds/new-site/` skeleton into `content/`: `_index.md`, `philosophy.md`, `contact.md`, journal section index, products section index.
 6. Copy `_headers.tmpl` → `_headers`, `_redirects.tmpl` → `_redirects`, with consumer-specific values templated.

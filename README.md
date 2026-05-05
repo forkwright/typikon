@@ -10,7 +10,7 @@ A typikon does not contain the service. It governs how the service is enacted.
 
 Optimized for agentic operation. Humans should not need to develop here. The substrate ships:
 
-- **Templates** (`theme/templates/`) — Tera templates for base, page, section, journal.
+- **Templates** (`templates/`) — Tera templates for base, page, section, journal.
 - **Schemas** (`schemas/`) — JSON Schema for every content type. Frontmatter must validate before commit.
 - **Scaffolds** (`scaffolds/`) — content templates copied by `bin/typikon-init`.
 - **Binaries** (`bin/`) — `typikon-init`, `typikon-validate`, `typikon-check`. Idempotent CLIs with JSONL output.
@@ -51,4 +51,4 @@ See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmat
 
 AGPL-3.0-or-later. See LICENSE and NOTICE.
 
-Self-hosted fonts under `theme/static/fonts/` are OFL-1.1; see NOTICE for attributions.
+Self-hosted fonts under `static/fonts/` are OFL-1.1; see NOTICE for attributions.

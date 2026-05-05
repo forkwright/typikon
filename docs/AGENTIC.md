@@ -66,8 +66,8 @@ Output is JSONL summarizing each gate. If anything fails, fix; do not push to by
 
 Anywhere. Not in templates, not in markdown content, not in scaffolded snippets.
 
-- `<script>foo()</script>` → extract to `theme/static/js/<name>.js`, reference from `<script src="/js/<name>.js" defer>`.
-- `<style>...</style>` → extract to `theme/static/css/<name>.css`, reference from `<link rel="stylesheet" href="/css/<name>.css">`.
+- `<script>foo()</script>` → extract to `static/js/<name>.js`, reference from `<script src="/js/<name>.js" defer>`.
+- `<style>...</style>` → extract to `static/css/<name>.css`, reference from `<link rel="stylesheet" href="/css/<name>.css">`.
 - `<button onclick="...">` → attach in JS via `addEventListener` after `DOMContentLoaded`.
 
 The CSP-enforce gate fails the build if any of these appear in the rendered output.
@@ -126,7 +126,7 @@ For a structural change (template, schema, primitive):
 ## What this contract does not say
 
 - It does not say *what* content to write. That comes from the consumer site's brief.
-- It does not say what the design language is. That is in `theme/` and is read, not derived.
+- It does not say what the design language is. That is in `templates/` + `static/` and is read, not derived.
 - It does not say how to make decisions about scope. Use kanon's standard escalation surfaces (issues, plans).
 
 When in doubt, run the gate. If the gate is green, you are not breaking anything. If the gate is red, the gate is the source of truth.

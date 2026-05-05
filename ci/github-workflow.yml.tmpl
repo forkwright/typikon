@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive  # Pulls typikon as theme/
+          submodules: recursive  # Pulls typikon as themes/typikon/
 
       # ── Tooling install ────────────────────────────────────────
       - name: Install Zola
@@ -60,7 +60,7 @@ jobs:
 
       # ── Strict gate ────────────────────────────────────────────
       - name: typikon-validate (frontmatter schemas)
-        run: theme/bin/typikon-validate .
+        run: themes/typikon/bin/typikon-validate .
 
       - name: zola check (internal links + assets)
         run: zola check
@@ -69,10 +69,10 @@ jobs:
         run: zola build
 
       - name: csp-enforce (no inline script/style/handlers)
-        run: theme/ci/csp-enforce.sh public/
+        run: themes/typikon/ci/csp-enforce.sh public/
 
       - name: lychee (external links)
-        run: lychee --config theme/ci/lychee.toml public/
+        run: lychee --config themes/typikon/ci/lychee.toml public/
 
       - name: Serve public/ for browser-based gates
         run: |
@@ -81,12 +81,12 @@ jobs:
           sleep 2
 
       - name: pa11y (WCAG 2.1 AA)
-        run: pa11y-ci --config theme/ci/pa11y.config.js
+        run: pa11y-ci --config themes/typikon/ci/pa11y.config.js
 
       - name: playwright (per-route smoke)
         if: ${{ hashFiles('tests/smoke/**/*.spec.ts') != '' }}
         run: |
-          cp theme/ci/playwright.config.ts ./playwright.config.ts
+          cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
           npx playwright test
 
       - name: Tear down static server
