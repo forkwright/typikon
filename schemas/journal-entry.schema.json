@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/journal-entry.schema.json",
+  "title": "typikon journal entry",
+  "description": "Frontmatter contract for a journal entry (content/journal/<slug>.md). Stricter than the page schema: date and the entry-level extras are required so the auto-generated journal-section listing renders cleanly.",
+  "type": "object",
+  "required": ["title", "description", "date", "extra"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 20, "maxLength": 200 },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date. Sort key for the journal listing."
+    },
+    "updated": { "type": "string", "format": "date" },
+    "path": { "type": "string", "pattern": "^/[a-z0-9/_-]*/?$" },
+    "template": { "type": "string", "pattern": "^[a-z0-9_-]+\\.html$" },
+    "weight": { "type": "integer", "minimum": 0 },
+    "draft": { "type": "boolean" },
+    "extra": {
+      "type": "object",
+      "required": ["components", "words"],
+      "additionalProperties": true,
+      "properties": {
+        "components": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 120,
+          "description": "Tag-line of conceptual components, e.g. 'ardere · presence · the question'. Rendered under the title in the journal listing and on the entry page itself."
+        },
+        "words": {
+          "type": "string",
+          "pattern": "^~?\\d+( words)?$",
+          "description": "Approximate word count, e.g. '~480' or '~480 words'."
+        },
+        "seo_title": { "type": "string", "maxLength": 80 },
+        "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
+        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$" },
+        "og_type": { "type": "string", "enum": ["website", "article", "profile"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/page.schema.json",
+  "title": "typikon page",
+  "description": "Frontmatter contract for a typikon-consuming site's standard page (content/<name>.md, not _index.md).",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Page title. Renders as <title> and <h1>. Keep under ~50 chars for SEO."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "SEO meta description and og:description. Aim for 120-180 chars."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date. Required for journal entries; optional otherwise."
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601. When this page was last meaningfully edited."
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^/[a-z0-9/_-]*/?$",
+      "description": "Override Zola's auto-generated path. Lowercase ASCII, slashes, hyphens, underscores."
+    },
+    "template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Custom Tera template (relative to theme/templates/)."
+    },
+    "weight": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sort order within a section."
+    },
+    "draft": {
+      "type": "boolean",
+      "description": "Exclude from production build."
+    },
+    "extra": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "seo_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Override <title> when it should differ from page title (e.g., longer SEO-optimized form)."
+        },
+        "body_class": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9 -]*$",
+          "description": "CSS class on <body>. Used by the home page to hide nav/footer (body_class = 'home-page')."
+        },
+        "og_image": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "description": "Path under static/ (e.g. 'img/og-cover.png'). get_url() resolves to absolute."
+        },
+        "og_type": {
+          "type": "string",
+          "enum": ["website", "article", "profile"],
+          "description": "Open Graph type. Defaults to 'website'."
+        }
+      }
+    }
+  }
+}

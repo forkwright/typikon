@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/product.schema.json",
+  "title": "typikon product",
+  "description": "Frontmatter contract for a product page (content/products/<slug>.md). Requires price, Stripe checkout URL, and shipping note so the product page renders the full purchase block.",
+  "type": "object",
+  "required": ["title", "description", "extra"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 30, "maxLength": 200 },
+    "date": { "type": "string", "format": "date" },
+    "updated": { "type": "string", "format": "date" },
+    "path": { "type": "string", "pattern": "^/[a-z0-9/_-]*/?$" },
+    "template": { "type": "string", "pattern": "^[a-z0-9_-]+\\.html$" },
+    "weight": { "type": "integer", "minimum": 0 },
+    "draft": { "type": "boolean" },
+    "extra": {
+      "type": "object",
+      "required": ["price", "stripe_url"],
+      "additionalProperties": true,
+      "properties": {
+        "price": {
+          "type": "string",
+          "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
+          "description": "Display price with optional leading $ (e.g. '$150', '85'). Bare number assumed USD."
+        },
+        "stripe_url": {
+          "type": "string",
+          "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
+          "description": "Stripe direct-checkout URL. Generated in the Stripe dashboard per product."
+        },
+        "shipping_note": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Override the default shipping line. Defaults to 'Shipping included · Tax at checkout · Ships within one week'."
+        },
+        "seo_title": { "type": "string", "maxLength": 80 },
+        "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
+        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$" },
+        "og_type": { "type": "string", "enum": ["website", "article", "profile"] }
+      }
+    }
+  }
+}

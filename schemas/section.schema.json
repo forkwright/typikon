@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/section.schema.json",
+  "title": "typikon section",
+  "description": "Frontmatter contract for a section index file (_index.md). Sections group child pages and may use a custom template (journal-section.html, etc.).",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "maxLength": 200 },
+    "template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Custom Tera template. Default: section.html. Common: journal-section.html, index.html (for content/_index.md)."
+    },
+    "sort_by": {
+      "type": "string",
+      "enum": ["date", "weight", "title", "none"],
+      "description": "How Zola sorts this section's child pages."
+    },
+    "weight": { "type": "integer", "minimum": 0 },
+    "transparent": {
+      "type": "boolean",
+      "description": "When true, child pages appear in the parent section's listing as if at the parent level."
+    },
+    "extra": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "greek": {
+          "type": "string",
+          "description": "Greek heading attribute (data-greek on <h1>) for the design family's hover pattern."
+        },
+        "body_class": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9 -]*$"
+        },
+        "list_caption": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Small caption rendered after the section's auto-listed pages (e.g., 'Newest at top')."
+        },
+        "home_logo": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "description": "Path under static/ for the index.html template's hero logo."
+        },
+        "home_tagline": { "type": "string" },
+        "home_tagline_alt": { "type": "string" },
+        "triad": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["greek", "english"],
+          "properties": {
+            "greek": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 2,
+              "maxItems": 4,
+              "description": "Greek terms cycled by the triad-mark component."
+            },
+            "english": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 2,
+              "maxItems": 4
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^/[a-z0-9/_-]*/?$",
+              "description": "Where the triad-mark links to (default: /philosophy/)."
+            }
+          }
+        },
+        "home_nav": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "type": "string" },
+              "label": { "type": "string" },
+              "greek": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

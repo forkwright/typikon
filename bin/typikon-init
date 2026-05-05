@@ -1,0 +1,285 @@
+#!/usr/bin/env bash
+# typikon-init — scaffold a new typikon-consuming site.
+#
+# Usage:
+#     typikon-init <site-name> <destination-path>
+#
+# Creates a fleet web-property repo that consumes typikon. Idempotent:
+# re-running over an existing destination refreshes scaffolded files
+# without overwriting consumer-edited content.
+#
+# What it writes:
+#     <dest>/
+#     ├── .git/                     (git init, remotes set: origin=forge, github=mirror)
+#     ├── .gitignore                (zola public/, editor crud)
+#     ├── .kanon-ci.toml            (sentinel pipeline; consumers replace with real gate)
+#     ├── theme/                    (git submodule -> forkwright/typikon)
+#     ├── config.toml               (Zola config with placeholder [extra])
+#     ├── content/_index.md         (homepage stub)
+#     ├── content/about.md          (placeholder)
+#     ├── content/contact.md        (placeholder)
+#     ├── static/img/.gitkeep       (consumer images go here)
+#     ├── _headers                  (instance of typikon's _headers.tmpl)
+#     ├── _redirects                (instance of typikon's _redirects.tmpl)
+#     ├── tests/smoke/.gitkeep      (per-route Playwright assertions)
+#     └── CLAUDE.md                 (operator brief, consumer-specific)
+#
+# After scaffolding, the user runs:
+#     cd <dest>
+#     bin/typikon-check .          (validates + builds; should green)
+#     git push origin main         (will need ALLOW_PROTECTED_PUSH=1 for
+#                                   the first push; see kanon#460)
+
+set -euo pipefail
+
+THEME_REPO="${TYPIKON_THEME_REPO:-http://127.0.0.1:7878/forkwright/typikon.git}"
+THEME_REPO_GH="${TYPIKON_THEME_REPO_GH:-git@github.com:forkwright/typikon.git}"
+TYPIKON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+    cat <<EOF >&2
+typikon-init — scaffold a typikon-consuming site
+
+Usage:
+    typikon-init <site-name> <destination-path>
+
+Arguments:
+    site-name           lowercase ASCII name; becomes the forge/GitHub repo slug
+    destination-path    where to scaffold; created if absent
+
+Environment:
+    TYPIKON_THEME_REPO     forge URL for the typikon theme submodule
+                           (default: $THEME_REPO)
+    TYPIKON_THEME_REPO_GH  GitHub URL for the github remote
+                           (default: $THEME_REPO_GH)
+EOF
+    exit 2
+}
+
+[[ $# -ne 2 ]] && usage
+
+SITE_NAME="$1"
+DEST="$(realpath -m "$2")"
+
+if [[ ! "$SITE_NAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "error: site-name must be lowercase ASCII letters/digits/hyphens, starting with a letter" >&2
+    exit 2
+fi
+
+mkdir -p "$DEST"
+cd "$DEST"
+
+if [[ ! -d .git ]]; then
+    git init -q -b main
+    git remote add origin "http://127.0.0.1:7878/forkwright/${SITE_NAME}.git"
+    git remote add github "git@github.com:forkwright/${SITE_NAME}.git"
+fi
+
+# Theme submodule (or refresh if already present).
+if [[ ! -d theme/.git && ! -f theme/theme.toml ]]; then
+    git submodule add "$THEME_REPO" theme
+else
+    (cd theme && git pull --ff-only origin main 2>/dev/null) || true
+fi
+
+# Idempotent file writes — only create if absent. Consumer-edited content stays.
+write_if_absent() {
+    local path="$1"
+    local content="$2"
+    if [[ -e "$path" ]]; then
+        echo "skip   $path (exists)" >&2
+    else
+        mkdir -p "$(dirname "$path")"
+        printf '%s' "$content" > "$path"
+        echo "create $path" >&2
+    fi
+}
+
+# Copy templates from typikon (always refresh the .tmpl-derived instances —
+# consumers should treat _headers and _redirects as derived files, not
+# hand-edited; per-site deltas go in a sibling _headers.local file or in
+# direct edits the operator commits manually).
+copy_template() {
+    local src="$1"
+    local dest="$2"
+    if [[ -e "$dest" ]]; then
+        echo "skip   $dest (exists; remove to refresh)" >&2
+    else
+        cp "$src" "$dest"
+        echo "create $dest (from $src)" >&2
+    fi
+}
+
+copy_template "$TYPIKON_ROOT/_headers.tmpl" "_headers"
+copy_template "$TYPIKON_ROOT/_redirects.tmpl" "_redirects"
+
+write_if_absent ".gitignore" "$(cat <<'GITIGNORE'
+public/
+.zola-cache/
+.DS_Store
+*.swp
+node_modules/
+.lychee_cache/
+test-results/
+playwright-report/
+.playwright/
+*.local
+.env
+.env.local
+GITIGNORE
+)
+"
+
+write_if_absent ".kanon-ci.toml" "$(cat <<'CI'
+# Site CI pipeline — sentinel until typikon's full gate ships.
+#
+# Phase 5 of typikon's v1 plan replaces these stages with the strict
+# gate (zola check, zola build, csp-enforce, lychee, pa11y,
+# playwright-smoke). Until then, this sentinel keeps the forge
+# post-receive hook honest.
+[pipeline]
+stages = ["checkout-ok"]
+
+[stages.checkout-ok]
+cmd = "true"
+timeout_secs = 10
+
+[verifier]
+enabled = false
+CI
+)
+"
+
+write_if_absent "config.toml" "$(cat <<EOF
+# Zola config for ${SITE_NAME}. Consumer-specific values live under [extra].
+title = "${SITE_NAME}"
+description = "TODO: site description"
+base_url = "https://${SITE_NAME}.example.com"
+default_language = "en"
+output_dir = "public"
+theme = "typikon"
+generate_feeds = true
+feed_filenames = ["atom.xml"]
+
+[markdown]
+smart_punctuation = true
+
+[extra]
+# Brand identity — read by typikon's base.html / nav.html / footer.html.
+brand_name = "${SITE_NAME}"
+# brand_greek = "Greek motto for footer + nav-logo hover"
+# logo_path = "img/logo.svg"
+# theme_color = "#F7F3E8"
+# og_locale = "en_US"
+# og_image = "img/og-cover.png"
+
+# Self-hosted font preload list (relative URLs under /fonts/).
+font_preload = ["/fonts/cormorant-garamond-400.woff2", "/fonts/spectral-400.woff2"]
+
+# Top-nav structure. Each item: { url, label, greek? }.
+nav_items = []
+
+# Footer link list. Each item: { url, label, rel? }.
+footer_links = []
+EOF
+)
+"
+
+write_if_absent "content/_index.md" "$(cat <<EOF
++++
+title = "${SITE_NAME}"
+description = "TODO: site description"
+
+[extra]
+# body_class = "home-page"
+# template = "index.html"
++++
+
+TODO: home content.
+EOF
+)
+"
+
+write_if_absent "content/about.md" "$(cat <<'EOF'
++++
+title = "About"
+description = "TODO: meta description (120-180 chars)."
++++
+
+TODO: about content.
+EOF
+)
+"
+
+write_if_absent "content/contact.md" "$(cat <<'EOF'
++++
+title = "Contact"
+description = "TODO: meta description (120-180 chars)."
++++
+
+TODO: contact content.
+EOF
+)
+"
+
+mkdir -p static/img tests/smoke
+touch static/img/.gitkeep tests/smoke/.gitkeep
+
+# CLAUDE.md (operator brief). Force-add at commit time per
+# global-gitignore rules (~/.config/git/ignore excludes CLAUDE.md by default).
+write_if_absent "CLAUDE.md" "$(cat <<EOF
+# CLAUDE.md: ${SITE_NAME}
+
+Consumer of typikon (\`forkwright/typikon\`). The site's structural
+contract — templates, schemas, gates — comes from typikon. This repo
+holds the site-specific *content* and *brand parameters* only.
+
+## Standards
+
+Authoring rules live in typikon's \`docs/AGENTIC.md\`. Read those before
+editing content here.
+
+Frontmatter must validate against the appropriate schema in
+typikon \`schemas/\` (page / section / journal-entry / product).
+Run \`bin/typikon-validate .\` from the typikon checkout to verify.
+
+## Locked decisions
+
+- **Theme**: \`forkwright/typikon\` via git submodule under \`theme/\`.
+- **Forge-primary**: \`origin\` is the forkwright forge; \`github\` is mirror.
+- **Strict CSP**: enforced via \`_headers\`. No inline scripts/styles anywhere.
+- **Self-hosted fonts**: served from \`/fonts/\` at first-party origin.
+
+## Refreshing the theme
+
+\`\`\`
+cd theme && git pull --ff-only origin main && cd ..
+git add theme && git commit -m "chore: bump typikon to <sha>"
+\`\`\`
+EOF
+)
+"
+
+# Stage if anything new is unstaged.
+if [[ -n "$(git status --porcelain)" ]]; then
+    git add -A
+    if [[ -f CLAUDE.md ]]; then
+        git add -f CLAUDE.md 2>/dev/null || true
+    fi
+    if [[ -z "$(git log --oneline 2>/dev/null)" ]]; then
+        git commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+        echo "ok     initial commit created" >&2
+    else
+        echo "ok     scaffold refreshed (commit pending if you want to capture refresh)" >&2
+    fi
+fi
+
+cat <<EOF >&2
+
+Next steps:
+    cd $DEST
+    bin/typikon-check .                      # local gate (Phase 5 fills out)
+    ALLOW_PROTECTED_PUSH=1 git push origin main   # first push only; see kanon#460
+    kanon forge init forkwright/${SITE_NAME}      # create the bare repo on forge
+
+EOF

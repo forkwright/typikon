@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# typikon-check — orchestrate the local pre-push gate against a consumer site.
+#
+# Usage:
+#     typikon-check <consumer-site-root>
+#
+# Runs every available gate stage in order, fail-fast. Stages currently
+# implemented are listed below; Phase 5 of the typikon v1 plan adds the rest.
+#
+# Implemented (Phase 4):
+#     1. typikon-validate        frontmatter against JSON Schema
+#     2. zola check              internal links + asset references
+#     3. zola build              clean build with no warnings
+#
+# Pending (Phase 5):
+#     4. csp-enforce             grep public/ for inline script/style/on*= handlers
+#     5. lychee                  external link integrity
+#     6. pa11y                   WCAG 2.1 AA accessibility
+#     7. playwright              per-route smoke assertions
+#
+# Output:
+#     One JSONL line per stage on stdout:
+#         {"stage": "...", "status": "pass|fail|skip", "duration_ms": N, "detail": "..."}
+#     Detail surface on stderr (each tool's native output).
+#
+# Exit codes:
+#     0  every implemented stage passed
+#     1  at least one stage failed
+#     2  invocation error (missing root, no content/, etc.)
+
+set -uo pipefail
+
+TYPIKON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+    echo "usage: typikon-check <consumer-site-root>" >&2
+    exit 2
+}
+
+[[ $# -ne 1 ]] && usage
+
+ROOT="$(realpath "$1")"
+[[ -d "$ROOT/content" ]] || { echo "error: $ROOT has no content/ dir" >&2; exit 2; }
+
+emit() {
+    local stage="$1"; local status="$2"; local duration_ms="$3"; local detail="$4"
+    printf '{"stage":"%s","status":"%s","duration_ms":%d,"detail":"%s"}\n' \
+        "$stage" "$status" "$duration_ms" "$detail"
+}
+
+run_stage() {
+    local stage="$1"; shift
+    local start=$(date +%s%3N)
+    if "$@" >/dev/null 2>"$LOGDIR/$stage.err"; then
+        local end=$(date +%s%3N)
+        emit "$stage" "pass" "$((end - start))" "ok"
+        return 0
+    else
+        local rc=$?
+        local end=$(date +%s%3N)
+        emit "$stage" "fail" "$((end - start))" "exit $rc; see $LOGDIR/$stage.err"
+        return 1
+    fi
+}
+
+LOGDIR="$(mktemp -d -t typikon-check.XXXXXX)"
+trap 'echo "logs: $LOGDIR" >&2' EXIT
+
+cd "$ROOT"
+
+FAIL=0
+
+# Stage 1 — frontmatter schemas.
+run_stage "typikon-validate" "$TYPIKON_ROOT/bin/typikon-validate" "$ROOT" || FAIL=1
+
+# Stage 2 — zola check (internal links + assets).
+if command -v zola >/dev/null 2>&1; then
+    run_stage "zola-check" zola check || FAIL=1
+else
+    emit "zola-check" "skip" 0 "zola binary not found on PATH"
+fi
+
+# Stage 3 — zola build (clean output to public/).
+if command -v zola >/dev/null 2>&1; then
+    run_stage "zola-build" zola build || FAIL=1
+else
+    emit "zola-build" "skip" 0 "zola binary not found on PATH"
+fi
+
+# Stage 4-7 — Phase 5 fills these in. Emit `skip` so the JSONL stream
+# documents what is *expected* to exist; agents reading the output can
+# distinguish "not yet implemented" from "passed".
+emit "csp-enforce"      "skip" 0 "Phase 5"
+emit "lychee"           "skip" 0 "Phase 5"
+emit "pa11y"            "skip" 0 "Phase 5"
+emit "playwright-smoke" "skip" 0 "Phase 5"
+
+exit "$FAIL"
