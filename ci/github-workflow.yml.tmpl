@@ -74,7 +74,7 @@ jobs:
         run: themes/typikon/ci/csp-enforce.sh public/
 
       - name: lychee (external links)
-        run: lychee --config themes/typikon/ci/lychee.toml public/
+        run: lychee --config themes/typikon/ci/lychee.toml --base public/ public/
 
       - name: Serve public/ for browser-based gates
         run: |

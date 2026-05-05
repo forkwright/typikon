@@ -42,7 +42,7 @@
 {% block content %}
 <div class="home">
   {%- if section.extra.home_logo %}
-  <img src="{{ get_url(path=section.extra.home_logo, trailing_slash=false) }}" alt="{{ config.extra.brand_name | default(value=config.title) }} logo" class="home-logo">
+  <img src="/{{ section.extra.home_logo }}" alt="{{ config.extra.brand_name | default(value=config.title) }} logo" class="home-logo">
   {%- endif %}
 
   {%- if section.extra.home_tagline %}
@@ -72,6 +72,6 @@
 
 {% block scripts %}
 {%- if section.extra.triad %}
-<script src="{{ get_url(path='js/triad.js', trailing_slash=false) }}" defer></script>
+<script src="/js/triad.js" defer></script>
 {%- endif %}
 {% endblock scripts %}
