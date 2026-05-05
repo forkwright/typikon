@@ -37,6 +37,10 @@ exclude = [
   # Already covered by `accept = 405`, but explicit skip avoids the
   # round-trip entirely on every CI run.
   "^https://buy\\.stripe\\.com/",
+  # Instagram permanently rate-limits machine HEAD/GET on profile URLs
+  # (returns 429 regardless of cadence). The links work for visitors;
+  # this is link-checker reality, not link rot.
+  "^https?://(www\\.)?instagram\\.com/",
 ]
 
 # Method per host. lychee defaults to HEAD, falls back to GET on 405.
