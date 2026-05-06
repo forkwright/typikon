@@ -37,8 +37,37 @@
         },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
-        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$" },
-        "og_type": { "type": "string", "enum": ["website", "article", "profile"] }
+        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$" },
+        "og_type": { "type": "string", "enum": ["website", "article", "profile"] },
+        "skip_sitemap": { "type": "boolean", "description": "Exclude from sitemap.xml." },
+        "author": { "type": "string", "description": "Per-product author override." },
+        "images": {
+          "type": "array",
+          "description": "Product photography. First image becomes the hero (eager-loaded); the rest lazy-load. Files live under static/<src>; Zola's resize_image() generates 400/800/1200px WebP variants automatically. The og_image field is independent — typically points at the same hero shot or a 1200x630 social-card variant.",
+          "items": {
+            "type": "object",
+            "required": ["src", "alt"],
+            "additionalProperties": false,
+            "properties": {
+              "src": {
+                "type": "string",
+                "pattern": "^[a-z0-9/_-]+\\.(jpg|jpeg|png|webp|tiff|heic)$",
+                "description": "Path under static/ (e.g. 'img/products/belt/01.jpg'). Camera-native formats (heic, tiff) accepted as input; resize_image converts to WebP."
+              },
+              "alt": {
+                "type": "string",
+                "minLength": 5,
+                "maxLength": 200,
+                "description": "Accessible description. Describe what's in the photo for visitors who can't see it."
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "Optional figcaption rendered under the image."
+              }
+            }
+          }
+        }
       }
     }
   }

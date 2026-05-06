@@ -31,5 +31,9 @@
 {% endblock ld_json %}
 
 {% block content %}
+{# Product gallery renders before page content when extra.images is set —
+   the operator drops the placeholder <div class="product-images"> from
+   markdown when photos arrive and the gallery takes its visual slot. #}
+{%- include "partials/product-gallery.html" -%}
 {{ page.content | safe }}
 {% endblock content %}

@@ -1,0 +1,41 @@
+{# Responsive product gallery. Renders when page.extra.images is set on a
+   product page (or any page that wants a gallery).
+
+   Inputs (per item in page.extra.images):
+     src      — path under static/, e.g. "img/products/belt/01.jpg"
+     alt      — accessible description
+     caption  — optional figcaption text
+
+   Pipeline (Zola built-in resize_image):
+     - Hero variant: 1200px wide, WebP, fit op (preserves aspect ratio)
+     - Medium variant: 800px wide
+     - Small variant: 400px wide
+   Browsers pick the smallest variant via <source media>; mobile saves bytes.
+
+   First image is the hero (eager-loaded). Subsequent images are lazy.
+
+   Schema: schemas/product.schema.json#extra.images
+#}
+{%- if page.extra.images and page.extra.images | length > 0 %}
+<div class="product-gallery">
+  {%- for image in page.extra.images %}
+  {%- set hero   = resize_image(path=image.src, width=1200, op="fit", format="webp") -%}
+  {%- set medium = resize_image(path=image.src, width=800,  op="fit", format="webp") -%}
+  {%- set small  = resize_image(path=image.src, width=400,  op="fit", format="webp") -%}
+  <figure class="product-photo{% if loop.first %} product-photo-hero{% endif %}">
+    <picture>
+      <source media="(min-width: 800px)" srcset="{{ hero.url | safe }}" type="image/webp">
+      <source media="(min-width: 400px)" srcset="{{ medium.url | safe }}" type="image/webp">
+      <img src="{{ small.url | safe }}"
+           alt="{{ image.alt }}"
+           width="{{ hero.width }}"
+           height="{{ hero.height }}"
+           {% if not loop.first %}loading="lazy" decoding="async"{% endif %}>
+    </picture>
+    {%- if image.caption %}
+    <figcaption>{{ image.caption }}</figcaption>
+    {%- endif %}
+  </figure>
+  {%- endfor %}
+</div>
+{%- endif %}

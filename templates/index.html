@@ -36,6 +36,19 @@
 
 {% block body_class %}{% if section.extra.body_class %} class="{{ section.extra.body_class }}"{% endif %}{% endblock body_class %}
 
+{% block head_extra %}
+{%- if section.extra.home_logo %}
+  {# Preload the home logo so it can race with the rest of the head fetches.
+     Stage 3c — only matters on the home route, but this template is only
+     used for the home so the conditional is the visit-class itself. #}
+  {%- if section.extra.home_logo is ending_with(".svg") %}
+  <link rel="preload" href="/{{ section.extra.home_logo | safe }}" as="image" type="image/svg+xml">
+  {%- else %}
+  <link rel="preload" href="/{{ section.extra.home_logo | safe }}" as="image">
+  {%- endif %}
+{%- endif %}
+{% endblock head_extra %}
+
 {% block nav %}{# home page hides top nav via .home-page CSS rule #}{% endblock nav %}
 {% block footer %}{# same for footer #}{% endblock footer %}
 

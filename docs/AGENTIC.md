@@ -98,6 +98,25 @@ The PR description must list every consumer affected and link the migration runs
 
 `kanon forge set-mirror` configures the mirror push. Do not push directly to GitHub — the mirror handles it.
 
+### 9. Photography goes in `page.extra.images`
+
+Drop source files in the consumer's `static/img/<section>/<slug>/<n>.{jpg,jpeg,png,webp,tiff,heic}` and reference them in frontmatter:
+
+```toml
+[[extra.images]]
+src = "img/products/belt/01.jpg"
+alt = "Brown harness leather belt laid flat with brass buckle"
+
+[[extra.images]]
+src = "img/products/belt/02.jpg"
+alt = "Close-up of saddle stitch on belt edge"
+caption = "Two needles work the same thread from opposite sides."
+```
+
+The product-gallery partial (auto-included by page.html) renders a responsive `<picture>` per image — Zola's `resize_image()` generates 400 / 800 / 1200 px WebP variants automatically. First image is the hero (eager-loaded); the rest lazy-load.
+
+When real photos arrive, drop the placeholder `<div class="product-images">…image-placeholder-list…</div>` block from the markdown body — the gallery takes its visual slot.
+
 ## The agent loop
 
 For a routine content edit:

@@ -545,6 +545,40 @@ a:hover {
   margin: var(--space-3xs) 0;
 }
 
+/* === PRODUCT GALLERY === */
+/* Renders when page.extra.images is set on a product (or any) page.
+   Hero image is full-width; subsequent images sit below in a column.
+   Mobile: every image is full-width. */
+.product-gallery {
+  margin: var(--space-l) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.product-photo {
+  margin: 0;
+}
+
+.product-photo picture,
+.product-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.product-photo img {
+  border: 1px solid var(--rule);
+}
+
+.product-photo figcaption {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+  margin-top: var(--space-xs);
+}
+
 /* Tables */
 table {
   width: 100%;
