@@ -108,5 +108,18 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # Ensure CF Pages production-branch matches the ship branch.
+          # Idempotent: if it's already correct, the API call is a no-op.
+          # Required so wrangler's deploy below registers as production
+          # rather than as a per-branch preview deployment.
+          BRANCH="${GITHUB_REF##*/}"
+          curl -fsS -X PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/{{ PROJECT_NAME }}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "{\"production_branch\": \"${BRANCH}\"}" \
+            > /tmp/cf-edit.json
+          echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
+
           npm install -g wrangler
-          wrangler pages deploy public --project-name={{ PROJECT_NAME }}
+          wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"
