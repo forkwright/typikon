@@ -6,29 +6,18 @@
 # can't ship without proving they don't break a real consumer shape.
 
 [pipeline]
-stages = [
-  "fixtures-build",
-  "fixtures-validate",
-  "fixtures-csp",
-]
+stages = ["fixtures-gate"]
 
-# Build both example fixtures with Zola. Catches template syntax errors,
-# missing partials, broken include paths, resize_image misuse.
-[stages.fixtures-build]
-cmd = "bash -c 'cd examples/sample-blog && zola build && cd ../sample-shop && zola build'"
-timeout_secs = 120
-
-# Validate every fixture content file against its schema. Catches
-# additionalProperties violations, missing required fields, regex misses.
-[stages.fixtures-validate]
-cmd = "bash -c 'bin/typikon-validate examples/sample-blog && bin/typikon-validate examples/sample-shop'"
-timeout_secs = 60
-
-# Enforce strict CSP — no inline scripts/styles/event handlers in the
-# rendered output of either fixture.
-[stages.fixtures-csp]
-cmd = "bash -c 'ci/csp-enforce.sh examples/sample-blog/public && ci/csp-enforce.sh examples/sample-shop/public'"
-timeout_secs = 30
+# Single combined gate against both example fixtures end-to-end. Builds
+# each fixture with Zola, validates frontmatter against schemas, enforces
+# strict CSP on the rendered HTML. Substrate changes can't ship without
+# proving they don't break a real consumer shape.
+#
+# Combined into one stage so logs are colocated when something fails;
+# kanon CI doesn't currently expose per-stage stdout for shell pipelines.
+[stages.fixtures-gate]
+cmd = "bash -c 'set -ex; cd examples/sample-blog && zola build && cd ../sample-shop && zola build && cd ../.. && bin/typikon-validate examples/sample-blog && bin/typikon-validate examples/sample-shop && ci/csp-enforce.sh examples/sample-blog/public && ci/csp-enforce.sh examples/sample-shop/public'"
+timeout_secs = 180
 
 # Independent verifier replays the main pipeline's claims in a fresh
 # worktree. Typikon's stages already exercise from a clean checkout
