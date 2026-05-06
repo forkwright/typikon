@@ -70,13 +70,18 @@ jobs:
       - name: zola build
         run: zola build
 
-      - name: Copy _headers + _redirects into public/
+      - name: Copy _headers + _redirects + 404 into public/
         # Cloudflare Pages reads _headers and _redirects from the deploy
         # root. wrangler ships public/, so the files at repo root never
         # get applied. Copy them in (idempotent — overwrites if present).
+        # CF Pages also serves public/404.html for any 404, but Zola
+        # generates content/404.md as public/404/index.html — copy it to
+        # the expected name so the consumer's branded 404 page wins over
+        # CF's generic one.
         run: |
           [ -f _headers ] && cp _headers public/_headers
           [ -f _redirects ] && cp _redirects public/_redirects
+          [ -f public/404/index.html ] && cp public/404/index.html public/404.html
           true
 
       - name: csp-enforce (no inline script/style/handlers)

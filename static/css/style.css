@@ -271,6 +271,32 @@ strong {
   font-weight: 600;
 }
 
+/* Focus ring for every keyboard-reachable element. Sized 2px so it sits
+   clearly outside the rule colour without overpowering the design family. */
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* Skip-link becomes visible when keyboard-focused (otherwise sr-only). */
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: fixed;
+  top: var(--space-s);
+  left: var(--space-s);
+  width: auto;
+  height: auto;
+  padding: var(--space-xs) var(--space-s);
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--bg);
+  border: 1px solid var(--text);
+  z-index: 1000;
+}
+
 a {
   color: var(--text);
   text-decoration: underline;
