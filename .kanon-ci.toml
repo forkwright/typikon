@@ -1,28 +1,9 @@
-# Typikon CI pipeline.
-#
-# Typikon is a Zola theme + agentic substrate, not a Rust workspace.
-# The pipeline runs the same gates a consumer site runs locally —
-# but against typikon's own example fixtures, so substrate changes
-# can't ship without proving they don't break a real consumer shape.
-
 [pipeline]
 stages = ["fixtures-gate"]
 
-# Single combined gate against both example fixtures end-to-end. Builds
-# each fixture with Zola, validates frontmatter against schemas, enforces
-# strict CSP on the rendered HTML. Substrate changes can't ship without
-# proving they don't break a real consumer shape.
-#
-# Combined into one stage so logs are colocated when something fails;
-# kanon CI doesn't currently expose per-stage stdout for shell pipelines.
 [stages.fixtures-gate]
-cmd = "bash -c 'set -ex; cd examples/sample-blog && zola build && cd ../sample-shop && zola build && cd ../.. && bin/typikon-validate examples/sample-blog && bin/typikon-validate examples/sample-shop && ci/csp-enforce.sh examples/sample-blog/public && ci/csp-enforce.sh examples/sample-shop/public'"
+cmd = "ci/run-fixtures.sh"
 timeout_secs = 180
 
-# Independent verifier replays the main pipeline's claims in a fresh
-# worktree. Typikon's stages already exercise from a clean checkout
-# (zola build is hermetic; the validator + CSP check read deterministic
-# rendered output). The verifier's default build probe assumes a Cargo
-# workspace — disable.
 [verifier]
 enabled = false

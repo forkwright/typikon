@@ -100,7 +100,21 @@ jobs:
         run: themes/typikon/ci/csp-enforce.sh public/
 
       - name: lychee (external links)
-        run: lychee --config themes/typikon/ci/lychee.toml --root-dir "$GITHUB_WORKSPACE/public" public/
+        # Self-host absolute URLs (the site's own base_url) get excluded
+        # at link-check time, otherwise lychee checks the LIVE site for
+        # pages this very build is trying to deploy — a chicken-and-egg
+        # that bricks every PR that adds a new page. zola check covers
+        # internal-link integrity at source-tree level, so we don't lose
+        # coverage by skipping them here.
+        run: |
+          BASE_URL=$(grep -E '^base_url\s*=' config.toml | head -1 | sed -E 's/^base_url\s*=\s*"([^"]+)".*/\1/' | sed 's:/$::')
+          BASE_HOST=$(printf '%s' "$BASE_URL" | sed -E 's|^https?://||' | sed -E 's|/.*$||')
+          ESCAPED_HOST=$(printf '%s' "$BASE_HOST" | sed 's/\./\\./g')
+          echo "Excluding self-host links: ^https?://${ESCAPED_HOST}/"
+          lychee --config themes/typikon/ci/lychee.toml \
+            --root-dir "$GITHUB_WORKSPACE/public" \
+            --exclude "^https?://${ESCAPED_HOST}/" \
+            public/
 
       - name: Serve public/ for browser-based gates
         run: |
