@@ -6,6 +6,16 @@
 #}
 {% extends "page.html" %}
 
+{% block ld_json %}
+  {{ super() }}
+  {# HowTo JSON-LD when a decision_tree is present. Opens up the
+     how-to rich snippet in Google search; the data is already the
+     right shape (ordered steps + product type). #}
+  {%- if page.extra.decision_tree and page.extra.decision_tree | length > 0 -%}
+  {%- include "partials/ld-howto.html" -%}
+  {%- endif -%}
+{% endblock ld_json %}
+
 {% block content %}
 <article class="sizing-guide">
   <header class="page-header">

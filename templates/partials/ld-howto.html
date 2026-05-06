@@ -1,0 +1,33 @@
+{# Schema.org/HowTo JSON-LD. Override the ld_json block from
+   sizing-guide.html when page.extra.decision_tree is present.
+
+   A sizing guide with a decision_tree is structurally a how-to —
+   ordered steps that lead the visitor from "what do I have / measure"
+   to "what size do I order." HowTo opens up the how-to rich snippet
+   surface in Google search.
+
+   Inputs:
+     page.extra.product_type  — what the guide sizes (becomes part of name)
+     page.extra.decision_tree — array of strings, one step per item
+
+   Schema reference: https://schema.org/HowTo
+#}
+{%- set howto_name = "How to choose your " ~ page.extra.product_type ~ " size" -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": {{ howto_name | json_encode | safe }},
+  "description": {{ page.description | json_encode | safe }},
+  "totalTime": "PT2M",
+  "step": [
+    {%- for line in page.extra.decision_tree -%}
+    {
+      "@type": "HowToStep",
+      "position": {{ loop.index }},
+      "text": {{ line | json_encode | safe }}
+    }{%- if not loop.last -%},{%- endif -%}
+    {%- endfor %}
+  ]
+}
+</script>
