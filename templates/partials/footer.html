@@ -7,7 +7,7 @@
   <p class="footer-links">
     {%- for link in config.extra.footer_links -%}
       {%- if not loop.first %} · {% endif -%}
-      <a href="{{ link.url }}"{% if link.rel %} rel="{{ link.rel }}"{% endif %}>{{ link.label }}</a>
+      <a href="{{ link.url | safe }}"{% if link.rel %} rel="{{ link.rel }}"{% endif %}>{{ link.label }}</a>
     {%- endfor %}
   </p>
   {%- endif %}

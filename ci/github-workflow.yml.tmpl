@@ -70,6 +70,15 @@ jobs:
       - name: zola build
         run: zola build
 
+      - name: Copy _headers + _redirects into public/
+        # Cloudflare Pages reads _headers and _redirects from the deploy
+        # root. wrangler ships public/, so the files at repo root never
+        # get applied. Copy them in (idempotent — overwrites if present).
+        run: |
+          [ -f _headers ] && cp _headers public/_headers
+          [ -f _redirects ] && cp _redirects public/_redirects
+          true
+
       - name: csp-enforce (no inline script/style/handlers)
         run: themes/typikon/ci/csp-enforce.sh public/
 

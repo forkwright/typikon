@@ -38,7 +38,7 @@
 <ul class="journal-list">
 {%- for entry in section.pages %}
   <li>
-    <a href="{{ entry.permalink }}">
+    <a href="{{ entry.permalink | safe }}">
       <span class="entry-name">{{ entry.title }}</span>
       {%- if entry.date %}
       <span class="entry-date-inline">{{ entry.date | date(format="%Y-%m-%d") }}</span>

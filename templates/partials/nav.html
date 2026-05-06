@@ -10,7 +10,7 @@
   </a>
   <div class="nav-links">
     {%- for item in config.extra.nav_items | default(value=[]) %}
-    <a href="{{ item.url }}"{% if item.greek %} data-greek="{{ item.greek }}"{% endif %}><span>{{ item.label }}</span></a>
+    <a href="{{ item.url | safe }}"{% if item.greek %} data-greek="{{ item.greek }}"{% endif %}><span>{{ item.label }}</span></a>
     {%- endfor %}
   </div>
 </nav>

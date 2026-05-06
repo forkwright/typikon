@@ -50,7 +50,7 @@
   {%- endif %}
 
   {%- if section.extra.triad %}
-  <a href="{{ section.extra.triad.target | default(value='/philosophy/') }}" class="triad-mark cycling" id="triad">
+  <a href="{{ section.extra.triad.target | default(value='/philosophy/') | safe }}" class="triad-mark cycling" id="triad">
     {%- for greek in section.extra.triad.greek %}
     <span class="triad-word triad-{{ loop.index }}"><span class="greek">{{ greek }}</span><span class="english">{{ section.extra.triad.english[loop.index0] }}</span></span>
     {%- if not loop.last %}<span class="triad-dot">·</span>{% endif %}
@@ -61,7 +61,7 @@
   {%- if section.extra.home_nav %}
   <nav class="home-nav">
     {%- for item in section.extra.home_nav %}
-    <a href="{{ item.url }}"{% if item.greek %} data-greek="{{ item.greek }}"{% endif %}><span>{{ item.label }}</span></a>
+    <a href="{{ item.url | safe }}"{% if item.greek %} data-greek="{{ item.greek }}"{% endif %}><span>{{ item.label }}</span></a>
     {%- endfor %}
   </nav>
   {%- endif %}
