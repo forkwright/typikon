@@ -511,7 +511,7 @@ a:hover {
   font-family: var(--font-mono);
   font-size: var(--step--2);
   color: var(--text-light);
-  margin: var(--space-2xs) 0 0 0;
+  margin: var(--space-xs) 0 0 0;
   letter-spacing: 0.02em;
 }
 
@@ -521,7 +521,8 @@ a:hover {
   margin-bottom: var(--space-l);
 }
 
-.product-images {
+.product-images,
+.workshop-images {
   margin: var(--space-l) 0;
   padding: var(--space-xl) var(--space-m);
   background: var(--bg-accent);
@@ -654,9 +655,16 @@ th {
     rgba(44, 27, 58, 0.08) 100%);
 }
 
+.dye-entry-natural {
+  background: linear-gradient(145deg,
+    rgba(139, 90, 43, 0.06) 0%,
+    rgba(139, 90, 43, 0.12) 50%,
+    rgba(139, 90, 43, 0.08) 100%);
+}
+
 .dye-entry-aporia {
-  background: linear-gradient(145deg, 
-    rgba(92, 142, 99, 0.06) 0%, 
+  background: linear-gradient(145deg,
+    rgba(92, 142, 99, 0.06) 0%,
     rgba(92, 142, 99, 0.12) 50%,
     rgba(92, 142, 99, 0.08) 100%);
 }
