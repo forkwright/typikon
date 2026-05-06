@@ -12,7 +12,12 @@
     "template": {
       "type": "string",
       "pattern": "^[a-z0-9_-]+\\.html$",
-      "description": "Custom Tera template. Default: section.html. Common: journal-section.html, index.html (for content/_index.md)."
+      "description": "Custom Tera template for the section index itself. Default: section.html. Common: journal-section.html, index.html (for content/_index.md)."
+    },
+    "page_template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Default Tera template for CHILD pages of this section. Zola applies it unless a child overrides `template` in its own frontmatter. Used to cascade journal-entry.html across all journal entries from journal/_index.md."
     },
     "sort_by": {
       "type": "string",
@@ -85,6 +90,10 @@
               "greek": { "type": "string" }
             }
           }
+        },
+        "skip_sitemap": {
+          "type": "boolean",
+          "description": "Exclude this section from sitemap.xml. Rare; usually used for hidden internal sections."
         }
       }
     }

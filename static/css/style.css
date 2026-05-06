@@ -1236,3 +1236,78 @@ main hr {
     scroll-behavior: auto !important;
   }
 }
+
+/* === JOURNAL ENTRY NAV === */
+/* Prev/next chronological navigation rendered at the bottom of each
+   journal entry by templates/journal-entry.html. */
+.entry-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-m);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-m);
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+
+.entry-nav a {
+  color: var(--text-light);
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  transition: color 0.2s ease;
+}
+
+.entry-nav a:hover {
+  color: var(--aima);
+}
+
+.entry-nav a[rel="next"] {
+  margin-left: auto;
+  text-align: right;
+}
+
+/* === PRINT === */
+/* Honest print: hide chrome, drop background colors, force underlines. */
+@media print {
+  nav,
+  footer,
+  .sr-only,
+  .triad-mark,
+  .buttondown-form,
+  .entry-nav,
+  .product-images,
+  .workshop-images {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+    padding: 0;
+    max-width: none;
+  }
+
+  main {
+    max-width: none;
+  }
+
+  a {
+    color: black;
+    text-decoration: underline;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  .product-header,
+  .entry-header {
+    page-break-after: avoid;
+  }
+
+  table,
+  .specs {
+    page-break-inside: avoid;
+  }
+}

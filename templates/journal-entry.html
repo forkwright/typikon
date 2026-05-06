@@ -1,0 +1,50 @@
+{# Journal-entry template. Wraps the entry in <article>, upgrades the date
+   to <time>, layers Article + BreadcrumbList JSON-LD, renders prev/next
+   chronological siblings at the bottom.
+
+   Consumer setup:
+     content/journal/<slug>.md  -- frontmatter has 'template = "journal-entry.html"' OR
+     content/journal/_index.md  -- transparent + page_template default makes children inherit
+
+   The template assumes journal entries have:
+     page.title, page.description, page.date (ISO), page.extra.components,
+     page.extra.words. See schemas/journal-entry.schema.json.
+#}
+{% extends "page.html" %}
+
+{% block og_type %}article{% endblock og_type %}
+
+{% block ld_json %}
+  {%- include "partials/ld-organization.html" -%}
+  {%- include "partials/ld-article.html" -%}
+  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+{% endblock ld_json %}
+
+{% block content %}
+<article class="journal-entry-page">
+  <header class="entry-header">
+    <h1>{{ page.title }}</h1>
+    <p class="entry-date"><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></p>
+    {%- if page.extra.components %}
+    <p class="entry-components"><a href="/lexicon/">{{ page.extra.components }}</a></p>
+    {%- endif %}
+  </header>
+
+  {{ page.content | safe }}
+
+  {%- if page.extra.words %}
+  <p class="specs">{{ page.extra.words }}</p>
+  {%- endif %}
+
+  {%- if page.lower or page.higher %}
+  <nav class="entry-nav" aria-label="Journal navigation">
+    {%- if page.lower %}
+    <a href="{{ page.lower.permalink | safe }}" rel="prev">← {{ page.lower.title }}</a>
+    {%- endif %}
+    {%- if page.higher %}
+    <a href="{{ page.higher.permalink | safe }}" rel="next">{{ page.higher.title }} →</a>
+    {%- endif %}
+  </nav>
+  {%- endif %}
+</article>
+{% endblock content %}

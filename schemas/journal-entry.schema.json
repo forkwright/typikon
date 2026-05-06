@@ -38,7 +38,9 @@
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
         "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$" },
-        "og_type": { "type": "string", "enum": ["website", "article", "profile"] }
+        "og_type": { "type": "string", "enum": ["website", "article", "profile"] },
+        "author": { "type": "string", "description": "Per-entry author override; falls back to config.extra.author.name." },
+        "skip_sitemap": { "type": "boolean", "description": "Exclude this entry from sitemap.xml." }
       }
     }
   }

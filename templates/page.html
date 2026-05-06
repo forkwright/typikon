@@ -20,6 +20,16 @@
 
 {% block body_class %}{% if page.extra.body_class %} class="{{ page.extra.body_class }}"{% endif %}{% endblock body_class %}
 
+{% block ld_json %}
+  {{ super() }}
+  {# Product JSON-LD when frontmatter is product-shaped (per schema). #}
+  {%- if page.extra.price and page.extra.stripe_url -%}
+  {%- include "partials/ld-product.html" -%}
+  {%- endif -%}
+  {# BreadcrumbList for non-home pages. #}
+  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+{% endblock ld_json %}
+
 {% block content %}
 {{ page.content | safe }}
 {% endblock content %}

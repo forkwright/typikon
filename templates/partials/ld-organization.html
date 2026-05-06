@@ -1,0 +1,42 @@
+{# Schema.org/Organization JSON-LD. Rendered on every page (via base.html
+   default ld_json block) so search engines learn the brand on any landing.
+
+   Inputs from consumer config.toml:
+     config.title             — brand name
+     config.description       — brand tagline
+     config.base_url          — canonical site root
+     config.extra.logo_path   — relative to /; resolves to absolute via base_url
+     config.extra.author.name — primary maker / founder
+     config.extra.brand_greek — optional motto (used in alternateName)
+     config.extra.founding_date — optional ISO 8601 year (e.g. "2024")
+     config.extra.footer_links — list of {url, rel}; entries with rel="me" emit as sameAs
+#}
+{%- set logo_url = config.base_url ~ "/" ~ config.extra.logo_path -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": {{ config.title | json_encode | safe }},
+  "description": {{ config.description | json_encode | safe }},
+  "url": {{ config.base_url | json_encode | safe }},
+  "logo": {{ logo_url | json_encode | safe }}
+  {%- if config.extra.brand_greek -%},
+  "alternateName": {{ config.extra.brand_greek | json_encode | safe }}
+  {%- endif -%}
+  {%- if config.extra.founding_date -%},
+  "foundingDate": {{ config.extra.founding_date | json_encode | safe }}
+  {%- endif -%}
+  {%- if config.extra.footer_links -%}
+    {%- set sameas = [] -%}
+    {%- for link in config.extra.footer_links -%}
+      {%- set rel_val = link.rel | default(value="") -%}
+      {%- if rel_val == "me" -%}
+        {%- set_global sameas = sameas | concat(with=link.url) -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if sameas | length > 0 -%},
+  "sameAs": {{ sameas | json_encode | safe }}
+    {%- endif -%}
+  {%- endif %}
+}
+</script>

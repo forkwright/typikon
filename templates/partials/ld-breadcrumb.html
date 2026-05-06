@@ -1,0 +1,46 @@
+{# Schema.org/BreadcrumbList JSON-LD as a Tera macro. Both page and section
+   contexts call it with their own title/permalink/ancestors.
+
+   Usage from page.html / section.html / journal-*.html:
+     {% import "partials/ld-breadcrumb.html" as crumb %}
+     {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+
+   Skips emitting any JSON-LD when ancestors is empty (e.g. home page).
+#}
+{% macro breadcrumb(title, permalink, ancestors) %}
+{%- if ancestors and ancestors | length > 0 %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": {{ config.title | json_encode | safe }},
+      "item": {{ config.base_url | json_encode | safe }}
+    }
+    {%- set position = 2 -%}
+    {%- for ancestor_path in ancestors -%}
+      {%- set ancestor = get_section(path=ancestor_path) -%}
+      {%- if ancestor.title and ancestor.permalink and ancestor.permalink != config.base_url ~ "/" -%},
+    {
+      "@type": "ListItem",
+      "position": {{ position }},
+      "name": {{ ancestor.title | json_encode | safe }},
+      "item": {{ ancestor.permalink | json_encode | safe }}
+    }
+        {%- set_global position = position + 1 -%}
+      {%- endif -%}
+    {%- endfor -%},
+    {
+      "@type": "ListItem",
+      "position": {{ position }},
+      "name": {{ title | json_encode | safe }},
+      "item": {{ permalink | json_encode | safe }}
+    }
+  ]
+}
+</script>
+{%- endif %}
+{% endmacro breadcrumb %}

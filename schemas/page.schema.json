@@ -70,6 +70,24 @@
           "type": "string",
           "enum": ["website", "article", "profile"],
           "description": "Open Graph type. Defaults to 'website'."
+        },
+        "skip_sitemap": {
+          "type": "boolean",
+          "description": "Exclude this page from the generated sitemap.xml. Useful for utility pages (404, thanks) that should not be indexed."
+        },
+        "author": {
+          "type": "string",
+          "description": "Override the brand author for this page. Falls back to config.extra.author.name."
+        },
+        "price": {
+          "type": "string",
+          "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
+          "description": "Used in product context. Triggers ld-product JSON-LD when paired with stripe_url."
+        },
+        "stripe_url": {
+          "type": "string",
+          "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
+          "description": "Used in product context. Triggers ld-product JSON-LD when paired with price."
         }
       }
     }

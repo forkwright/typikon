@@ -1,0 +1,19 @@
+{# Sitemap override. Filters out pages with extra.skip_sitemap = true so
+   /404/ and /thanks/ (or any other transient utility page) don't get
+   indexed. Zola's built-in sitemap doesn't support per-page exclusion.
+#}
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  {%- for sitemap_entry in entries %}
+    {%- if not sitemap_entry.extra or not sitemap_entry.extra.skip_sitemap %}
+  <url>
+    <loc>{{ sitemap_entry.permalink | escape_xml | safe }}</loc>
+        {%- if sitemap_entry.updated %}
+    <lastmod>{{ sitemap_entry.updated }}</lastmod>
+        {%- elif sitemap_entry.date %}
+    <lastmod>{{ sitemap_entry.date }}</lastmod>
+        {%- endif %}
+  </url>
+    {%- endif %}
+  {%- endfor %}
+</urlset>

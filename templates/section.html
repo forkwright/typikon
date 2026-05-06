@@ -16,6 +16,11 @@
 
 {% block body_class %}{% if section.extra.body_class %} class="{{ section.extra.body_class }}"{% endif %}{% endblock body_class %}
 
+{% block ld_json %}
+  {{ super() }}
+  {{ crumb::breadcrumb(title=section.title, permalink=section.permalink, ancestors=section.ancestors) }}
+{% endblock ld_json %}
+
 {% block content %}
 {{ section.content | safe }}
 {% endblock content %}

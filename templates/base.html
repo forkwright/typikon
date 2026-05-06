@@ -6,6 +6,7 @@
      base.html does not access `page.*` or `section.*` directly so it works
      in every rendering context.
 #}
+{% import "partials/ld-breadcrumb.html" as crumb %}
 <!DOCTYPE html>
 <html lang="{{ lang | default(value="en") }}">
 <head>
@@ -48,6 +49,12 @@
   {%- endif %}
   <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/css/style.css">
+
+  {# Default JSON-LD: Organization on every page. Consumer page templates
+     override this block to layer on Product/Article/BreadcrumbList. #}
+  {% block ld_json %}
+  {%- include "partials/ld-organization.html" -%}
+  {% endblock ld_json %}
 
   {% block head_extra %}{% endblock head_extra %}
 </head>

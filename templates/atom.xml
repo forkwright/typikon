@@ -1,0 +1,46 @@
+{# Atom 1.0 feed override. Zola's default emits <author><name>Unknown</name>;
+   typikon reads the brand author from config.extra.author so feed
+   subscribers see a real attribution.
+
+   Inputs:
+     config.extra.author.name — fallback brand author for entries
+     config.extra.author.uri  — optional author URL
+     page.extra.author        — per-entry override (becomes Person)
+#}
+{%- set author_name = config.extra.author.name | default(value=config.title) -%}
+{%- set author_uri = config.extra.author.uri | default(value=config.base_url) -%}
+{%- if section %}{% set pages = section.pages %}{% else %}{% set pages = config.feed_pages | default(value=[]) %}{% endif -%}
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"{% if lang %} xml:lang="{{ lang }}"{% endif %}>
+    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section.title %} - {{ section.title }}{% endif %}</title>
+    {%- if config.description %}
+    <subtitle>{{ config.description }}</subtitle>
+    {%- endif %}
+    <link href="{{ feed_url | safe }}" rel="self" type="application/atom+xml"/>
+    <link href="{{ config.base_url | safe }}"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>{{ last_updated | date(format="%+") }}</updated>
+    <id>{{ feed_url | safe }}</id>
+    <author>
+        <name>{{ author_name }}</name>
+        <uri>{{ author_uri | safe }}</uri>
+    </author>
+    {%- for page in pages %}
+    <entry xml:lang="{{ page.lang | default(value=lang) }}">
+        <title>{{ page.title }}</title>
+        <published>{{ page.date | date(format="%+") }}</published>
+        <updated>{{ page.updated | default(value=page.date) | date(format="%+") }}</updated>
+        <author>
+            <name>{{ page.extra.author | default(value=author_name) }}</name>
+        </author>
+        <link rel="alternate" href="{{ page.permalink | safe }}" type="text/html"/>
+        <id>{{ page.permalink | safe }}</id>
+        {%- if page.summary %}
+        <summary type="html">{{ page.summary }}</summary>
+        {%- elif page.description %}
+        <summary type="html">{{ page.description }}</summary>
+        {%- endif %}
+        <content type="html">{{ page.content }}</content>
+    </entry>
+    {%- endfor %}
+</feed>
