@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""typikon-migrate-template — skeleton for schema migration scripts.
+
+Copy this file to bin/typikon-migrate-<from>-<to> when typikon ships a
+breaking schema change. The migration:
+
+    - reads every content file under <consumer-site-root>/content/
+    - applies the schema-shape transformation in `migrate(frontmatter)`
+    - writes back if the frontmatter changed
+    - is idempotent (re-running over migrated files is a no-op)
+
+Usage (consumer-side):
+
+    bin/typikon-migrate-<from>-<to> <consumer-site-root>
+
+Output:
+    JSONL on stderr, one line per file changed:
+        {"file": "content/products/belt.md", "before": {...}, "after": {...}}
+    Summary on stdout:
+        {"checked": 17, "changed": 3, "errors": 0}
+
+Exit codes:
+    0 — at least one file was checked, no errors
+    1 — at least one file errored (missing schema, malformed frontmatter)
+    2 — runtime error (bad arguments, unreadable site root)
+
+Conventions:
+    - migrations are forward-only; downgrade lives in a separate -down script
+    - each migration covers exactly one schema shift; chain them when needed
+    - the PR that ships the breaking schema also ships the migration script
+    - the PR description lists every consumer affected
+    - on merge, run the migration against each consumer in a separate PR
+"""
+
+from __future__ import annotations
+
+import datetime as _datetime
+import json
+import sys
+import tomllib
+from pathlib import Path
+
+
+def migrate(frontmatter: dict, file_path: str) -> dict:
+    """Transform old-shape frontmatter into new-shape frontmatter.
+
+    REPLACE THIS FUNCTION WHEN COPYING THE SKELETON. Examples:
+
+    1. Renaming a field:
+
+           if "old_name" in frontmatter.get("extra", {}):
+               extra = frontmatter["extra"]
+               extra["new_name"] = extra.pop("old_name")
+
+    2. Splitting a field:
+
+           ext = frontmatter.get("extra", {})
+           if "address" in ext:
+               full = ext.pop("address")
+               ext["street"], ext["city"] = full.split(",", 1)
+
+    3. Removing a deprecated field:
+
+           frontmatter.get("extra", {}).pop("deprecated_field", None)
+
+    Idempotence rule: running migrate() twice on the same input must
+    produce the same output as running it once. If your transformation
+    cannot be made idempotent at the data level, gate it on a sentinel
+    field (e.g. `extra.schema_version`) that the migration sets after
+    applying.
+    """
+    return frontmatter
+
+
+# === Below this line: shared infrastructure. Don't edit when copying. ===
+
+
+def parse_frontmatter(text: str, file_label: str) -> tuple[dict, int, int]:
+    """Return (parsed_dict, body_start_index, body_end_index_excl). Body
+    starts after the closing +++ line. The body bytes between [end:end] are
+    written back unchanged so prose is preserved verbatim."""
+    if not text.startswith("+++"):
+        raise ValueError(f"{file_label}: missing TOML frontmatter")
+    end = text.find("\n+++", 4)
+    if end == -1:
+        raise ValueError(f"{file_label}: unterminated TOML frontmatter")
+    block = text[4:end].strip()
+    parsed = tomllib.loads(block)
+    body_start = end + len("\n+++")
+    return parsed, body_start, len(text)
+
+
+def serialize_frontmatter(fm: dict) -> str:
+    """Re-serialize a parsed frontmatter dict back to TOML.
+
+    This is intentionally minimal — it covers the field shapes typikon
+    schemas actually produce. Replace with a richer TOML emitter (e.g.
+    `tomli_w`) if your migration needs to round-trip arbitrary TOML.
+    """
+    try:
+        import tomli_w  # type: ignore
+
+        return tomli_w.dumps(fm)
+    except ImportError:
+        # Fallback: emit a deterministic but minimal TOML form.
+        return _basic_toml_dump(fm)
+
+
+def _basic_toml_dump(fm: dict, indent: str = "") -> str:
+    lines: list[str] = []
+    scalars: list[tuple[str, object]] = []
+    tables: list[tuple[str, dict]] = []
+    arrays_of_tables: list[tuple[str, list]] = []
+
+    for key, value in fm.items():
+        if isinstance(value, dict):
+            tables.append((key, value))
+        elif isinstance(value, list) and value and all(isinstance(x, dict) for x in value):
+            arrays_of_tables.append((key, value))
+        else:
+            scalars.append((key, value))
+
+    for key, value in scalars:
+        lines.append(f"{key} = {_toml_value(value)}")
+
+    for key, value in tables:
+        lines.append("")
+        lines.append(f"[{key}]")
+        lines.append(_basic_toml_dump(value).rstrip())
+
+    for key, value_list in arrays_of_tables:
+        for item in value_list:
+            lines.append("")
+            lines.append(f"[[{key}]]")
+            lines.append(_basic_toml_dump(item).rstrip())
+
+    return "\n".join(lines) + "\n"
+
+
+def _toml_value(v: object) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    if isinstance(v, str):
+        if "\n" in v:
+            return f'"""\n{v}\n"""'
+        return json.dumps(v, ensure_ascii=False)
+    if isinstance(v, _datetime.date):
+        return v.isoformat()
+    if isinstance(v, list):
+        return "[" + ", ".join(_toml_value(x) for x in v) + "]"
+    raise ValueError(f"unsupported scalar type: {type(v).__name__}")
+
+
+def _coerce_dates(obj):
+    if isinstance(obj, _datetime.datetime):
+        return obj.isoformat()
+    if isinstance(obj, _datetime.date):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _coerce_dates(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_coerce_dates(v) for v in obj]
+    return obj
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        print("usage: typikon-migrate-<from>-<to> <consumer-site-root>", file=sys.stderr)
+        return 2
+
+    root = Path(argv[1]).resolve()
+    content_root = root / "content"
+    if not content_root.is_dir():
+        print(json.dumps({"error": f"no content/ dir under {root}"}), file=sys.stderr)
+        return 2
+
+    files = sorted(content_root.rglob("*.md"))
+    checked = 0
+    changed = 0
+    errors = 0
+
+    for path in files:
+        rel = path.relative_to(root)
+        file_label = str(rel)
+        checked += 1
+
+        try:
+            text = path.read_text(encoding="utf-8")
+            fm, body_start, body_end = parse_frontmatter(text, file_label)
+        except Exception as exc:
+            print(json.dumps({"file": file_label, "error": str(exc)}), file=sys.stderr)
+            errors += 1
+            continue
+
+        before = json.loads(json.dumps(_coerce_dates(fm)))  # deep-copy via JSON
+        after = migrate(fm, file_label)
+
+        if json.dumps(_coerce_dates(after), sort_keys=True) == json.dumps(before, sort_keys=True):
+            continue
+
+        new_block = serialize_frontmatter(after).rstrip()
+        new_text = f"+++\n{new_block}\n+++{text[body_start:]}"
+        path.write_text(new_text, encoding="utf-8")
+        print(
+            json.dumps(
+                {
+                    "file": file_label,
+                    "before": before,
+                    "after": _coerce_dates(after),
+                }
+            ),
+            file=sys.stderr,
+        )
+        changed += 1
+
+    print(json.dumps({"checked": checked, "changed": changed, "errors": errors}))
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -7,7 +7,7 @@
      caption  — optional figcaption text
 
    Pipeline (Zola built-in resize_image):
-     - Hero variant: 1200px wide, WebP, fit op (preserves aspect ratio)
+     - Hero variant: 1200px wide, WebP, fit_width op (preserves aspect ratio)
      - Medium variant: 800px wide
      - Small variant: 400px wide
    Browsers pick the smallest variant via <source media>; mobile saves bytes.
@@ -19,9 +19,9 @@
 {%- if page.extra.images and page.extra.images | length > 0 %}
 <div class="product-gallery">
   {%- for image in page.extra.images %}
-  {%- set hero   = resize_image(path=image.src, width=1200, op="fit", format="webp") -%}
-  {%- set medium = resize_image(path=image.src, width=800,  op="fit", format="webp") -%}
-  {%- set small  = resize_image(path=image.src, width=400,  op="fit", format="webp") -%}
+  {%- set hero   = resize_image(path=image.src, width=1200, op="fit_width", format="webp") -%}
+  {%- set medium = resize_image(path=image.src, width=800,  op="fit_width", format="webp") -%}
+  {%- set small  = resize_image(path=image.src, width=400,  op="fit_width", format="webp") -%}
   <figure class="product-photo{% if loop.first %} product-photo-hero{% endif %}">
     <picture>
       <source media="(min-width: 800px)" srcset="{{ hero.url | safe }}" type="image/webp">

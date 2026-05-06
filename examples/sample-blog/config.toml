@@ -1,0 +1,35 @@
+# Sample blog — exercises section + journal-entry + page schemas.
+title = "Sample Blog"
+description = "A typikon fixture demonstrating section + journal-entry + page schemas with a different brand identity than ardent."
+base_url = "https://sample-blog.example.com"
+default_language = "en"
+output_dir = "public"
+theme = "typikon"
+generate_feeds = true
+feed_filenames = ["atom.xml"]
+
+[markdown]
+smart_punctuation = true
+
+[extra]
+brand_name = "Sample Blog"
+brand_greek = "Λόγος"
+logo_path = "img/logo.svg"
+theme_color = "#FBF7EC"
+og_locale = "en_US"
+founding_date = "2026"
+
+font_preload = ["/fonts/cormorant-garamond-400.woff2", "/fonts/spectral-400.woff2"]
+
+nav_items = [
+  { url = "/journal/", label = "journal", greek = "ἡμερολόγιον" },
+  { url = "/about/",   label = "about",   greek = "περί" },
+]
+
+footer_links = [
+  { url = "/about/", label = "About" },
+]
+
+[extra.author]
+name = "Sample Author"
+uri = "https://sample-blog.example.com/about/"

@@ -4,17 +4,20 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 
 ## How the validator routes a file to a schema
 
-`typikon-validate` reads `<root>/content/**/*.md` and classifies by path:
+`typikon-validate` reads `<root>/content/**/*.md` and classifies in this order — first match wins:
 
-| Path under `content/`           | Schema             |
-|---------------------------------|--------------------|
-| `_index.md`                     | section            |
-| `<section>/_index.md`           | section            |
-| `journal/<slug>.md`             | journal-entry      |
-| `products/<slug>.md`            | product            |
-| anything else                   | page               |
+| Rule                                         | Schema             |
+|----------------------------------------------|--------------------|
+| frontmatter `template = "faq.html"`          | faq                |
+| frontmatter `template = "sizing-guide.html"` | sizing-guide       |
+| `_index.md` (root or section)                | section            |
+| `journal/<slug>.md`                          | journal-entry      |
+| `products/<slug>.md`                         | product            |
+| anything else                                | page               |
 
-Renaming sections (`journal/` → `notes/`) requires updating the validator's classifier. Out of scope for v1; file an issue when needed.
+Template-driven dispatch comes first so per-page overrides (FAQ on a non-FAQ section, sizing-guide for a non-product section) escape the path-based default. To add a new template-routed type, extend `TEMPLATE_SCHEMA_MAP` in `bin/typikon-validate`.
+
+Renaming path-routed sections (`journal/` → `notes/`) requires updating the classifier. Out of scope for v1; file an issue when needed.
 
 ## page (`schemas/page.schema.json`)
 
@@ -105,6 +108,7 @@ Pages under `content/products/`. Required for the purchase block to render.
 - price: matches `^\$?\d{1,5}(\.\d{2})?$` (e.g. `$150`, `85`, `12.50`)
 - stripe_url: matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`
 - shipping_note (optional): ≤200 chars
+- images (optional): array of `{src, alt, caption?}` — Zola's `resize_image` produces 400/800/1200px WebP variants automatically; the product-gallery partial renders responsive `<picture>` per item
 
 **Example:**
 
@@ -112,32 +116,120 @@ Pages under `content/products/`. Required for the purchase block to render.
 +++
 title = "Belt"
 description = "Single-layer Hermann Oak harness leather. Solid brass. Hand saddle-stitched. $150, shipping included."
-seoTitle = "Hermann Oak Leather Belt | Ardent Leatherworks"
 
 [extra]
 seo_title = "Hermann Oak Leather Belt | Ardent Leatherworks"
 price = "$150"
 stripe_url = "https://buy.stripe.com/cNi9AT1ZHfFDeNRdsh6Ri02"
+
+[[extra.images]]
+src = "img/products/belt/01.jpg"
+alt = "Brown harness leather belt laid flat with brass buckle"
+
+[[extra.images]]
+src = "img/products/belt/02.jpg"
+alt = "Close-up of saddle-stitch on belt edge"
+caption = "Two needles work the same thread from opposite sides."
 +++
 ```
+
+## faq (`schemas/faq.schema.json`)
+
+Any page with `template = "faq.html"`. Renders a definition-list FAQ with anchored `<dt>`s and emits FAQPage JSON-LD.
+
+**Required:** `title`, `extra.questions` (array of one or more entries).
+
+**Constraints (per question):**
+- q: 5–200 chars
+- a: 5–2000 chars; supports `\n\n` for paragraph breaks (template splits on it)
+- anchor (optional): `^[a-z0-9-]+$` — slugified from `q` if omitted
+- additionalProperties on each question: false (strict)
+
+**Example:**
+
+```toml
++++
+title = "Questions"
+description = "Frequently asked questions."
+template = "faq.html"
+
+[[extra.questions]]
+q = "What size belt do I need?"
+a = "Belt size is the actual measurement around your body, not pants size. Most wear two inches over pants."
+anchor = "sizing"
+
+[[extra.questions]]
+q = "Do you ship internationally?"
+a = "US only currently. Reach out for case-by-case international quotes."
++++
+```
+
+## sizing-guide (`schemas/sizing-guide.schema.json`)
+
+Any page with `template = "sizing-guide.html"`. Renders a measurement table, an optional inline-SVG diagram, and an optional decision tree.
+
+**Required:** `title`, `extra.product_type`, `extra.size_table` (one or more rows).
+
+**Constraints:**
+- product_type: 2–40 chars
+- measurement_unit (optional): `inches | centimeters | both` (default `inches`)
+- size_table rows: required `size`; optional `waist`, `length`, `width`, `note` — column rendering is conditional on the first row's keys
+- diagram (optional): path under static/ to an `.svg` file; loaded inline via `load_data`
+- decision_tree (optional): array of strings, rendered as ordered list
+
+**Example:**
+
+```toml
++++
+title = "Belt Sizing"
+description = "How to size an Ardent harness belt."
+template = "sizing-guide.html"
+
+[extra]
+product_type = "belt"
+measurement_unit = "inches"
+decision_tree = [
+  "Find a belt you wear and like the fit of. Measure from the buckle fold to the hole you use most.",
+  "If you carry concealed at the waist, add 1 inch.",
+]
+
+[[extra.size_table]]
+size = "32"
+waist = "32"
+note = "Sized to the middle hole; first hole is 30, last is 34."
+
+[[extra.size_table]]
+size = "34"
+waist = "34"
+note = "Sized to the middle hole; first hole is 32, last is 36."
++++
+```
+
+> **TOML order matters.** `decision_tree = [...]` must come *before* the first `[[extra.size_table]]` block. Once an array-of-tables starts, scalar assignments belong to the *last* table — so a trailing `decision_tree` would silently land inside the final size_table row.
 
 ## Adding a new content type
 
 1. Identify the type. If two existing types could absorb it via an optional field, use that instead.
 2. Write `schemas/<type>.schema.json`, extending the page shape where possible.
-3. Add a scaffold under `scaffolds/new-<type>.md.tmpl` (Phase 5+).
-4. Update `bin/typikon-validate` to classify by path.
+3. Add a template `templates/<type>.html` (extend `page.html` when the override is content-only; replace it when the head/body shape needs to change).
+4. Update `bin/typikon-validate`:
+   - if path-routed: extend the path classifier
+   - if template-routed: add an entry to `TEMPLATE_SCHEMA_MAP`
+   - in either case: add the slug to the `load_schemas()` tuple
 5. Update this document with a new section.
-6. Add a fixture in `examples/` exercising the type.
+6. Add coverage in `examples/sample-blog/` or `examples/sample-shop/` (or a new fixture if the type doesn't fit either).
 7. Run `bin/typikon-check examples/<fixture>` end-to-end.
 
 ## Schema migrations
 
 When a schema changes incompatibly:
 
-1. Ship a migration script in `bin/typikon-migrate-<from>-<to>` (Rust-or-bash, idempotent).
-2. The migration walks a consumer site root and rewrites old frontmatter to the new shape.
-3. The PR description lists every consumer affected.
-4. On merge, run the migration against each consumer; open consumer-side PRs to capture the diff.
+1. Copy `bin/typikon-migrate-template` → `bin/typikon-migrate-<from>-<to>`.
+2. Replace the `migrate(frontmatter, file_path)` body with the field transformation. Idempotence rule: running it twice on the same input must produce the same output as once.
+3. The script walks a consumer site root, parses frontmatter, runs `migrate()`, and writes back when the result differs.
+4. The typikon PR description lists every consumer affected.
+5. On merge, run the migration against each consumer in a separate consumer-side PR — that captures the rewrite as a reviewable diff.
+
+The skeleton handles parsing, idempotence checking, basic TOML serialization, and JSONL change reporting. It uses `tomli_w` when installed and falls back to a minimal emitter otherwise — install `tomli_w` via `uv tool install tomli_w` if your migration needs round-trip fidelity for inline tables / multi-line strings.
 
 This keeps consumers from drifting out of typikon's contract silently.

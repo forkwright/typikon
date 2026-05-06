@@ -142,6 +142,58 @@ For a structural change (template, schema, primitive):
 7. on merge: run migration against each consumer, open consumer-side PRs
 ```
 
+## Starting a new typikon-consuming site
+
+When a new fleet site enters the family, do not fork or copy. Consume the substrate.
+
+### 1. Scaffold
+
+```bash
+typikon-init <site-slug> ~/dev/<site-slug>
+```
+
+The scaffolder writes `config.toml`, the `themes/typikon` submodule, `_headers`, `_redirects`, the GitHub Actions workflow, a starter `content/_index.md`, and the operator brief at `CLAUDE.md`. The first commit lands automatically; the operator pushes once the forge repo exists (`kanon forge init forkwright/<site-slug>`).
+
+### 2. Brand identity (consumer-side, not theme-side)
+
+The substrate is design-family neutral. Brand-specific values go in `config.toml [extra]`:
+
+| Field                       | What it shapes                              |
+|-----------------------------|---------------------------------------------|
+| `brand_name`                | header, footer, JSON-LD Organization name   |
+| `brand_greek`               | nav-logo hover and footer attribution       |
+| `logo_path`                 | header logo + JSON-LD Organization.logo     |
+| `theme_color`               | `<meta name="theme-color">` browser chrome  |
+| `og_image`                  | default Open Graph image when a page omits its own |
+| `font_preload`              | which `.woff2` files preload at first paint |
+| `nav_items`, `footer_links` | navigation structure                        |
+| `[extra.author]`            | atom feed `<author>` + JSON-LD Article author |
+
+If a brand needs a *visual* override beyond these (different scale ratio, different color palette, different type pairing), redeclare the relevant `:root` custom properties in a consumer-side CSS file loaded after `style.css`. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
+
+### 3. When to extend typikon vs. override locally
+
+| You need to                                                | Where it goes                                                            |
+|------------------------------------------------------------|--------------------------------------------------------------------------|
+| Change one site's color palette / type / scale             | Consumer-side CSS overriding `:root` tokens                              |
+| Add a one-off CSS class used in one site's content         | Consumer-side CSS                                                        |
+| Add a content type (FAQ, sizing-guide, recipe, gallery)    | typikon — schema + template + AGENTIC + fixture coverage                 |
+| Add an optional frontmatter field shared by ≥2 sites       | typikon — extend the relevant schema with `additionalProperties` discipline |
+| Override one page's HTML structure                         | Consumer-side template under `<consumer>/templates/<name>.html` (Zola overrides typikon) |
+| Add a global behavior (CSP token, JSON-LD type, atom field)| typikon — and update `examples/` so the fixture exercises the change      |
+
+The rule of thumb: **two consumers wanting the same thing → typikon. One consumer wanting an exception → consumer-side override.**
+
+### 4. Fixtures verify your assumptions
+
+`examples/sample-blog/` and `examples/sample-shop/` are working consumer sites that consume typikon via a `themes/typikon` symlink to the parent repo. They build under `zola build` from their own directory and exercise every schema and template typikon ships.
+
+When you add a content type or change a primitive, update at least one fixture to exercise the change. CI runs `zola build` + `typikon-validate` + `csp-enforce` against both fixtures on every PR. If a substrate change breaks a fixture, it would break a real consumer — fix it before merge.
+
+### 5. Schema migrations
+
+When a typikon schema changes incompatibly, the same PR ships a migration script — see `bin/typikon-migrate-template` and the migration section of [`SCHEMAS.md`](SCHEMAS.md). The PR description lists every consumer affected. On merge, run the migration against each consumer in a separate consumer-side PR.
+
 ## What this contract does not say
 
 - It does not say *what* content to write. That comes from the consumer site's brief.

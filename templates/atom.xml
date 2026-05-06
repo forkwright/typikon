@@ -19,7 +19,10 @@
     <link href="{{ feed_url | safe }}" rel="self" type="application/atom+xml"/>
     <link href="{{ config.base_url | safe }}"/>
     <generator uri="https://www.getzola.org/">Zola</generator>
-    <updated>{{ last_updated | date(format="%+") }}</updated>
+    {# last_updated is provided by Zola when at least one feed page has a
+       date; on a feedless site (e.g. a shop with no journal) it is absent,
+       so fall back to now() to keep the feed valid. #}
+    <updated>{{ last_updated | default(value=now()) | date(format="%+") }}</updated>
     <id>{{ feed_url | safe }}</id>
     <author>
         <name>{{ author_name }}</name>

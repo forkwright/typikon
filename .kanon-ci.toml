@@ -1,29 +1,39 @@
 # Typikon CI pipeline.
 #
-# Typikon is a Zola theme + agentic substrate, not a Rust workspace. The
-# forge's default Rust gate (cargo fmt + check + clippy + nextest + lint)
-# does not apply. A sentinel stage keeps the forge post-receive hook
-# honest while the real typikon gate is being assembled.
-#
-# Phase 5 of the v1 plan replaces these stages with:
-#
-#     stages = ["zola-check", "zola-build", "csp-enforce", "lychee",
-#               "pa11y", "playwright-smoke"]
-#
-# At that point the [stages.<name>] blocks below grow concrete cmd /
-# timeout_secs entries pointing at bin/typikon-check sub-commands.
+# Typikon is a Zola theme + agentic substrate, not a Rust workspace.
+# The pipeline runs the same gates a consumer site runs locally —
+# but against typikon's own example fixtures, so substrate changes
+# can't ship without proving they don't break a real consumer shape.
 
 [pipeline]
-stages = ["checkout-ok"]
+stages = [
+  "fixtures-build",
+  "fixtures-validate",
+  "fixtures-csp",
+]
 
-[stages.checkout-ok]
-cmd = "true"
-timeout_secs = 10
+# Build both example fixtures with Zola. Catches template syntax errors,
+# missing partials, broken include paths, resize_image misuse.
+[stages.fixtures-build]
+cmd = "bash -c 'cd examples/sample-blog && zola build && cd ../sample-shop && zola build'"
+timeout_secs = 120
+
+# Validate every fixture content file against its schema. Catches
+# additionalProperties violations, missing required fields, regex misses.
+[stages.fixtures-validate]
+cmd = "bash -c 'bin/typikon-validate examples/sample-blog && bin/typikon-validate examples/sample-shop'"
+timeout_secs = 60
+
+# Enforce strict CSP — no inline scripts/styles/event handlers in the
+# rendered output of either fixture.
+[stages.fixtures-csp]
+cmd = "bash -c 'ci/csp-enforce.sh examples/sample-blog/public && ci/csp-enforce.sh examples/sample-shop/public'"
+timeout_secs = 30
 
 # Independent verifier replays the main pipeline's claims in a fresh
-# worktree. Typikon's pipeline currently makes no claims to replay (the
-# sentinel stage is literally `true`), and the verifier's default build
-# probe (`cargo check --all-features --tests`) fails because typikon has
-# no Cargo workspace. Disable until Phase 5 ships real stages.
+# worktree. Typikon's stages already exercise from a clean checkout
+# (zola build is hermetic; the validator + CSP check read deterministic
+# rendered output). The verifier's default build probe assumes a Cargo
+# workspace — disable.
 [verifier]
 enabled = false
