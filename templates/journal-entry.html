@@ -38,11 +38,14 @@
 
   {%- if page.lower or page.higher %}
   <nav class="entry-nav" aria-label="Journal navigation">
-    {%- if page.lower %}
-    <a href="{{ page.lower.permalink | safe }}" rel="prev">← {{ page.lower.title }}</a>
-    {%- endif %}
+    {# In a section sorted by date DESC, page.higher is the chronologically
+       older entry (lower position in listing = newer; higher = older).
+       UX convention: ← prev points to the older entry; next → points newer. #}
     {%- if page.higher %}
-    <a href="{{ page.higher.permalink | safe }}" rel="next">{{ page.higher.title }} →</a>
+    <a href="{{ page.higher.permalink | safe }}" rel="prev">← {{ page.higher.title }}</a>
+    {%- endif %}
+    {%- if page.lower %}
+    <a href="{{ page.lower.permalink | safe }}" rel="next">{{ page.lower.title }} →</a>
     {%- endif %}
   </nav>
   {%- endif %}
