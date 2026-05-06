@@ -1301,6 +1301,199 @@ main hr {
   text-align: right;
 }
 
+/* === FAQ === */
+/* Definition-list FAQ rendered by faq.html. Each <dt> is anchored so
+   visitors can deep-link to a specific question. */
+.faq-page .page-header {
+  margin-bottom: var(--space-l);
+  padding-bottom: var(--space-s);
+  border-bottom: 1px solid var(--rule);
+}
+
+.faq-page .page-lede {
+  font-size: var(--step-1);
+  color: var(--text-mid);
+  font-style: italic;
+  margin-top: var(--space-xs);
+}
+
+.faq-intro {
+  margin-bottom: var(--space-l);
+  color: var(--text-mid);
+}
+
+.faq-list {
+  margin: 0;
+  padding: 0;
+}
+
+.faq-item {
+  padding: var(--space-m) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-item:target {
+  background: var(--bg-accent);
+  margin-left: calc(var(--space-s) * -1);
+  margin-right: calc(var(--space-s) * -1);
+  padding-left: var(--space-s);
+  padding-right: var(--space-s);
+}
+
+.faq-question {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: var(--space-s);
+  line-height: 1.3;
+}
+
+.faq-anchor {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: none;
+}
+
+.faq-anchor:hover {
+  color: var(--aima);
+  border-bottom: 1px solid var(--aima);
+}
+
+.faq-answer {
+  margin: 0;
+  color: var(--text-mid);
+  max-width: 70ch;
+}
+
+.faq-answer p {
+  margin: 0 0 var(--space-s) 0;
+}
+
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+/* === SIZING GUIDE === */
+.sizing-guide .page-header {
+  margin-bottom: var(--space-l);
+  padding-bottom: var(--space-s);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sizing-guide .page-lede {
+  font-size: var(--step-1);
+  color: var(--text-mid);
+  font-style: italic;
+  margin-top: var(--space-xs);
+}
+
+.sizing-intro {
+  margin-bottom: var(--space-l);
+  color: var(--text-mid);
+  max-width: 70ch;
+}
+
+.sizing-diagram {
+  margin: var(--space-l) 0;
+  text-align: center;
+}
+
+.sizing-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.sizing-diagram figcaption {
+  margin-top: var(--space-s);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--text-light);
+}
+
+.sizing-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-l) 0;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+
+.sizing-table caption {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-style: italic;
+  color: var(--text-mid);
+  margin-bottom: var(--space-s);
+  text-align: left;
+  caption-side: top;
+}
+
+.sizing-table th,
+.sizing-table td {
+  padding: var(--space-s) var(--space-m);
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sizing-table thead th {
+  font-weight: 500;
+  color: var(--text);
+  border-bottom: 2px solid var(--text);
+}
+
+.sizing-table tbody th {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sizing-decision {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-l);
+  border-top: 1px solid var(--rule);
+}
+
+.sizing-decision h2 {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 500;
+  margin-bottom: var(--space-m);
+}
+
+.sizing-steps {
+  padding-left: var(--space-l);
+  max-width: 70ch;
+}
+
+.sizing-steps li {
+  margin-bottom: var(--space-s);
+  color: var(--text-mid);
+}
+
+/* === PROCESS VIDEO === */
+.process-video {
+  margin: var(--space-l) 0;
+}
+
+.process-video video {
+  width: 100%;
+  height: auto;
+  background: var(--bg-accent);
+  display: block;
+}
+
+.process-video figcaption {
+  margin-top: var(--space-s);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--text-light);
+  font-style: italic;
+}
+
 /* === PRINT === */
 /* Honest print: hide chrome, drop background colors, force underlines. */
 @media print {
@@ -1311,7 +1504,8 @@ main hr {
   .buttondown-form,
   .entry-nav,
   .product-images,
-  .workshop-images {
+  .workshop-images,
+  .process-video {
     display: none !important;
   }
 

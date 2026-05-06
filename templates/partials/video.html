@@ -1,0 +1,34 @@
+{# Inline process video. Renders when page.extra.video is set.
+
+   Inputs:
+     page.extra.video.src      — path under static/ (.mp4 required; .webm optional sibling)
+     page.extra.video.poster   — path under static/ to a still frame
+     page.extra.video.alt      — accessible label
+     page.extra.video.captions — path under static/ to a WebVTT track (optional)
+
+   Zero-JS: native <video controls preload="metadata">. Browsers pick the
+   first <source> they can decode; webm is offered first for codec
+   savings, mp4 as the universal fallback.
+
+   Schema: schemas/page.schema.json#extra.video
+#}
+{%- if page.extra.video and page.extra.video.src %}
+{%- set v = page.extra.video -%}
+{%- set src_path = v.src -%}
+{%- set webm_path = src_path | replace(from=".mp4", to=".webm") -%}
+<figure class="process-video">
+  <video controls preload="metadata"
+         {% if v.poster %}poster="/{{ v.poster | safe }}"{% endif %}
+         aria-label="{{ v.alt }}">
+    <source src="/{{ webm_path | safe }}" type="video/webm">
+    <source src="/{{ src_path | safe }}" type="video/mp4">
+    {%- if v.captions %}
+    <track kind="captions" src="/{{ v.captions | safe }}" srclang="en" label="English" default>
+    {%- endif %}
+    <p>Your browser does not support inline video. <a href="/{{ src_path | safe }}">Download the video</a>.</p>
+  </video>
+  {%- if v.caption %}
+  <figcaption>{{ v.caption }}</figcaption>
+  {%- endif %}
+</figure>
+{%- endif %}

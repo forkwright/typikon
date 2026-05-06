@@ -1,0 +1,67 @@
+{# Sizing guide template. Activated by `template = "sizing-guide.html"`.
+   Renders an introduction (page.content), a measurement table, an
+   optional inline SVG diagram, and an optional decision tree.
+
+   Schema: schemas/sizing-guide.schema.json
+#}
+{% extends "page.html" %}
+
+{% block content %}
+<article class="sizing-guide">
+  <header class="page-header">
+    <h1>{{ page.title }}</h1>
+    {%- if page.description %}
+    <p class="page-lede">{{ page.description }}</p>
+    {%- endif %}
+  </header>
+
+  {%- if page.content %}
+  <div class="sizing-intro">
+    {{ page.content | safe }}
+  </div>
+  {%- endif %}
+
+  {%- if page.extra.diagram %}
+  <figure class="sizing-diagram">
+    {{ load_data(path=page.extra.diagram, format="plain") | safe }}
+    <figcaption>How to measure your {{ page.extra.product_type }}.</figcaption>
+  </figure>
+  {%- endif %}
+
+  {%- set unit_label = page.extra.measurement_unit | default(value="inches") %}
+  <table class="sizing-table">
+    <caption>{{ page.extra.product_type | capitalize }} sizes ({{ unit_label }})</caption>
+    <thead>
+      <tr>
+        <th scope="col">Size</th>
+        {%- if page.extra.size_table[0].waist is defined %}<th scope="col">Waist</th>{% endif %}
+        {%- if page.extra.size_table[0].length is defined %}<th scope="col">Length</th>{% endif %}
+        {%- if page.extra.size_table[0].width is defined %}<th scope="col">Width</th>{% endif %}
+        {%- if page.extra.size_table[0].note is defined %}<th scope="col">Note</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {%- for row in page.extra.size_table %}
+      <tr>
+        <th scope="row">{{ row.size }}</th>
+        {%- if row.waist is defined %}<td>{{ row.waist }}</td>{% endif %}
+        {%- if row.length is defined %}<td>{{ row.length }}</td>{% endif %}
+        {%- if row.width is defined %}<td>{{ row.width }}</td>{% endif %}
+        {%- if row.note is defined %}<td>{{ row.note }}</td>{% endif %}
+      </tr>
+      {%- endfor %}
+    </tbody>
+  </table>
+
+  {%- if page.extra.decision_tree %}
+  <section class="sizing-decision">
+    <h2>Choosing your size</h2>
+    <ol class="sizing-steps">
+      {%- for step in page.extra.decision_tree %}
+      <li>{{ step }}</li>
+      {%- endfor %}
+    </ol>
+  </section>
+  {%- endif %}
+</article>
+{% endblock content %}

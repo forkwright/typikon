@@ -1,0 +1,46 @@
+{# FAQ page template. Activated by frontmatter `template = "faq.html"`.
+   Renders a definition-list FAQ with anchor links per question and
+   emits FAQPage JSON-LD via the ld-faq partial.
+
+   Schema: schemas/faq.schema.json
+#}
+{% extends "page.html" %}
+
+{% block ld_json %}
+  {%- include "partials/ld-organization.html" -%}
+  {%- include "partials/ld-faq.html" -%}
+  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+{% endblock ld_json %}
+
+{% block content %}
+<article class="faq-page">
+  <header class="page-header">
+    <h1>{{ page.title }}</h1>
+    {%- if page.description %}
+    <p class="page-lede">{{ page.description }}</p>
+    {%- endif %}
+  </header>
+
+  {%- if page.content %}
+  <div class="faq-intro">
+    {{ page.content | safe }}
+  </div>
+  {%- endif %}
+
+  <dl class="faq-list">
+    {%- for item in page.extra.questions %}
+    {%- set anchor = item.anchor | default(value=item.q | slugify) %}
+    <div class="faq-item" id="{{ anchor }}">
+      <dt class="faq-question">
+        <a href="#{{ anchor }}" class="faq-anchor" aria-label="Link to this question">{{ item.q }}</a>
+      </dt>
+      <dd class="faq-answer">
+        {%- for paragraph in item.a | split(pat="\n\n") %}
+        <p>{{ paragraph | trim }}</p>
+        {%- endfor %}
+      </dd>
+    </div>
+    {%- endfor %}
+  </dl>
+</article>
+{% endblock content %}

@@ -8,7 +8,9 @@ Walks <root>/content/**/*.md, parses TOML frontmatter (between +++ lines),
 classifies each file by its location, and validates against the appropriate
 JSON Schema in <typikon-repo>/schemas/.
 
-Classification rules:
+Classification rules (in order — first match wins):
+    frontmatter `template = "faq.html"`     -> faq.schema.json
+    frontmatter `template = "sizing-guide.html"` -> sizing-guide.schema.json
     content/_index.md                       -> section.schema.json
     content/<section>/_index.md             -> section.schema.json
     content/journal/<slug>.md               -> journal-entry.schema.json
@@ -49,8 +51,20 @@ THEME_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = THEME_ROOT / "schemas"
 
 
-def classify(rel_path: Path) -> str:
-    """Map a markdown file's path under content/ to its schema name."""
+TEMPLATE_SCHEMA_MAP = {
+    "faq.html": "faq",
+    "sizing-guide.html": "sizing-guide",
+}
+
+
+def classify(rel_path: Path, frontmatter: dict) -> str:
+    """Map a markdown file to its schema name. Frontmatter `template` wins
+    when present in TEMPLATE_SCHEMA_MAP — that's how page-level overrides
+    (FAQ, sizing-guide) escape the path-based default."""
+    template = frontmatter.get("template")
+    if template in TEMPLATE_SCHEMA_MAP:
+        return TEMPLATE_SCHEMA_MAP[template]
+
     parts = rel_path.parts
     # parts[0] == "content"
     name = parts[-1]
@@ -113,7 +127,7 @@ def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> l
     except Exception as exc:
         return [{"file": file_label, "pointer": "", "error": str(exc)}]
 
-    schema_name = classify(rel)
+    schema_name = classify(rel, fm)
     schema = schemas.get(schema_name)
     if schema is None:
         return [{"file": file_label, "pointer": "", "error": f"no schema for class '{schema_name}'"}]
@@ -133,7 +147,7 @@ def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> l
 
 def load_schemas() -> dict[str, dict]:
     schemas: dict[str, dict] = {}
-    for slug in ("page", "section", "journal-entry", "product"):
+    for slug in ("page", "section", "journal-entry", "product", "faq", "sizing-guide"):
         p = SCHEMA_DIR / f"{slug}.schema.json"
         if not p.exists():
             print(json.dumps({"error": f"missing schema: {p}"}), file=sys.stderr)

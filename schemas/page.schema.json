@@ -88,6 +88,40 @@
           "type": "string",
           "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
           "description": "Used in product context. Triggers ld-product JSON-LD when paired with price."
+        },
+        "video": {
+          "type": "object",
+          "description": "Inline process video (zero-JS native <video>). Drop the .mp4 (and optionally .webm sibling) under static/video/; reference here.",
+          "required": ["src", "alt"],
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.mp4$",
+              "description": "Path under static/ to the .mp4 file. Template auto-tries the .webm sibling at the same path before falling back to mp4."
+            },
+            "poster": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.(jpg|jpeg|png|webp)$",
+              "description": "Path under static/ to a still-frame image shown before play."
+            },
+            "alt": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200,
+              "description": "Accessible label describing what the video shows."
+            },
+            "captions": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.vtt$",
+              "description": "Path under static/ to a WebVTT captions file. Strongly recommended for accessibility."
+            },
+            "caption": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Optional figcaption rendered under the video."
+            }
+          }
         }
       }
     }

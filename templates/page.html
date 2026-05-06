@@ -36,4 +36,6 @@
    markdown when photos arrive and the gallery takes its visual slot. #}
 {%- include "partials/product-gallery.html" -%}
 {{ page.content | safe }}
+{# Process video renders after page content when extra.video is set. #}
+{%- include "partials/video.html" -%}
 {% endblock content %}
