@@ -24,6 +24,8 @@
   
   /* Spacing (based on line-height) */
   --space-unit: 1.625rem;
+  --space-3xs: calc(var(--space-unit) * 0.0625);
+  --space-2xs: calc(var(--space-unit) * 0.125);
   --space-xs: calc(var(--space-unit) * 0.25);
   --space-s: calc(var(--space-unit) * 0.5);
   --space-m: var(--space-unit);
@@ -325,14 +327,6 @@ a:hover {
   transition: opacity 0.4s ease;
 }
 
-.home-truth {
-  font-family: var(--font-body);
-  font-size: var(--step-0);
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 400px;
-}
-
 .dye-marks {
   display: flex;
   gap: var(--space-s);
@@ -412,32 +406,6 @@ a:hover {
 
 .home-nav a:hover span {
   opacity: 0;
-}
-
-.home-sub {
-  font-family: var(--font-mono);
-  font-size: var(--step--2);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-light);
-  margin-bottom: var(--space-xl);
-}
-
-.home-link {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: var(--text);
-  padding: var(--space-s) var(--space-m);
-  border: 1px solid var(--text);
-}
-
-.home-link:hover {
-  background: var(--text);
-  color: var(--bg);
 }
 
 /* === PRODUCTS & JOURNAL LIST === */
@@ -1230,4 +1198,15 @@ main hr {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Honor the visitor's reduced-motion preference. The cycling triad,
+   fade-in, and decorative transitions all collapse to near-instant. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

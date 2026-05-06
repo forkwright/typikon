@@ -1,12 +1,9 @@
-/* Self-hosted fonts. WOFF2 files land in theme/static/fonts/ during Phase 2.
+/* Self-hosted webfonts (OFL-1.1). All families subsetted to:
+ *   - Latin (U+0000-00FF)
+ *   - Greek (U+0370-03FF) and Greek Extended (U+1F00-1FFF) for serif families
  *
- * Phase 1 placeholder: declare @font-face blocks pointing at expected paths.
- * Phase 2 commits the actual subsetted WOFF2 files (Cormorant Garamond,
- * Spectral, IBM Plex Mono — OFL-1.1) and validates the unicode-range coverage.
- *
- * Until Phase 2 lands, browsers will fall back to the system fonts named in
- * style.css (Garamond, Georgia, monospace). The strict CSP `font-src 'self'`
- * already blocks any external font CDN.
+ * Strict CSP `font-src 'self'` ensures no external font CDN is reachable
+ * even if a stray @font-face URL is added by mistake.
  */
 
 /* Cormorant Garamond — display */

@@ -50,11 +50,12 @@ exclude = [
 # Don't scan these source files for links (they reference the site's
 # own canonical URLs which don't resolve pre-deploy).
 exclude_path = [
-  # atom.xml self-references config.base_url/atom.xml in its <id> tag;
-  # pre-cutover the live site has no atom.xml so it returns 404. Post-
-  # cutover the link works. Skip scanning the feed source entirely;
-  # the rendered HTML pages reference atom.xml indirectly via <link>
-  # tags which lychee resolves locally via --root-dir.
+  # atom.xml's <id> tag self-references config.base_url/atom.xml. lychee
+  # resolves it as an external URL and follows it; in pre-deployment runs
+  # (or when base_url differs from the live host) the request 404s
+  # spuriously. The rendered HTML pages reference atom.xml indirectly via
+  # <link rel="alternate"> tags, which lychee resolves locally via
+  # --root-dir, so coverage is not lost.
   "atom.xml",
 ]
 
