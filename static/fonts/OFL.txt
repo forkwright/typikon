@@ -15,11 +15,14 @@ OFL 1.1 text is available at https://openfontlicense.org.
 
 --------------------------------------------------------------------
 Cormorant Garamond
-  Files: cormorant-garamond-400.woff2,
-         cormorant-garamond-500.woff2,
-         cormorant-garamond-600.woff2,
-         cormorant-garamond-400-italic.woff2
+  Files: cormorant-garamond-variable.woff2 (upright, weight axis 300-700)
+         cormorant-garamond-variable-italic.woff2 (italic, weight axis 300-700)
   Source: https://github.com/CatharsisFonts/Cormorant
+  Build:  fonts/variable/CormorantGaramond[wght].ttf and
+          fonts/variable/CormorantGaramond-Italic[wght].ttf
+          subsetted via `pyftsubset --flavor=woff2
+          --unicodes=U+0000-00FF,U+0370-03FF,U+1F00-1FFF
+          --layout-features='*' --no-hinting --desubroutinize`
 --------------------------------------------------------------------
 
 Copyright 2015 the Cormorant Project Authors

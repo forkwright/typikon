@@ -19,7 +19,7 @@ theme_color = "#FBF7EC"
 og_locale = "en_US"
 founding_date = "2026"
 
-font_preload = ["/fonts/cormorant-garamond-400.woff2", "/fonts/spectral-400.woff2"]
+font_preload = ["/fonts/cormorant-garamond-variable.woff2", "/fonts/spectral-400.woff2"]
 
 nav_items = [
   { url = "/journal/", label = "journal", greek = "ἡμερολόγιον" },

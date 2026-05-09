@@ -187,8 +187,10 @@ brand_name = "${SITE_NAME}"
 # og_locale = "en_US"
 # og_image = "img/og-cover.png"
 
-# Self-hosted font preload list (relative URLs under /fonts/).
-font_preload = ["/fonts/cormorant-garamond-400.woff2", "/fonts/spectral-400.woff2"]
+# Self-hosted font preload list (relative URLs under /fonts/). Cormorant
+# Garamond is a variable WOFF2 (covers all weights via the wght axis);
+# Spectral is a static cut at 400 (Production Type ships no variable yet).
+font_preload = ["/fonts/cormorant-garamond-variable.woff2", "/fonts/spectral-400.woff2"]
 
 # Top-nav structure. Each item: { url, label, greek? }.
 nav_items = []

@@ -4,37 +4,30 @@
  *
  * Strict CSP `font-src 'self'` ensures no external font CDN is reachable
  * even if a stray @font-face URL is added by mistake.
+ *
+ * Cormorant Garamond ships as a variable WOFF2 (weight axis 300-700) per
+ * forkwright/typikon#2: one upright + one italic file replace four static
+ * cuts. Spectral remains static — Production Type's upstream
+ * (productiontype/Spectral) does not yet ship a variable build; track via
+ * forkwright/typikon#<spectral-followup>. IBM Plex Mono remains static
+ * per the original issue scope (variable upstream is not yet stable).
  */
 
-/* Cormorant Garamond — display */
+/* Cormorant Garamond — display (variable, weight axis 300-700) */
 @font-face {
   font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-400.woff2') format('woff2');
-  font-weight: 400;
+  src: url('/fonts/cormorant-garamond-variable.woff2') format('woff2-variations'),
+       url('/fonts/cormorant-garamond-variable.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
 }
 @font-face {
   font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-500.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
-}
-@font-face {
-  font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-600.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
-}
-@font-face {
-  font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-400-italic.woff2') format('woff2');
-  font-weight: 400;
+  src: url('/fonts/cormorant-garamond-variable-italic.woff2') format('woff2-variations'),
+       url('/fonts/cormorant-garamond-variable-italic.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: italic;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
