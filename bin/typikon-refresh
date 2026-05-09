@@ -118,8 +118,12 @@ else
     PROJECT_NAME="$(basename "${ORIGIN_URL%.git}" | sed 's:/*$::')"
 fi
 
-# ZOLA_VERSION mirrors typikon-init's default + env override.
-ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-0.22.1}"
+# ZOLA_VERSION default lives in bin/typikon-defaults.sh (single source
+# of truth shared with typikon-init); env-var override stays the same
+# shape (`TYPIKON_ZOLA_VERSION=... typikon-refresh`).
+# shellcheck source=./typikon-defaults.sh
+ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-}"
+. "$TYPIKON_ROOT/bin/typikon-defaults.sh"
 
 # ----- Step 3 — re-render template instances -----
 

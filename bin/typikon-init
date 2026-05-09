@@ -115,7 +115,12 @@ copy_template "$TYPIKON_ROOT/_headers.tmpl" "_headers"
 copy_template "$TYPIKON_ROOT/_redirects.tmpl" "_redirects"
 
 # GitHub Actions workflow — substitute placeholders during copy.
-ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-0.22.1}"
+# ZOLA_VERSION default lives in bin/typikon-defaults.sh (single source
+# of truth shared with typikon-refresh); env-var override stays the
+# same shape (`TYPIKON_ZOLA_VERSION=... typikon-init ...`).
+# shellcheck source=./typikon-defaults.sh
+ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-}"
+. "$TYPIKON_ROOT/bin/typikon-defaults.sh"
 mkdir -p .github/workflows
 if [[ ! -e .github/workflows/deploy.yml ]]; then
     sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
