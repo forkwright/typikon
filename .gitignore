@@ -29,3 +29,5 @@ fonts-src/
 
 # Allow only the subsetted WOFF2 we ship
 !theme/static/fonts/*.woff2
+target/
+*.bak
