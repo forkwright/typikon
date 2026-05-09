@@ -1,0 +1,43 @@
+[meta]
+name = "typikon"
+repo = "forkwright/typikon"
+generated = false
+source_docs = [
+  "README.md",
+  "CLAUDE.md",
+]
+
+[decisions]
+summary = "Core decisions for the fleet web-property substrate."
+
+[[decision]]
+id = "D-zola"
+title = "Use Zola as the static-site engine"
+status = "accepted"
+context = "Fleet web properties need static deployment with no JS build path."
+decision = "Use Zola 0.22.x and Tera templates."
+consequences = "Consumer sites avoid Node/npm in the deploy path."
+
+[[decision]]
+id = "D-submodule"
+title = "Distribute theme as a git submodule"
+status = "accepted"
+context = "Zola has no equivalent first-class theme registry for this use case."
+decision = "Consumers pin typikon under themes/typikon."
+consequences = "Theme upgrades are explicit git changes."
+
+[[decision]]
+id = "D-schema-first"
+title = "Validate frontmatter through schemas"
+status = "accepted"
+context = "Agents need predictable content types and error messages."
+decision = "Define every content type in JSON Schema and validate before commit."
+consequences = "Fields are not invented in consumer repos."
+
+[[decision]]
+id = "D-strict-csp"
+title = "Enforce strict CSP"
+status = "accepted"
+context = "Visitor runtime should not depend on inline code or third-party CDNs."
+decision = "Fail CI on inline scripts/styles and serve fonts locally."
+consequences = "Security posture is encoded in headers, assets, and gates."

@@ -1,0 +1,28 @@
+[meta]
+name = "typikon"
+repo = "forkwright/typikon"
+generated = false
+source_docs = [
+  "README.md",
+  "CLAUDE.md",
+  "bin/",
+]
+
+[apis]
+summary = "Typikon exposes local CLI scripts for scaffolding, validation, migration, and CI checks."
+
+[[cli_commands]]
+name = "bin/typikon-init"
+purpose = "Scaffold a new consumer site or content primitive."
+
+[[cli_commands]]
+name = "bin/typikon-validate"
+purpose = "Validate consumer site frontmatter against typikon schemas."
+
+[[cli_commands]]
+name = "bin/typikon-check"
+purpose = "Run local site gate: validation, Zola checks/build, CSP, and optional external tools."
+
+[[cli_commands]]
+name = "bin/typikon-migrate-template"
+purpose = "Apply template/schema migrations for consumers."

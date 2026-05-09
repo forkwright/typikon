@@ -1,0 +1,57 @@
+[meta]
+name = "typikon"
+repo = "forkwright/typikon"
+generated = false
+source_docs = [
+  "README.md",
+  "CLAUDE.md",
+  "theme.toml",
+]
+
+[architecture]
+summary = "Fleet Zola theme plus schemas, scaffolds, bin tooling, strict CSP assets, and CI gates for agent-operated web properties."
+layers = [
+  "theme",
+  "templates",
+  "schemas",
+  "scaffolds",
+  "bin",
+  "ci",
+  "static-assets",
+  "docs",
+]
+
+[[architecture.crates]]
+name = "templates"
+path = "templates"
+role = "Tera templates for base, page, section, and journal layouts."
+
+[[architecture.crates]]
+name = "schemas"
+path = "schemas"
+role = "JSON Schemas for content frontmatter validation."
+
+[[architecture.crates]]
+name = "scaffolds"
+path = "scaffolds"
+role = "Content templates copied into consumer sites."
+
+[[architecture.crates]]
+name = "bin"
+path = "bin"
+role = "typikon-init, typikon-validate, typikon-check, and migration scripts."
+
+[[architecture.crates]]
+name = "ci"
+path = "ci"
+role = "Strict web-property gate configuration."
+
+[[interfaces]]
+name = "typikon CLI tools"
+kind = "cli"
+path = "bin"
+
+[[interfaces]]
+name = "Zola theme"
+kind = "static-web"
+path = "theme.toml"

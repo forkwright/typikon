@@ -1,0 +1,30 @@
+# Typikon
+
+> Fleet web-property substrate: Zola theme, frontmatter schemas, scaffolds, bin tooling, and CI gates.
+
+Typikon governs how consumer sites are built, validated, and deployed. Consumers pin it as a git submodule under `themes/typikon/` and keep site-specific content and brand config in their own repos.
+
+## Tools
+
+`bin/typikon-init` - scaffold a consumer site or content primitive.
+
+`bin/typikon-validate` - validate frontmatter against schemas.
+
+`bin/typikon-check` - run the local web-property gate.
+
+## Architecture
+
+Structured LLM corpus:
+- [_llm/architecture.toml](_llm/architecture.toml): theme layers and tool surfaces
+- [_llm/current_state.toml](_llm/current_state.toml): current substrate status
+- [_llm/decisions.toml](_llm/decisions.toml): accepted web-substrate decisions
+- [_llm/glossary.toml](_llm/glossary.toml): typikon vocabulary
+- [_llm/apis.toml](_llm/apis.toml): local CLI tools
+
+## Agent Entry Points
+
+- [README.md](README.md): overview, usage, and design
+- [CLAUDE.md](CLAUDE.md): agent contract and locked decisions
+- [schemas/](schemas/): frontmatter contracts
+- [scaffolds/](scaffolds/): content templates
+- [bin/](bin/): scaffolding and validation commands

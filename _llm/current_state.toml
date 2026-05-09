@@ -1,0 +1,22 @@
+[meta]
+name = "typikon"
+repo = "forkwright/typikon"
+generated = false
+source_docs = [
+  "README.md",
+  "CLAUDE.md",
+]
+
+[state]
+summary = "Typikon is the active fleet Zola theme, schema, scaffolding, and gate substrate; ardent-site is the first consumer."
+current_phase = "v1 substrate active with consumer adoption through submodules."
+updated = "2026-05-08"
+
+[[recent]]
+date = "2026-05-05"
+item = "Typikon repo established as fleet web-property substrate."
+
+[[open_threads]]
+name = "Consumer migrations"
+issue = 0
+status = "Schema changes must ship migration scripts for existing consumers."

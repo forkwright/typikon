@@ -1,0 +1,36 @@
+[meta]
+name = "typikon"
+repo = "forkwright/typikon"
+generated = false
+source_docs = [
+  "README.md",
+  "CLAUDE.md",
+]
+
+[glossary]
+description = "Domain vocabulary for typikon."
+
+[[terms]]
+term = "typikon"
+definition = "Rule of execution; the fleet web-property substrate."
+canonical = true
+
+[[terms]]
+term = "consumer site"
+definition = "A site that pins typikon as a submodule and supplies content/brand config."
+canonical = true
+
+[[terms]]
+term = "schema"
+definition = "JSON Schema contract for a content type's frontmatter."
+canonical = true
+
+[[terms]]
+term = "scaffold"
+definition = "Template content copied by typikon-init."
+canonical = true
+
+[[terms]]
+term = "strict CSP"
+definition = "No-inline runtime policy enforced by headers and CI."
+canonical = true
