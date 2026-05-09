@@ -49,6 +49,19 @@ emit() {
         "$stage" "$status" "$duration_ms" "$detail"
 }
 
+base_host() {
+    grep -E '^base_url\s*=' config.toml \
+        | head -1 \
+        | sed -E 's/^base_url\s*=\s*"([^"]+)".*/\1/' \
+        | sed 's:/$::' \
+        | sed -E 's|^https?://||' \
+        | sed -E 's|/.*$||'
+}
+
+regex_escape() {
+    sed -E 's/[][(){}.^$+*?|\\]/\\&/g'
+}
+
 run_stage() {
     local stage="$1"; shift
     local start=$(date +%s%3N)
@@ -98,7 +111,17 @@ fi
 # Stage 5 — external links via lychee. Skip if binary absent.
 if command -v lychee >/dev/null 2>&1; then
     if [[ -d public ]]; then
-        run_stage "lychee" lychee --config "$TYPIKON_ROOT/ci/lychee.toml" public || FAIL=1
+        BASE_HOST="$(base_host)"
+        if [[ -n "$BASE_HOST" ]]; then
+            ESCAPED_HOST="$(printf '%s' "$BASE_HOST" | regex_escape)"
+            run_stage "lychee" lychee \
+                --config "$TYPIKON_ROOT/ci/lychee.toml" \
+                --root-dir "$ROOT/public" \
+                --exclude "^https?://${ESCAPED_HOST}/" \
+                public || FAIL=1
+        else
+            run_stage "lychee" lychee --config "$TYPIKON_ROOT/ci/lychee.toml" public || FAIL=1
+        fi
     else
         emit "lychee" "skip" 0 "no public/ dir"
     fi
