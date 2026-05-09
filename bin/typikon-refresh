@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# typikon-refresh — re-render consumer-side template instances after a
+# typikon submodule bump.
+#
+# Usage (from a consumer site root):
+#     themes/typikon/bin/typikon-refresh
+#
+# Behavior (per forkwright/typikon#3):
+#   1. cd themes/typikon && git pull --ff-only origin main
+#   2. Re-render every typikon `*.tmpl` file to its consumer-side
+#      instance, substituting placeholders with consumer values.
+#   3. `git add` the bumped submodule + each rendered file.
+#   4. Print a summary of what was bumped + what was re-rendered.
+#   5. DO NOT commit — leave staged so the operator (or an agent)
+#      reviews the diff before authoring the commit message.
+#
+# Idempotent: re-running with no upstream changes is a no-op.
+#
+# Hand-edits in rendered files are clobbered by re-render. The contract
+# in `_headers.tmpl` / `_redirects.tmpl` notes that those instances are
+# operator-edited (they're NOT re-rendered here for that reason — only
+# the genuine `{{ PLACEHOLDER }}`-substituted templates pass through).
+# For `ci/github-workflow.yml.tmpl` the rendered instance lives at
+# `.github/workflows/deploy.yml` and is treated as derived: hand-edits
+# there are lost on refresh, by design. Per-site GH Actions deltas
+# belong in a sibling workflow file the consumer authors directly.
+#
+# Environment:
+#     TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.22.1, mirroring
+#                            typikon-init's default)
+#     TYPIKON_PROJECT_NAME   override the auto-derived consumer project
+#                            slug (default: parsed from `git config --get
+#                            remote.origin.url` basename minus `.git`)
+
+set -euo pipefail
+
+TYPIKON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONSUMER_ROOT="$(pwd)"
+
+usage() {
+    cat <<EOF >&2
+typikon-refresh — re-render consumer-side template instances
+
+Usage:
+    themes/typikon/bin/typikon-refresh
+
+Run from the consumer site root (the directory that contains
+\`themes/typikon/\`). Pulls typikon to its latest \`origin/main\`,
+re-renders the substituted templates against your consumer config,
+stages the changes, and prints a summary. Does NOT commit.
+
+Environment:
+    TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.22.1)
+    TYPIKON_PROJECT_NAME   override consumer project slug
+                           (default: derived from git origin URL)
+EOF
+    exit 2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && usage
+
+# Sanity: must be invoked from a consumer site root that contains
+# this same typikon as a submodule.
+if [[ ! -f "$CONSUMER_ROOT/themes/typikon/theme.toml" ]]; then
+    echo "error: typikon-refresh must run from a consumer site root" >&2
+    echo "       (the directory containing themes/typikon/)." >&2
+    echo "       cwd: $CONSUMER_ROOT" >&2
+    exit 2
+fi
+
+# Sanity: the typikon checkout we're operating from must match the
+# consumer's submodule. Fail loudly if the operator invoked a
+# different typikon checkout's bin/.
+EXPECTED_TYPIKON_ROOT="$(cd "$CONSUMER_ROOT/themes/typikon" && pwd)"
+if [[ "$TYPIKON_ROOT" != "$EXPECTED_TYPIKON_ROOT" ]]; then
+    echo "error: this typikon-refresh lives at $TYPIKON_ROOT" >&2
+    echo "       but the consumer's submodule is $EXPECTED_TYPIKON_ROOT." >&2
+    echo "       Invoke the submodule's own bin/ to avoid mismatched substrate." >&2
+    exit 2
+fi
+
+# Sanity: consumer must be a git checkout (we'll `git add` to it).
+if ! git -C "$CONSUMER_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "error: $CONSUMER_ROOT is not a git checkout" >&2
+    exit 2
+fi
+
+# ----- Step 1 — bump the typikon submodule to origin/main -----
+
+cd "$TYPIKON_ROOT"
+PRE_BUMP_SHA="$(git rev-parse HEAD)"
+
+# `--ff-only` matches the manual recipe in the issue body and
+# typikon's CLAUDE.md `## Refreshing the theme` section. If main has
+# diverged from local, refuse — the operator must reconcile by hand.
+if ! git pull --ff-only origin main 2>&1 | grep -vE '^From |^ \* branch' >&2; then
+    echo "error: typikon submodule has diverged from origin/main" >&2
+    echo "       reconcile manually before re-running typikon-refresh" >&2
+    exit 1
+fi
+POST_BUMP_SHA="$(git rev-parse HEAD)"
+cd "$CONSUMER_ROOT"
+
+# ----- Step 2 — derive substitution values -----
+
+# PROJECT_NAME defaults to the consumer's git origin repo basename
+# (matches the `<site-name>` arg typikon-init takes). Override via
+# TYPIKON_PROJECT_NAME for unusual layouts.
+if [[ -n "${TYPIKON_PROJECT_NAME:-}" ]]; then
+    PROJECT_NAME="$TYPIKON_PROJECT_NAME"
+else
+    ORIGIN_URL="$(git -C "$CONSUMER_ROOT" config --get remote.origin.url 2>/dev/null || echo '')"
+    if [[ -z "$ORIGIN_URL" ]]; then
+        echo "error: consumer has no git remote 'origin'; set TYPIKON_PROJECT_NAME explicitly" >&2
+        exit 1
+    fi
+    # Strip .git suffix and trailing slash, then take basename.
+    PROJECT_NAME="$(basename "${ORIGIN_URL%.git}" | sed 's:/*$::')"
+fi
+
+# ZOLA_VERSION mirrors typikon-init's default + env override.
+ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-0.22.1}"
+
+# ----- Step 3 — re-render template instances -----
+
+# Each entry is `tmpl_path|consumer_dest`. Add to this array as new
+# substituted templates ship in typikon. Templates that are NOT
+# placeholder-substituted (e.g. `_headers.tmpl`, `_redirects.tmpl` —
+# verbatim copies that consumers edit) intentionally do not appear
+# here; they are scaffolded once by typikon-init and not re-rendered.
+declare -a TMPL_TARGETS=(
+    "ci/github-workflow.yml.tmpl|.github/workflows/deploy.yml"
+)
+
+declare -a RENDERED=()
+declare -a SKIPPED=()
+
+for spec in "${TMPL_TARGETS[@]}"; do
+    src="${spec%%|*}"
+    dest="${spec##*|}"
+    src_path="$TYPIKON_ROOT/$src"
+    dest_path="$CONSUMER_ROOT/$dest"
+
+    if [[ ! -f "$src_path" ]]; then
+        SKIPPED+=("$dest (source $src missing in typikon)")
+        continue
+    fi
+
+    mkdir -p "$(dirname "$dest_path")"
+    sed -e "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|g" \
+        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
+        "$src_path" \
+        > "$dest_path"
+    RENDERED+=("$dest")
+done
+
+# ----- Step 4 — stage the changes (no commit) -----
+
+# Stage the submodule pointer bump + each rendered file. Use named
+# adds rather than `git add -A` to avoid sweeping in unrelated
+# operator-side work.
+git -C "$CONSUMER_ROOT" add themes/typikon
+for dest in "${RENDERED[@]}"; do
+    git -C "$CONSUMER_ROOT" add "$dest"
+done
+
+# ----- Step 5 — summary -----
+
+echo
+echo "typikon-refresh summary"
+echo "======================="
+if [[ "$PRE_BUMP_SHA" == "$POST_BUMP_SHA" ]]; then
+    echo "  submodule:    no upstream change ($POST_BUMP_SHA)"
+else
+    echo "  submodule:    bumped $PRE_BUMP_SHA → $POST_BUMP_SHA"
+fi
+echo "  PROJECT_NAME: $PROJECT_NAME"
+echo "  ZOLA_VERSION: $ZOLA_VERSION"
+echo
+if [[ ${#RENDERED[@]} -gt 0 ]]; then
+    echo "  re-rendered:"
+    for r in "${RENDERED[@]}"; do echo "    - $r"; done
+fi
+if [[ ${#SKIPPED[@]} -gt 0 ]]; then
+    echo
+    echo "  skipped:"
+    for s in "${SKIPPED[@]}"; do echo "    - $s"; done
+fi
+echo
+echo "Staged changes (no commit yet):"
+git -C "$CONSUMER_ROOT" diff --cached --stat | sed 's/^/    /'
+echo
+echo "Review with:"
+echo "    git diff --cached"
+echo "Then commit:"
+echo "    git commit -m 'chore(theme): bump typikon to ${POST_BUMP_SHA:0:8} + regen templates'"

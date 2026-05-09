@@ -13,7 +13,7 @@ Optimized for agentic operation. Humans should not need to develop here. The sub
 - **Templates** (`templates/`) — Tera templates for base, page, section, journal.
 - **Schemas** (`schemas/`) — JSON Schema for every content type. Frontmatter must validate before commit.
 - **Scaffolds** (`scaffolds/`) — content templates copied by `bin/typikon-init`.
-- **Binaries** (`bin/`) — `typikon-init`, `typikon-validate`, `typikon-check`. Idempotent CLIs with JSONL output.
+- **Binaries** (`bin/`) — `typikon-init`, `typikon-validate`, `typikon-check`, `typikon-refresh`. Idempotent CLIs with JSONL output where applicable.
 - **CI** (`ci/`) — strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
 - **Headers** (`_headers.tmpl`, `_redirects.tmpl`) — Cloudflare Pages strict-CSP + redirect templates.
 
@@ -43,6 +43,11 @@ bin/typikon-validate /path/to/consumer/site
 
 # Run all CI gates locally
 bin/typikon-check /path/to/consumer/site
+
+# Refresh a consumer site against the latest typikon main
+# (run from the consumer site root; bumps the submodule + re-renders
+#  every substituted template; stages the diff but doesn't commit).
+themes/typikon/bin/typikon-refresh
 ```
 
 See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmatter reference, `docs/BOOTSTRAP.md` for the scaffolder behavior.

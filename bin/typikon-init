@@ -267,9 +267,16 @@ Run \`bin/typikon-validate .\` from the typikon checkout to verify.
 ## Refreshing the theme
 
 \`\`\`
-cd themes/typikon && git pull --ff-only origin main && cd ../..
-git add themes/typikon && git commit -m "chore: bump typikon to <sha>"
+themes/typikon/bin/typikon-refresh
+git diff --cached  # review
+git commit -m "chore(theme): bump typikon to <sha> + regen templates"
 \`\`\`
+
+\`typikon-refresh\` bumps the submodule to the latest \`origin/main\`,
+re-renders every substituted template (e.g. \`.github/workflows/deploy.yml\`
+from \`ci/github-workflow.yml.tmpl\`), and leaves the diff staged for
+review. Idempotent: re-running with no upstream changes is a no-op.
+See \`themes/typikon/bin/typikon-refresh --help\` for env knobs.
 EOF
 )
 "
