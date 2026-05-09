@@ -28,7 +28,7 @@
 #     cd <dest>
 #     bin/typikon-check .          (validates + builds; should green)
 #     git push origin main         (will need ALLOW_PROTECTED_PUSH=1 for
-#                                   the first push; see kanon#460)
+#                                   the first push; see <internal-issue-id>)
 
 set -euo pipefail
 
@@ -300,7 +300,7 @@ cat <<EOF >&2
 Next steps:
     cd $DEST
     bin/typikon-check .                      # local gate (Phase 5 fills out)
-    ALLOW_PROTECTED_PUSH=1 git push origin main   # first push only; see kanon#460
+    ALLOW_PROTECTED_PUSH=1 git push origin main   # first push only; see <internal-issue-id>
     kanon forge init forkwright/${SITE_NAME}      # create the bare repo on forge
 
 EOF
