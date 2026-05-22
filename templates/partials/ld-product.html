@@ -12,6 +12,13 @@
      config.title          — brand name (Product.brand)
      config.base_url       — for image absolute URL
 #}
+{% import "partials/assert.html" as assert %}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-product.html") }}
+{{ assert::required(ok=page.description is defined and page.description, field="page.description", template="partials/ld-product.html") }}
+{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-product.html") }}
+{{ assert::required(ok=page.extra.price is defined and page.extra.price, field="page.extra.price", template="partials/ld-product.html") }}
+{{ assert::required(ok=page.extra.price_source is defined and page.extra.price_source, field="page.extra.price_source", template="partials/ld-product.html") }}
+{{ assert::required(ok=page.extra.stripe_url is defined and page.extra.stripe_url, field="page.extra.stripe_url", template="partials/ld-product.html") }}
 {%- set price_numeric = page.extra.price | trim_start_matches(pat="$") -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}

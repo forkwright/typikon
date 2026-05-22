@@ -4,8 +4,10 @@ description = "The first journal entry in the sample fixture. Tests that the jou
 date = 2026-01-15
 
 [extra]
+audience = "typikon fixture readers"
 components = "λόγος · attention · the work"
 words = "~120 words"
+words_source = "fixture hand count"
 +++
 
 The first journal entry exists to prove that `journal-entry.schema.json` validates a real file with all required fields populated.

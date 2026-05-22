@@ -5,6 +5,10 @@
    Inputs:
      page.extra.questions — array of {q, a, anchor?} per faq schema
 #}
+{% import "partials/assert.html" as assert %}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-faq.html") }}
+{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-faq.html") }}
+{{ assert::required(ok=page.extra.questions is defined and page.extra.questions | length > 0, field="page.extra.questions", template="partials/ld-faq.html") }}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",

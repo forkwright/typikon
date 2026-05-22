@@ -10,6 +10,11 @@
      config.extra.author.name — fallback brand author
      config.title       — publisher name
 #}
+{% import "partials/assert.html" as assert %}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-article.html") }}
+{{ assert::required(ok=page.description is defined and page.description, field="page.description", template="partials/ld-article.html") }}
+{{ assert::required(ok=page.date is defined and page.date, field="page.date", template="partials/ld-article.html") }}
+{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-article.html") }}
 {%- set author_name = page.extra.author | default(value=config.extra.author.name) | default(value=config.title) -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}

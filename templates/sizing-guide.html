@@ -5,6 +5,7 @@
    Schema: schemas/sizing-guide.schema.json
 #}
 {% extends "page.html" %}
+{% import "partials/assert.html" as assert %}
 
 {% block ld_json %}
   {{ super() }}
@@ -17,6 +18,11 @@
 {% endblock ld_json %}
 
 {% block content %}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="sizing-guide.html") }}
+{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="sizing-guide.html") }}
+{{ assert::required(ok=page.extra.product_type is defined and page.extra.product_type, field="page.extra.product_type", template="sizing-guide.html") }}
+{{ assert::required(ok=page.extra.measurement_source is defined and page.extra.measurement_source, field="page.extra.measurement_source", template="sizing-guide.html") }}
+{{ assert::required(ok=page.extra.size_table is defined and page.extra.size_table | length > 0, field="page.extra.size_table", template="sizing-guide.html") }}
 <article class="sizing-guide">
   <header class="page-header">
     <h1>{{ page.title }}</h1>

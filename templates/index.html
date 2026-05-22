@@ -20,9 +20,10 @@
      +++
 #}
 {% extends "base.html" %}
+{% import "partials/assert.html" as assert %}
 
-{% block title %}{{ section.extra.seo_title | default(value=section.title) }}{% endblock title %}
-{% block og_title %}{{ section.extra.seo_title | default(value=section.title) }}{% endblock og_title %}
+{% block title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="index.html") }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock title %}
+{% block og_title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="index.html") }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock og_title %}
 
 {% block description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock description %}
 {% block og_description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock og_description %}

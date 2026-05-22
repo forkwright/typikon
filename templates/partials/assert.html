@@ -1,0 +1,8 @@
+{# Template assertions for metadata that must exist before rendering.
+   Schema validation should catch these first; throw keeps custom-template
+   builds from silently rendering incomplete context. #}
+{% macro required(ok, field, template) -%}
+{%- if not ok -%}
+{{ throw(message=template ~ ": missing required metadata `" ~ field ~ "`") }}
+{%- endif -%}
+{%- endmacro required %}

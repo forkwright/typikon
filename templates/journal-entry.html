@@ -11,6 +11,7 @@
      page.extra.words. See schemas/journal-entry.schema.json.
 #}
 {% extends "page.html" %}
+{% import "partials/assert.html" as assert %}
 
 {% block og_type %}article{% endblock og_type %}
 
@@ -21,6 +22,13 @@
 {% endblock ld_json %}
 
 {% block content %}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="journal-entry.html") }}
+{{ assert::required(ok=page.description is defined and page.description, field="page.description", template="journal-entry.html") }}
+{{ assert::required(ok=page.date is defined and page.date, field="page.date", template="journal-entry.html") }}
+{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="journal-entry.html") }}
+{{ assert::required(ok=page.extra.components is defined and page.extra.components, field="page.extra.components", template="journal-entry.html") }}
+{{ assert::required(ok=page.extra.words is defined and page.extra.words, field="page.extra.words", template="journal-entry.html") }}
+{{ assert::required(ok=page.extra.words_source is defined and page.extra.words_source, field="page.extra.words_source", template="journal-entry.html") }}
 <article class="journal-entry-page">
   <header class="entry-header">
     <h1>{{ page.title }}</h1>

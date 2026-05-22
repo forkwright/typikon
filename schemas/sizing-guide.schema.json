@@ -17,9 +17,15 @@
     "draft": { "type": "boolean" },
     "extra": {
       "type": "object",
-      "required": ["product_type", "size_table"],
+      "required": ["audience", "measurement_source", "product_type", "size_table"],
       "additionalProperties": false,
       "properties": {
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended reader context for the sizing guide."
+        },
         "product_type": {
           "type": "string",
           "minLength": 2,
@@ -31,6 +37,12 @@
           "enum": ["inches", "centimeters", "both"],
           "default": "inches",
           "description": "Display unit for size_table values. 'both' renders inches and a parenthesized cm conversion."
+        },
+        "measurement_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for numeric sizing claims, e.g. pattern block, sample measurement run, or fixture note."
         },
         "size_table": {
           "type": "array",
