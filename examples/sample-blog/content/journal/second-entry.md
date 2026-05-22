@@ -4,8 +4,10 @@ description = "The second journal entry. Pairs with first-entry so the prev/next
 date = 2026-02-10
 
 [extra]
+audience = "typikon fixture readers"
 components = "πρᾶξις · iteration · the second pass"
 words = "~90 words"
+words_source = "fixture hand count"
 +++
 
 The second journal entry. With this entry plus `first-entry.md`, the section renders as a list of two and each entry has one prev/next sibling.

@@ -2,9 +2,10 @@
    shared base shell. Consumers can override per-page via frontmatter
    `template = "..."` or per-section by shipping `<section>/page.html`. #}
 {% extends "base.html" %}
+{% import "partials/assert.html" as assert %}
 
-{% block title %}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock title %}
-{% block og_title %}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock og_title %}
+{% block title %}{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock title %}
+{% block og_title %}{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock og_title %}
 
 {% block description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock description %}
 {% block og_description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock og_description %}
@@ -23,7 +24,11 @@
 {% block ld_json %}
   {{ super() }}
   {# Product JSON-LD when frontmatter is product-shaped (per schema). #}
-  {%- if page.extra.price and page.extra.stripe_url -%}
+  {%- if page.extra.price or page.extra.stripe_url or page.extra.price_source -%}
+  {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="page.html") }}
+  {{ assert::required(ok=page.extra.price is defined and page.extra.price, field="page.extra.price", template="page.html") }}
+  {{ assert::required(ok=page.extra.price_source is defined and page.extra.price_source, field="page.extra.price_source", template="page.html") }}
+  {{ assert::required(ok=page.extra.stripe_url is defined and page.extra.stripe_url, field="page.extra.stripe_url", template="page.html") }}
   {%- include "partials/ld-product.html" -%}
   {%- endif -%}
   {# BreadcrumbList for non-home pages. #}

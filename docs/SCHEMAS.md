@@ -1,10 +1,10 @@
 # Schemas
 
-JSON Schema definitions for every content type a typikon-consuming site can author. The schemas in `schemas/` are authoritative; this document is a human-readable index. Validation happens via `bin/typikon-validate`.
+JSON Schema definitions for every content type a typikon-consuming site can author live in `schemas/`. Validation happens via `bin/typikon-validate`.
 
 ## How the validator routes a file to a schema
 
-`typikon-validate` reads `<root>/content/**/*.md` and classifies in this order — first match wins:
+`typikon-validate` reads `<root>/content/**/*.md` and classifies in this order; first match wins:
 
 | Rule                                         | Schema             |
 |----------------------------------------------|--------------------|
@@ -75,13 +75,15 @@ list_caption = "Newest at top."
 
 Pages under `content/journal/` (excluding `_index.md`). Stricter than page: requires `description`, `date`, and the entry-level extras so the auto-generated journal listing renders cleanly.
 
-**Required:** `title`, `description`, `date`, `extra.components`, `extra.words`.
+**Required:** `title`, `description`, `date`, `extra.audience`, `extra.components`, `extra.words`, `extra.words_source`.
 
 **Constraints:**
 - description: 20–200 chars
 - date: ISO 8601
+- extra.audience: 3–120 chars
 - extra.components: 5–120 chars (the conceptual-tags line)
 - extra.words: matches `^~?\d+( words)?$`
+- extra.words_source: 3–200 chars; source for the rendered word-count claim
 
 **Example:**
 
@@ -92,8 +94,10 @@ description = "On the green dye and the tensions it holds. Why the color that ca
 date = 2026-01-20
 
 [extra]
+audience = "readers following the workbench journal"
 components = "ἀπορία · productive uncertainty · the green"
 words = "~430 words"
+words_source = "manual count"
 +++
 ```
 
@@ -101,14 +105,16 @@ words = "~430 words"
 
 Pages under `content/products/`. Required for the purchase block to render.
 
-**Required:** `title`, `description`, `extra.price`, `extra.stripe_url`.
+**Required:** `title`, `description`, `extra.audience`, `extra.price`, `extra.price_source`, `extra.stripe_url`.
 
 **Constraints:**
 - description: 30–200 chars
+- audience: 3–120 chars
 - price: matches `^\$?\d{1,5}(\.\d{2})?$` (e.g. `$150`, `85`, `12.50`)
+- price_source: 3–200 chars; source for the rendered price claim
 - stripe_url: matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`
 - shipping_note (optional): ≤200 chars
-- images (optional): array of `{src, alt, caption?}` — Zola's `resize_image` produces 400/800/1200px WebP variants automatically; the product-gallery partial renders responsive `<picture>` per item
+- images (optional): array of `{src, alt, caption?}`; Zola's `resize_image` produces 400/800/1200px WebP variants automatically, and the product-gallery partial renders responsive `<picture>` per item
 
 **Example:**
 
@@ -119,7 +125,9 @@ description = "Single-layer Hermann Oak harness leather. Solid brass. Hand saddl
 
 [extra]
 seo_title = "Hermann Oak Leather Belt | Ardent Leatherworks"
+audience = "customers choosing a made-to-order belt"
 price = "$150"
+price_source = "Stripe price price_123"
 stripe_url = "https://buy.stripe.com/cNi9AT1ZHfFDeNRdsh6Ri02"
 
 [[extra.images]]
@@ -137,12 +145,13 @@ caption = "Two needles work the same thread from opposite sides."
 
 Any page with `template = "faq.html"`. Renders a definition-list FAQ with anchored `<dt>`s and emits FAQPage JSON-LD.
 
-**Required:** `title`, `extra.questions` (array of one or more entries).
+**Required:** `title`, `extra.audience`, `extra.questions` (array of one or more entries).
 
 **Constraints (per question):**
+- audience: 3–120 chars
 - q: 5–200 chars
 - a: 5–2000 chars; supports `\n\n` for paragraph breaks (template splits on it)
-- anchor (optional): `^[a-z0-9-]+$` — slugified from `q` if omitted
+- anchor (optional): `^[a-z0-9-]+$`; slugified from `q` if omitted
 - additionalProperties on each question: false (strict)
 
 **Example:**
@@ -152,6 +161,9 @@ Any page with `template = "faq.html"`. Renders a definition-list FAQ with anchor
 title = "Questions"
 description = "Frequently asked questions."
 template = "faq.html"
+
+[extra]
+audience = "customers with pre-purchase questions"
 
 [[extra.questions]]
 q = "What size belt do I need?"
@@ -168,12 +180,14 @@ a = "US only currently. Reach out for case-by-case international quotes."
 
 Any page with `template = "sizing-guide.html"`. Renders a measurement table, an optional inline-SVG diagram, and an optional decision tree.
 
-**Required:** `title`, `extra.product_type`, `extra.size_table` (one or more rows).
+**Required:** `title`, `extra.audience`, `extra.measurement_source`, `extra.product_type`, `extra.size_table` (one or more rows).
 
 **Constraints:**
+- audience: 3–120 chars
+- measurement_source: 3–200 chars; source for numeric sizing claims
 - product_type: 2–40 chars
 - measurement_unit (optional): `inches | centimeters | both` (default `inches`)
-- size_table rows: required `size`; optional `waist`, `length`, `width`, `note` — column rendering is conditional on the first row's keys
+- size_table rows: required `size`; optional `waist`, `length`, `width`, `note`; column rendering is conditional on the first row's keys
 - diagram (optional): path under static/ to an `.svg` file; loaded inline via `load_data`
 - decision_tree (optional): array of strings, rendered as ordered list
 
@@ -186,8 +200,10 @@ description = "How to size an Ardent harness belt."
 template = "sizing-guide.html"
 
 [extra]
+audience = "customers measuring for belt sizing"
 product_type = "belt"
 measurement_unit = "inches"
+measurement_source = "bench pattern block 2026-01"
 decision_tree = [
   "Find a belt you wear and like the fit of. Measure from the buckle fold to the hole you use most.",
   "If you carry concealed at the waist, add 1 inch.",
@@ -205,7 +221,7 @@ note = "Sized to the middle hole; first hole is 32, last is 36."
 +++
 ```
 
-> **TOML order matters.** `decision_tree = [...]` must come *before* the first `[[extra.size_table]]` block. Once an array-of-tables starts, scalar assignments belong to the *last* table — so a trailing `decision_tree` would silently land inside the final size_table row.
+> **TOML order matters.** `decision_tree = [...]` must come *before* the first `[[extra.size_table]]` block. Once an array-of-tables starts, scalar assignments belong to the *last* table, so a trailing `decision_tree` would silently land inside the final size_table row.
 
 ## Adding a new content type
 
@@ -228,8 +244,8 @@ When a schema changes incompatibly:
 2. Replace the `migrate(frontmatter, file_path)` body with the field transformation. Idempotence rule: running it twice on the same input must produce the same output as once.
 3. The script walks a consumer site root, parses frontmatter, runs `migrate()`, and writes back when the result differs.
 4. The typikon PR description lists every consumer affected.
-5. On merge, run the migration against each consumer in a separate consumer-side PR — that captures the rewrite as a reviewable diff.
+5. On merge, run the migration against each consumer in a separate consumer-side PR; that captures the rewrite as a reviewable diff.
 
-The skeleton handles parsing, idempotence checking, basic TOML serialization, and JSONL change reporting. It uses `tomli_w` when installed and falls back to a minimal emitter otherwise — install `tomli_w` via `uv tool install tomli_w` if your migration needs round-trip fidelity for inline tables / multi-line strings.
+The skeleton handles parsing, idempotence checking, basic TOML serialization, and JSONL change reporting. It uses `tomli_w` when installed and falls back to a minimal emitter otherwise. Install `tomli_w` via `uv tool install tomli_w` if your migration needs round-trip fidelity for inline tables or multi-line strings.
 
 This keeps consumers from drifting out of typikon's contract silently.

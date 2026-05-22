@@ -17,9 +17,15 @@
     "draft": { "type": "boolean" },
     "extra": {
       "type": "object",
-      "required": ["questions"],
+      "required": ["audience", "questions"],
       "additionalProperties": false,
       "properties": {
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended reader context for the FAQ."
+        },
         "questions": {
           "type": "array",
           "minItems": 1,

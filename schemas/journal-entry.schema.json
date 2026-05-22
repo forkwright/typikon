@@ -21,9 +21,15 @@
     "draft": { "type": "boolean" },
     "extra": {
       "type": "object",
-      "required": ["components", "words"],
+      "required": ["audience", "components", "words", "words_source"],
       "additionalProperties": true,
       "properties": {
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended reader context for the entry. Required so rendered deliverables carry audience assumptions explicitly."
+        },
         "components": {
           "type": "string",
           "minLength": 5,
@@ -34,6 +40,12 @@
           "type": "string",
           "pattern": "^~?\\d+( words)?$",
           "description": "Approximate word count, e.g. '~480' or '~480 words'."
+        },
+        "words_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the rendered word-count claim, e.g. 'manual count' or the counting tool used."
         },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },

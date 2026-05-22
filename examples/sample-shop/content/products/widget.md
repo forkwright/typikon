@@ -4,7 +4,9 @@ description = "A sample product. Exercises product.schema.json's required fields
 weight = 1
 
 [extra]
+audience = "sample shop buyers"
 price = "$50"
+price_source = "sample fixture price list"
 stripe_url = "https://buy.stripe.com/test_widget_fixture"
 shipping_note = "Sample shipping note. Real consumers populate per-product."
 

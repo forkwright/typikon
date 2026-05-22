@@ -17,13 +17,25 @@
     "draft": { "type": "boolean" },
     "extra": {
       "type": "object",
-      "required": ["price", "stripe_url"],
+      "required": ["audience", "price", "price_source", "stripe_url"],
       "additionalProperties": true,
       "properties": {
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended buyer or reader context for the product page."
+        },
         "price": {
           "type": "string",
           "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
           "description": "Display price with optional leading $ (e.g. '$150', '85'). Bare number assumed USD."
+        },
+        "price_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the rendered price claim, e.g. the Stripe price object, SKU ledger, or fixture note."
         },
         "stripe_url": {
           "type": "string",
