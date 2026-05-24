@@ -3,7 +3,11 @@
 # spdx: AGPL-3.0-or-later
 
 [pipeline]
-stages = ["fixtures-gate"]
+stages = ["lint", "fixtures-gate"]
+
+[stages.lint]
+cmd = "kanon lint . --summary"
+timeout_secs = 60
 
 [stages.fixtures-gate]
 cmd = "ci/run-fixtures.sh"

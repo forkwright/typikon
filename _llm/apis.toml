@@ -1,3 +1,9 @@
+# Typikon ships no MCP server and no HTTP routes; these arrays are intentionally empty
+# but declared so the LLM-schema validator passes. Top-level keys must precede any
+# table declarations under TOML semantics.
+mcp_tools = []
+http_routes = []
+
 [meta]
 name = "typikon"
 repo = "forkwright/typikon"
@@ -9,7 +15,7 @@ source_docs = [
 ]
 
 [apis]
-summary = "Typikon exposes local CLI scripts for scaffolding, validation, migration, and CI checks."
+summary = "Typikon exposes local CLI scripts for scaffolding, validation, migration, and CI checks. No MCP server surface and no HTTP routes; all interaction is via the local CLIs enumerated below."
 
 [[cli_commands]]
 name = "bin/typikon-init"
