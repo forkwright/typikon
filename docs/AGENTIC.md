@@ -1,6 +1,6 @@
 # Agentic operation
 
-Typikon is operated by AI agents. This document is the contract every agent follows when working on typikon itself or on any consumer site.
+Every agent working on typikon itself or on any consumer site follows the contract below. Typikon is operated by AI agents; human edits are exceptions.
 
 If you are a human reading this: every constraint here is also good for humans, but the bias is toward machine ergonomics. When in doubt, optimize for the agent.
 

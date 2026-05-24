@@ -1,3 +1,9 @@
+<!--
+scope: Fleet Zola theme, frontmatter schemas, scaffolds, and CI gates for agentic web-property substrate
+defers_to: docs/AGENTIC.md for the agent contract; docs/SCHEMAS.md for frontmatter rules; docs/BOOTSTRAP.md for scaffolder behaviour
+tightens: forge-primary push policy and strict CSP with no unsafe-inline narrow the kanon defaults for fleet web properties
+-->
+
 # CLAUDE.md: Typikon
 
 ## Repository
