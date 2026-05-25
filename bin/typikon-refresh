@@ -20,10 +20,11 @@
 # in `_headers.tmpl` / `_redirects.tmpl` notes that those instances are
 # operator-edited (they're NOT re-rendered here for that reason — only
 # the genuine `{{ PLACEHOLDER }}`-substituted templates pass through).
-# For `ci/github-workflow.yml.tmpl` the rendered instance lives at
-# `.github/workflows/deploy.yml` and is treated as derived: hand-edits
-# there are lost on refresh, by design. Per-site GH Actions deltas
-# belong in a sibling workflow file the consumer authors directly.
+# For `ci/kanon-ci.toml.tmpl` and `ci/github-workflow.yml.tmpl`, the
+# rendered instances live at `.kanon-ci.toml` and
+# `.github/workflows/deploy.yml` and are treated as derived: hand-edits
+# there are lost on refresh, by design. Per-site CI deltas belong in
+# sibling files or operator-authored follow-up commits.
 #
 # Environment:
 #     TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.22.1, mirroring
@@ -133,6 +134,7 @@ ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-}"
 # verbatim copies that consumers edit) intentionally do not appear
 # here; they are scaffolded once by typikon-init and not re-rendered.
 declare -a TMPL_TARGETS=(
+    "ci/kanon-ci.toml.tmpl|.kanon-ci.toml"
     "ci/github-workflow.yml.tmpl|.github/workflows/deploy.yml"
 )
 

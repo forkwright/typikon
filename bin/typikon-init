@@ -12,7 +12,7 @@
 #     <dest>/
 #     ├── .git/                     (git init, remotes set: origin=forge, github=mirror)
 #     ├── .gitignore                (zola public/, editor crud)
-#     ├── .kanon-ci.toml            (sentinel pipeline; consumers replace with real gate)
+#     ├── .kanon-ci.toml            (strict forge-primary deploy gate)
 #     ├── themes/typikon/           (git submodule -> forkwright/typikon)
 #     ├── config.toml               (Zola config with placeholder [extra])
 #     ├── content/_index.md         (homepage stub)
@@ -114,7 +114,7 @@ copy_template() {
 copy_template "$TYPIKON_ROOT/_headers.tmpl" "_headers"
 copy_template "$TYPIKON_ROOT/_redirects.tmpl" "_redirects"
 
-# GitHub Actions workflow — substitute placeholders during copy.
+# CI workflow templates - substitute placeholders during copy.
 # ZOLA_VERSION default lives in bin/typikon-defaults.sh (single source
 # of truth shared with typikon-refresh); env-var override stays the
 # same shape (`TYPIKON_ZOLA_VERSION=... typikon-init ...`).
@@ -132,6 +132,16 @@ else
     echo "skip   .github/workflows/deploy.yml (exists)" >&2
 fi
 
+if [[ ! -e .kanon-ci.toml ]]; then
+    sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
+        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
+        "$TYPIKON_ROOT/ci/kanon-ci.toml.tmpl" \
+        > .kanon-ci.toml
+    echo "create .kanon-ci.toml (from ci/kanon-ci.toml.tmpl)" >&2
+else
+    echo "skip   .kanon-ci.toml (exists)" >&2
+fi
+
 write_if_absent ".gitignore" "$(cat <<'GITIGNORE'
 public/
 .zola-cache/
@@ -146,26 +156,6 @@ playwright-report/
 .env
 .env.local
 GITIGNORE
-)
-"
-
-write_if_absent ".kanon-ci.toml" "$(cat <<'CI'
-# Site CI pipeline — sentinel until typikon's full gate ships.
-#
-# Phase 5 of typikon's v1 plan replaces these stages with the strict
-# gate (zola check, zola build, csp-enforce, lychee, pa11y,
-# playwright-smoke). Until then, this sentinel keeps the forge
-# post-receive hook honest.
-[pipeline]
-stages = ["checkout-ok"]
-
-[stages.checkout-ok]
-cmd = "true"
-timeout_secs = 10
-
-[verifier]
-enabled = false
-CI
 )
 "
 
@@ -280,7 +270,8 @@ git commit -m "chore(theme): bump typikon to <sha> + regen templates"
 \`\`\`
 
 \`typikon-refresh\` bumps the submodule to the latest \`origin/main\`,
-re-renders every substituted template (e.g. \`.github/workflows/deploy.yml\`
+re-renders every substituted template (including \`.kanon-ci.toml\`
+from \`ci/kanon-ci.toml.tmpl\` and \`.github/workflows/deploy.yml\`
 from \`ci/github-workflow.yml.tmpl\`), and leaves the diff staged for
 review. Idempotent: re-running with no upstream changes is a no-op.
 See \`themes/typikon/bin/typikon-refresh --help\` for env knobs.
