@@ -1,0 +1,187 @@
+# kanon-CI pipeline for typikon-consuming sites.
+#
+# This file is a TEMPLATE. typikon-init copies it to a consumer site as
+# .kanon-ci.toml during scaffolding, substituting the two placeholders below.
+#
+# Placeholders:
+#   {{ PROJECT_NAME }}   - Cloudflare Pages project slug (e.g. ardent-site)
+#   {{ ZOLA_VERSION }}   - pinned Zola version (current: 0.22.1)
+#
+# Forge runners must provide:
+#   - CLOUDFLARE_API_TOKEN
+#   - CF_ACCOUNT_ID (or CLOUDFLARE_ACCOUNT_ID for GitHub-env parity)
+#
+# This mirrors ci/github-workflow.yml.tmpl stage-for-stage. GitHub remains
+# the executable fallback until forge runners validate the same deploy path.
+
+[pipeline]
+stages = [
+  "install-zola",
+  "install-python-deps",
+  "setup-node-tooling",
+  "typikon-validate",
+  "zola-check",
+  "zola-build",
+  "copy-cloudflare-files",
+  "csp-enforce",
+  "lychee",
+  "serve-public",
+  "pa11y",
+  "playwright",
+  "teardown-static-server",
+  "deploy-cloudflare-pages",
+]
+
+[stages.install-zola]
+cmd = """
+set -euo pipefail
+ZOLA_SHA256=0ca09aa40376aaa9ddfb512ff9ad963262ef95edb0d0f2d5ec6961b6f5cf22ef
+curl -L "https://github.com/getzola/zola/releases/download/v{{ ZOLA_VERSION }}/zola-v{{ ZOLA_VERSION }}-x86_64-unknown-linux-gnu.tar.gz" -o zola.tar.gz
+echo "${ZOLA_SHA256}  zola.tar.gz" | sha256sum -c
+tar -xzf zola.tar.gz
+mkdir -p .kanon-ci/bin
+mv zola .kanon-ci/bin/
+rm -f zola.tar.gz
+.kanon-ci/bin/zola --version
+"""
+timeout_secs = 120
+
+[stages.install-python-deps]
+cmd = """
+set -euo pipefail
+python3 -m pip install --user jsonschema
+"""
+timeout_secs = 120
+
+[stages.setup-node-tooling]
+cmd = """
+set -euo pipefail
+LYCHEE_VERSION=0.24.2
+LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+npm install -g pa11y-ci@latest @playwright/test@latest
+npx playwright install --with-deps chromium
+curl -L "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" -o lychee.tar.gz
+echo "${LYCHEE_SHA256}  lychee.tar.gz" | sha256sum -c
+mkdir -p lychee-extract .kanon-ci/bin
+tar -xzf lychee.tar.gz -C lychee-extract --strip-components=1
+mv lychee-extract/lychee .kanon-ci/bin/
+rm -rf lychee.tar.gz lychee-extract
+"""
+timeout_secs = 900
+
+[stages.typikon-validate]
+cmd = """
+set -euo pipefail
+themes/typikon/bin/typikon-validate .
+"""
+timeout_secs = 120
+
+[stages.zola-check]
+cmd = """
+set -euo pipefail
+PATH="$PWD/.kanon-ci/bin:$PATH" zola check
+"""
+timeout_secs = 120
+
+[stages.zola-build]
+cmd = """
+set -euo pipefail
+PATH="$PWD/.kanon-ci/bin:$PATH" zola build
+"""
+timeout_secs = 120
+
+[stages.copy-cloudflare-files]
+cmd = """
+set -euo pipefail
+[ -f _headers ] && cp _headers public/_headers
+[ -f _redirects ] && cp _redirects public/_redirects
+[ -f public/404/index.html ] && cp public/404/index.html public/404.html
+true
+"""
+timeout_secs = 30
+
+[stages.csp-enforce]
+cmd = """
+set -euo pipefail
+themes/typikon/ci/csp-enforce.sh public/
+"""
+timeout_secs = 120
+
+[stages.lychee]
+cmd = """
+set -euo pipefail
+BASE_URL=$(grep -E '^base_url\\s*=' config.toml | head -1 | sed -E 's/^base_url\\s*=\\s*"([^"]+)".*/\\1/' | sed 's:/$::')
+BASE_HOST=$(printf '%s' "$BASE_URL" | sed -E 's|^https?://||' | sed -E 's|/.*$||')
+ESCAPED_HOST=$(printf '%s' "$BASE_HOST" | sed 's/\\./\\\\./g')
+echo "Excluding self-host links: ^https?://${ESCAPED_HOST}/"
+PATH="$PWD/.kanon-ci/bin:$PATH" lychee --config themes/typikon/ci/lychee.toml --root-dir "$PWD/public" --exclude "^https?://${ESCAPED_HOST}/" public/
+"""
+timeout_secs = 300
+
+[stages.serve-public]
+cmd = """
+set -euo pipefail
+cd public
+python3 -m http.server 8080 > ../.kanon-ci/http-server.log 2>&1 &
+echo $! > ../.kanon-ci/server.pid
+sleep 2
+"""
+timeout_secs = 30
+
+[stages.pa11y]
+cmd = """
+set -euo pipefail
+pa11y-ci --config themes/typikon/ci/pa11y.config.js
+"""
+timeout_secs = 300
+
+[stages.playwright]
+cmd = """
+set -euo pipefail
+if find tests/smoke -type f -name '*.spec.ts' | grep -q .; then
+  cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
+  npx playwright test
+else
+  echo "skip playwright: no tests/smoke/**/*.spec.ts files"
+fi
+"""
+timeout_secs = 300
+
+[stages.teardown-static-server]
+cmd = """
+set -euo pipefail
+kill "$(cat .kanon-ci/server.pid 2>/dev/null)" 2>/dev/null || true
+"""
+timeout_secs = 30
+
+[stages.deploy-cloudflare-pages]
+cmd = """
+set -euo pipefail
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+case "$BRANCH" in
+  main|master) ;;
+  *)
+    echo "skip deploy: branch ${BRANCH} is not main/master"
+    exit 0
+    ;;
+esac
+
+ACCOUNT_ID="${CF_ACCOUNT_ID:-${CLOUDFLARE_ACCOUNT_ID:-}}"
+: "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required}"
+: "${ACCOUNT_ID:?CF_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID is required}"
+
+curl -fsS -X PATCH \
+  "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/{{ PROJECT_NAME }}" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  --data "{\\\"production_branch\\\": \\\"${BRANCH}\\\"}" \
+  > /tmp/cf-edit.json
+echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
+
+npm install -g wrangler
+wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"
+"""
+timeout_secs = 600
+
+[verifier]
+enabled = false
