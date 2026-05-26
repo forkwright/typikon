@@ -26,7 +26,7 @@
 #   1  violations found (printed with file path + matched line)
 #   2  invocation error
 
-# kanon:ignore SHELL/strict-mode -- counts violations across all files + continues; set -e would abort on first
+# Counts violations across all files and continues; set -e would abort on first miss.
 set -uo pipefail
 
 usage() {
