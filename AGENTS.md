@@ -1,0 +1,81 @@
+# AGENTS.md
+
+Agent operating manual for forkwright/typikon. Read this before contributing to the theme substrate.
+
+## Quick start
+
+Typikon is a Zola theme + frontmatter schemas + CI gates for agentic fleet web properties. Read the entry points in order:
+
+1. [README.md](README.md) — overview, design, usage
+2. [CLAUDE.md](CLAUDE.md) — locked decisions, boundaries
+3. [docs/AGENTIC.md](docs/AGENTIC.md) — agent contract (5 rules)
+4. [docs/SCHEMAS.md](docs/SCHEMAS.md) — frontmatter field reference
+5. [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — scaffolder behavior
+
+## Key binaries
+
+| Binary | Purpose |
+|--------|---------|
+| `bin/typikon-init` | Scaffold a new consumer site or content primitive. Usage: `bin/typikon-init <site-name> <dest>`. |
+| `bin/typikon-validate` | Validate frontmatter against schemas. Usage: `bin/typikon-validate <consumer-site-root>`. JSONL output on stderr. |
+| `bin/typikon-check` | Run the full local pre-push gate (7 stages). Usage: `bin/typikon-check <consumer-site-root>`. |
+| `bin/typikon-refresh` | Bump consumer site submodule + re-render templates. Run from consumer site root. |
+| `bin/typikon-migrate-template` | Skeleton for schema-migration scripts. Copy and adapt when frontmatter changes incompatibly. |
+
+All CLIs are idempotent; JSONL output for parsing.
+
+## Development loop
+
+### Theme changes
+
+1. Edit template, schema, scaffold, or CI gate in typikon.
+2. Validate: `cd <consumer-site> && themes/typikon/bin/typikon-check .` (all 7 stages pass).
+3. Run the theme gate locally: `cd <typikon> && ci/run-fixtures.sh` (validates typikon's own fixtures).
+4. Commit with conventional commit (type: feat/fix/chore/docs). No inline scripts/styles. No unsafe-inline CSP.
+5. Push to origin (forge is primary). CI gate on forge runs kanon lint + fixtures.
+
+### Consumer site updates
+
+Consumer sites use typikon as a git submodule under `themes/typikon/` and scaffold content via the binaries above. When typikon changes:
+
+1. Consumer runs `themes/typikon/bin/typikon-refresh` (bumps submodule, re-renders templates).
+2. Consumer validates: `bin/typikon-check .` (all 7 stages).
+3. Consumer commits the diff.
+
+## Locked decisions
+
+All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
+
+- **Static SSG**: Zola 0.22.x. No JavaScript build step in site build path.
+- **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on inline script/style/handler.
+- **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime.
+- **Forge-primary**: origin points at forkwright forge; GitHub is push-mirror only.
+- **License**: AGPL-3.0-or-later. AI-training prohibited (NOTICE).
+
+## Boundaries
+
+- **Push to origin (forge), not github.** Git remote verify: `git remote -v`.
+- **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
+- **Schema changes are migrations.** When a schema changes incompatibly, ship a migration script in `bin/`.
+- **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema here; do not fork the theme.
+
+## Dispatch entry points
+
+When a kimi (T3) worker lands changes to typikon:
+
+- All changes go through `bin/typikon-check` (or CI runs it). Gate must pass.
+- Recent-work review (5 days): commits must be sound (complete, no stubs/TODO-left), no AI indicators.
+- Docs (README/CLAUDE/AGENTS/llms.txt/_llm/) must be kept current — do not defer doc updates to a follow-up PR.
+
+When typikon changes, all consumer sites that use it as a submodule must refresh:
+
+- A parent orchestrator (T2) coordinates typikon bumps across the fleet once per release.
+- Consumers validate and commit the bump.
+
+## Glossary
+
+See [_llm/glossary.toml](_llm/glossary.toml) for typikon vocabulary (scaffold, schema, primitive, substrate, gate, CSP).
+
+## Architecture
+
+See [_llm/architecture.toml](_llm/architecture.toml) for theme layers and tool surfaces.
