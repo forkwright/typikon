@@ -1,0 +1,9 @@
+# typikon#9: preserve intentional substrate/example prose voice.
+WRITING/em-dash:README.md # typikon#9 preserves public substrate prose voice
+WRITING/em-dash:docs/AGENTIC.md # typikon#9 preserves agent-contract prose voice
+WRITING/em-dash:docs/BOOTSTRAP.md # typikon#9 preserves bootstrap prose voice
+WRITING/em-dash:examples/sample-shop/content/products/gadget.md # typikon#9 preserves rendered example prose voice
+WRITING/em-dash:examples/sample-shop/content/products/widget.md # typikon#9 preserves rendered example prose voice
+
+# typikon#15: keep CSP scan accumulation behavior; set -e would abort on the first grep miss.
+SHELL/strict-mode:ci/csp-enforce.sh # typikon#15 preserves full-report CSP scan behavior
