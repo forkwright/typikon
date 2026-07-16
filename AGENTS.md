@@ -1,3 +1,9 @@
+<!--
+scope: typikon repo cross-tool agent guide (Claude Code, Kimi, Codex, Cursor, Windsurf, Copilot)
+defers_to: CLAUDE.md for locked decisions and boundaries; docs/AGENTIC.md for the full agent contract
+tightens: docs/SCHEMAS.md frontmatter validation; docs/BOOTSTRAP.md scaffolder behavior
+-->
+
 # AGENTS.md
 
 Agent operating manual for forkwright/typikon. Read this before contributing to the theme substrate.

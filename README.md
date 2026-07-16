@@ -57,3 +57,28 @@ See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmat
 AGPL-3.0-or-later. See LICENSE and NOTICE.
 
 Self-hosted fonts under `static/fonts/` are OFL-1.1; see NOTICE for attributions.
+
+<!-- kanon:auto-start -->
+## Repository Metadata
+
+- Registry name: `typikon`
+- Description: Kanon-managed forkwright repository `typikon`.
+- Forge repo: `forkwright/typikon`
+- Kanon prefix: `ty`
+- Config source: `workflow/kanon.toml [projects.typikon]`
+- Planning state: `projects/typikon/STATE.md`
+- Last state update: `not recorded`
+
+Run `kanon docs sync --check --repo typikon` to verify this generated
+section and `kanon docs sync --apply --repo typikon` to refresh it.
+
+## Blast zone
+
+- Paths explicitly named by the rendered prompt, role, or template input.
+
+## Acceptance verifier
+
+```bash
+kanon gate
+```
+<!-- kanon:auto-end -->
