@@ -66,3 +66,27 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 - **Push to `origin` (forge), not `github`.** Mirror handles GitHub. Verify with `git remote -v`.
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
 - **Schema changes are migrations.** When a schema changes incompatibly, the change PR ships a migration script for existing consumers in `bin/`.
+
+<!-- kanon:auto-start -->
+## Generated kanon context
+
+- Registry name: `typikon`
+- Forge repo: `forkwright/typikon`
+- Kanon prefix: `ty`
+- Config source: `workflow/kanon.toml [projects.typikon]`
+- Standards source: `crates/basanos/standards/STANDARDS.md`
+- MCP routing catalog: `workflow/AGENTS-mcp-tools.md`
+
+Run `kanon docs sync --check --repo typikon` to verify this generated
+section and `kanon docs sync --apply --repo typikon` to refresh it.
+
+## Blast zone
+
+- Paths explicitly named by the rendered prompt, role, or template input.
+
+## Acceptance verifier
+
+```bash
+kanon gate
+```
+<!-- kanon:auto-end -->
