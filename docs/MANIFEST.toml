@@ -1,0 +1,19 @@
+# docs/MANIFEST.toml - documentation inventory for this repo.
+
+[[doc]]
+path = "docs/BOOTSTRAP.md"
+type = "authored"
+evergreen = true
+description = "bin/typikon-init scaffolder: anticipated invocation, wiring, idempotency semantics."
+
+[[doc]]
+path = "docs/SCHEMAS.md"
+type = "authored"
+evergreen = true
+description = "Content-type schema routing rules for typikon-validate and how to extend them."
+
+[[doc]]
+path = "docs/AGENTIC.md"
+type = "authored"
+evergreen = true
+description = "Agent operating contract for working on typikon or a consumer site."
