@@ -31,18 +31,21 @@
   Permissions-Policy: accelerometer=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
   Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self' https://buttondown.com; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests
 
-# Long-cache for content-addressable static assets.
-# Cloudflare Pages adds the cache-busting query string in production
-# automatically; consumers can layer asset-fingerprinting on top later.
+# Short-cache with revalidation for static assets.
+# NOTE: typikon-init scaffolds stable unhashed paths (/css/style.css,
+# /js/triad.js, ...) with no build-path fingerprinting, so these cannot
+# be marked immutable with a long lifetime — a deploy would leave
+# visitors pinned to stale content for the full lifetime. Revisit once
+# consumers layer asset-fingerprinting on top of these paths.
 
 /css/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /fonts/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /js/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /img/*
-  Cache-Control: public, max-age=2592000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
