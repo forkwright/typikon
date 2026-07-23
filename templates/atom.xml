@@ -9,7 +9,9 @@
 #}
 {%- set author_name = config.extra.author.name | default(value=config.title) -%}
 {%- set author_uri = config.extra.author.uri | default(value=config.base_url) -%}
-{%- if section %}{% set pages = section.pages %}{% else %}{% set pages = config.feed_pages | default(value=[]) %}{% endif -%}
+{# Section feeds get section.pages; the global feed already receives
+   Zola's site-wide `pages` in context, so leave it untouched here. #}
+{%- if section %}{% set pages = section.pages %}{% endif -%}
 <?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"{% if lang %} xml:lang="{{ lang }}"{% endif %}>
     <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section.title %} - {{ section.title }}{% endif %}</title>
@@ -19,10 +21,16 @@
     <link href="{{ feed_url | safe }}" rel="self" type="application/atom+xml"/>
     <link href="{{ config.base_url | safe }}"/>
     <generator uri="https://www.getzola.org/">Zola</generator>
-    {# last_updated is provided by Zola when at least one feed page has a
-       date; on a feedless site (e.g. a shop with no journal) it is absent,
-       so fall back to now() to keep the feed valid. #}
-    <updated>{{ last_updated | default(value=now()) | date(format="%+") }}</updated>
+    {%- if pages | length > 0 -%}
+    {%- set newest = pages | sort(attribute="date") | last -%}
+    {%- set feed_updated = newest.updated | default(value=newest.date) -%}
+    {%- else -%}
+    {# No dated entries to derive updated from (e.g. a shop with no
+       journal) — fall back to Zola's last_updated, then now(), to keep
+       the feed valid. #}
+    {%- set feed_updated = last_updated | default(value=now()) -%}
+    {%- endif -%}
+    <updated>{{ feed_updated | date(format="%+") }}</updated>
     <id>{{ feed_url | safe }}</id>
     <author>
         <name>{{ author_name }}</name>
