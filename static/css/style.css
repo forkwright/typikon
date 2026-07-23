@@ -963,16 +963,6 @@ footer p {
   flex: none;
 }
 
-.entry-header .entry-components a {
-  color: var(--text-light);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.entry-header .entry-components a:hover {
-  color: var(--aima);
-}
-
 /* === LEXICON === */
 main hr {
   border: none;
