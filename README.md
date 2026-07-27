@@ -10,12 +10,11 @@ A typikon does not contain the service. It governs how the service is enacted.
 
 Optimized for agentic operation. Humans should not need to develop here. The substrate ships:
 
-- **Templates** (`templates/`) — Tera templates for base, page, section, journal.
-- **Schemas** (`schemas/`) — JSON Schema for every content type. Frontmatter must validate before commit.
-- **Scaffolds** (`scaffolds/`) — content templates copied by `bin/typikon-init`.
-- **Binaries** (`bin/`) — `typikon-init`, `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
-- **CI** (`ci/`) — strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
-- **Headers** (`_headers.tmpl`, `_redirects.tmpl`) — Cloudflare Pages strict-CSP + redirect templates.
+- **Templates** (`templates/`) - Tera templates for base, page, section, journal.
+- **Schemas** (`schemas/`) - JSON Schema for every content type. Frontmatter must validate before commit.
+- **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
+- **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
+- **Headers** (`_headers.tmpl`, `_redirects.tmpl`) - Cloudflare Pages strict-CSP + redirect templates.
 
 ## Sovereignty
 

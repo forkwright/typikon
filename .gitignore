@@ -31,3 +31,6 @@ fonts-src/
 !theme/static/fonts/*.woff2
 target/
 *.bak
+
+# lychee link-check cache (build state, not source)
+.lycheecache
