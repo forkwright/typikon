@@ -14,6 +14,10 @@
 # Secrets the consumer must set in GitHub repo settings:
 #   - CLOUDFLARE_API_TOKEN
 #   - CLOUDFLARE_ACCOUNT_ID
+#
+# NOTE: third-party actions are pinned to a commit SHA with a `# vX` comment,
+# not a mutable tag. Refresh via:
+#   gh api repos/<owner>/<repo>/tags --jq '.[] | select(.name=="vX") | .commit.sha'
 
 name: Deploy to Cloudflare Pages
 
@@ -23,13 +27,26 @@ on:
   pull_request:
     branches: [main, master]
 
+# WHY: without this, a rapid succession of pushes to the same branch queues
+# overlapping deploys of stale commits; cancel-in-progress keeps only the
+# latest push's run alive.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# WHY: least privilege — this job only reads the repo and deploys via the
+# Cloudflare API/wrangler using repo secrets, never the GITHUB_TOKEN.
+permissions:
+  contents: read
+
 jobs:
   gate-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive  # Pulls typikon as themes/typikon/
+          persist-credentials: false
 
       # ── Tooling install ────────────────────────────────────────
       - name: Install Zola
@@ -50,7 +67,7 @@ jobs:
           python3 -m pip install --user jsonschema
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
