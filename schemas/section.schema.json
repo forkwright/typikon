@@ -61,15 +61,16 @@
             "greek": {
               "type": "array",
               "items": { "type": "string" },
-              "minItems": 2,
-              "maxItems": 4,
-              "description": "Greek terms cycled by the triad-mark component."
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Greek terms cycled by the triad-mark component. Fixed at three: templates/index.html pairs each entry with english[loop.index0] by position, and static/js/triad.js + the .triad-1/.triad-2/.triad-3 CSS rules are hard-coded for a three-term lifecycle."
             },
             "english": {
               "type": "array",
               "items": { "type": "string" },
-              "minItems": 2,
-              "maxItems": 4
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "English glosses, positionally paired with greek. Same length as greek by construction (both fixed at exactly three) so templates/index.html's english[loop.index0] lookup can never go out of bounds."
             },
             "target": {
               "type": "string",
