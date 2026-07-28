@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # csp-enforce — make the strict CSP load-bearing.
 #
 # Usage:
@@ -26,8 +27,8 @@
 #   1  violations found (printed with file path + matched line)
 #   2  invocation error
 
-# Counts violations across all files and continues; set -e would abort on first miss.
-set -uo pipefail
+# Strict mode globally; the counting section below drops `-e` locally because
+# its greps intentionally exit nonzero on no-match and must not abort.
 
 usage() {
     echo "usage: ci/csp-enforce.sh <built-public-dir>" >&2
@@ -50,6 +51,7 @@ mapfile -t FILES < <(find "$ROOT" -type f -name '*.html')
 }
 
 VIOLATIONS=0
+set +e  # count-and-continue: no-match greps below must not abort under -e
 
 # 1. Inline <script>...body...</script>. The body must contain at least
 #    one non-whitespace char. <script src="..." defer></script> is fine.

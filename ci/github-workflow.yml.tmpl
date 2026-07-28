@@ -82,6 +82,18 @@ jobs:
       - name: zola build
         run: zola build
 
+      - name: zola build (loopback base_url, for browser gates)
+        # pa11y and playwright render pages in a real browser, so any
+        # get_url()-derived absolute asset href in the HTML resolves
+        # against base_url — the real deployed domain, not the server
+        # this job spins up below. Without this, the browser gates fetch
+        # CSS/JS from the LIVE site and validate whatever's already
+        # deployed there instead of the commit under test. This second
+        # build, output separately, is the only copy the browser gates
+        # ever see; public/ (above) stays untouched for csp-enforce,
+        # lychee, and the Cloudflare deploy step.
+        run: zola build --base-url http://127.0.0.1:8080 --output-dir public-local
+
       - name: Copy _headers + _redirects + 404 into public/
         # Cloudflare Pages reads _headers and _redirects from the deploy
         # root. wrangler ships public/, so the files at repo root never
@@ -116,9 +128,13 @@ jobs:
             --exclude "^https?://${ESCAPED_HOST}/" \
             public/
 
-      - name: Serve public/ for browser-based gates
+      - name: Serve public-local/ for browser-based gates
+        # Serves the loopback-base_url build (see the "zola build
+        # (loopback base_url...)" step above), not public/ — csp-enforce
+        # and lychee already ran against public/ above and are
+        # unaffected by this substitution.
         run: |
-          cd public && python3 -m http.server 8080 &
+          cd public-local && python3 -m http.server 8080 &
           echo $! > /tmp/server.pid
           sleep 2
 

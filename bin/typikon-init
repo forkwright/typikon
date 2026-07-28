@@ -48,10 +48,11 @@ Arguments:
     destination-path    where to scaffold; created if absent
 
 Environment:
-    TYPIKON_THEME_REPO     forge URL for the typikon theme submodule
-                           (default: $THEME_REPO)
-    TYPIKON_THEME_REPO_GH  GitHub URL for the github remote
-                           (default: $THEME_REPO_GH)
+    TYPIKON_THEME_REPO     forge URL the theme submodule checkout is
+                           redirected to locally (default: $THEME_REPO)
+    TYPIKON_THEME_REPO_GH  GitHub URL recorded in .gitmodules, so the
+                           submodule stays reachable off-box (CI, a
+                           fresh clone) (default: $THEME_REPO_GH)
 EOF
     exit 2
 }
@@ -75,10 +76,17 @@ if [[ ! -d .git ]]; then
     git remote add github "git@github.com:forkwright/${SITE_NAME}.git"
 fi
 
-# Theme submodule (or refresh if already present).
+# Theme submodule (or refresh if already present). .gitmodules records
+# the GitHub URL so a network-isolated clone (CI runners, off-fleet
+# checkouts) can init the submodule with no local state; the checked-
+# out submodule's own `origin` is then redirected to the forge so the
+# operator's day-to-day pulls (and typikon-refresh's `git pull` inside
+# themes/typikon) hit the forge, not GitHub.
 if [[ ! -d themes/typikon/.git && ! -f themes/typikon/theme.toml ]]; then
     mkdir -p themes
-    git submodule add "$THEME_REPO" themes/typikon
+    git submodule add "$THEME_REPO_GH" themes/typikon
+    git config submodule.themes/typikon.url "$THEME_REPO"
+    git -C themes/typikon remote set-url origin "$THEME_REPO"
 else
     (cd themes/typikon && git pull --ff-only origin main 2>/dev/null) || true
 fi

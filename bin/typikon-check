@@ -78,7 +78,14 @@ run_stage() {
 }
 
 LOGDIR="$(mktemp -d -t typikon-check.XXXXXX)"
-trap 'echo "logs: $LOGDIR" >&2' EXIT
+PW_SRV_PID=""
+PW_CONFIG=""
+cleanup() {
+    [[ -n "$PW_SRV_PID" ]] && kill "$PW_SRV_PID" 2>/dev/null
+    [[ -n "$PW_CONFIG" ]] && rm -f "$PW_CONFIG"
+    echo "logs: $LOGDIR" >&2
+}
+trap cleanup EXIT INT TERM
 
 cd "$ROOT"
 
@@ -150,14 +157,20 @@ fi
 # under tests/smoke/.
 if [[ -d "$ROOT/tests/smoke" ]] && find "$ROOT/tests/smoke" -name '*.spec.ts' -print -quit | grep -q .; then
     if command -v npx >/dev/null 2>&1; then
-        cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$ROOT/playwright.config.ts"
+        # WARNING: never write to $ROOT/playwright.config.ts — a consumer may
+        # track its own. Stage the theme's config at a unique path and pass
+        # it explicitly so a pre-existing consumer config is never touched.
+        PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
+        cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
         cd public && python3 -m http.server 8080 >"$LOGDIR/pw-server.log" 2>&1 &
-        PW_PID=$!
+        PW_SRV_PID=$!
         cd "$ROOT"
         sleep 1
-        run_stage "playwright-smoke" npx playwright test || FAIL=1
-        kill "$PW_PID" 2>/dev/null || true
-        rm -f "$ROOT/playwright.config.ts"
+        run_stage "playwright-smoke" npx playwright test --config "$PW_CONFIG" || FAIL=1
+        kill "$PW_SRV_PID" 2>/dev/null || true
+        rm -f "$PW_CONFIG"
+        PW_SRV_PID=""
+        PW_CONFIG=""
     else
         emit "playwright-smoke" "skip" 0 "npx not on PATH"
     fi
