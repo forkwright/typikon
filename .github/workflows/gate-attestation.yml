@@ -1,48 +1,125 @@
+# WHY(kanon#2522): replaces the standalone trailer-only workflow (waived on
+# `github.actor`, the identity of whoever caused the CURRENT run — flips to a
+# maintainer login on "Re-run failed jobs" and re-arms the trailer check on a
+# bot PR that already passed) with the kanon-designed hybrid gate. A
+# trailer-stamped PR still takes the fast path; a trailer-less PR now falls
+# through to a REAL build on GH-hosted ubuntu-latest instead of being waived.
+# WARNING: an unmerged branch in this repo (fix/gate-bypass-author-shaped)
+# proposed patching the actor waiver by OR-ing
+# `startsWith(github.head_ref, 'release-please--branches--')` in — but
+# `github.head_ref` is the PR author's freely-chosen branch name, so any
+# contributor could name a branch that shape and skip the gate entirely
+# (kanon#2628 class). Adopting the reusable removes the waiver-by-identity
+# mechanism altogether: an untrailered PR compiles, full stop.
+#
+# WHY hosted in forkwright/.github, not forkwright/kanon: GitHub cannot
+# resolve a workflow_call reference into a private repo owned by a personal
+# account for other-repo callers (proven empirically across four prior
+# adoptions — see forkwright/.github's hybrid-gate.yml header).
+#
+# WHY fmt_cmd/clippy_cmd/nextest_cmd are "true" (no-op): typikon has no
+# Cargo.toml — it is a Zola theme (templates/, sass/, schemas/, bin/ shell
+# and Python scripts), not a Rust workspace. There is no fmt/clippy/test
+# split to route into those slots. The full-gate-build job unconditionally
+# installs a Rust toolchain + cargo-nextest regardless of these inputs (the
+# reusable has no Rust-optional path) — wasted ~1min of CI time here, not a
+# correctness issue: "true" always succeeds.
+#
+# WHY check_cmd carries toolchain-install + the entire gate: typikon's real
+# local gate is the single atomic script `ci/run-fixtures.sh` (see
+# AGENTS.md "Theme changes" step 3) — it is not phase-separable the way
+# `cargo fmt`/`check`/`clippy`/`nextest` are. Without installing zola +
+# lychee + pa11y-ci + playwright first, typikon-check's stages 2-6
+# self-report `skip` (tool not on PATH — this is intentional local-dev
+# behavior per bin/typikon-check's own docstring, "CI always has them,
+# local dev may not") and only frontmatter validation would actually run —
+# a gate that looks green while checking almost nothing, the same shape of
+# problem this migration exists to close. The zola + lychee tarball
+# sha256 pins below are copied from ci/github-workflow.yml.tmpl (this
+# repo's own consumer-site CI template) and were independently
+# re-downloaded and re-hashed against the upstream releases before use, not
+# trusted blindly from the template comment.
+#
+# WHY kanon lint is NOT part of this GH gate: `.kanon-ci.toml`'s `lint`
+# stage (`kanon lint . --summary`) requires the private forkwright/kanon
+# binary. forkwright/epistole's ci.yml is the one precedent for running it
+# on a hosted GH runner, and it needs a second `FLEET_REPO_TOKEN`-gated
+# checkout of forkwright/kanon (+ forkwright/logismos) plus a `cargo install
+# --path kanon/crates/pragma` build step — the hybrid-gate reusable's
+# full-gate-build job has no second-checkout slot to hang that on, and
+# epistole's own workflow falls back to a `::warning::` when the token is
+# absent rather than actually running it. `kanon lint` therefore stays
+# forge-only in practice (AGENTS.md: "CI gate on forge runs kanon lint +
+# fixtures") for both the old and the new GH workflow — not a coverage
+# regression from this migration, but a known, pre-existing gap.
+#
+# WHY a push trigger and not just pull_request: a squash merge does not
+# carry the source commits' trailers, so no commit on main has a
+# Gate-Passed trailer -- check-trailer finds none and routes to
+# full-gate-build, which is the job that actually runs the gate. Without
+# this nothing ever builds main, and the first PR to inherit a merged break
+# is what discovers it (forkwright/theatron#235).
 name: Gate Attestation
 
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# WHY no concurrency block here: hybrid-gate.yml itself already declares
+# `concurrency: group: ${{ github.workflow }}-${{ github.ref }}` and its own
+# comment states callers must NOT also set a concurrency group with that
+# same key, or the shared group self-cancels.
 
 jobs:
-  gate-attestation:
-    name: gate-attestation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Pass trusted automation PRs
-        if: ${{ github.actor == 'dependabot[bot]' || github.actor == 'release-please[bot]' || github.actor == 'github-actions[bot]' }}
-        run: echo "Gate attestation waived for trusted automation actor."
+  gate:
+    uses: forkwright/.github/.github/workflows/hybrid-gate.yml@main
+    with:
+      # WHY empty: no rust-toolchain.toml exists (there is no Rust code at
+      # all) -- auto-detect applies. The setup-rust-toolchain step runs
+      # unconditionally regardless of this value; it is inert for this repo.
+      rust_toolchain: ""
+      fmt_cmd: "true"
+      check_cmd: |
+        set -euo pipefail
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        if: ${{ github.actor != 'dependabot[bot]' && github.actor != 'release-please[bot]' && github.actor != 'github-actions[bot]' }}
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+        ZOLA_VERSION=0.22.1
+        ZOLA_SHA256=0ca09aa40376aaa9ddfb512ff9ad963262ef95edb0d0f2d5ec6961b6f5cf22ef
+        curl -L "https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" -o zola.tar.gz
+        echo "${ZOLA_SHA256}  zola.tar.gz" | sha256sum -c
+        tar -xzf zola.tar.gz
+        sudo mv zola /usr/local/bin/
+        rm -f zola.tar.gz
+        zola --version
 
-      - name: Verify Gate-Passed trailer
-        if: ${{ github.actor != 'dependabot[bot]' && github.actor != 'release-please[bot]' && github.actor != 'github-actions[bot]' }}
-        # WHY (kanon#2399): bind to the PR TIP, not "any commit in the range". The
-        # range form passed when any ancestor carried a trailer, so an unstamped tip
-        # could ride an earlier commit's attestation and the tree that actually
-        # merges was never gated. This matches the canonical
-        # forkwright/.github gate-attestation.yml and hybrid-gate.yml.
-        env:
-          # WHY: head.sha is server-populated and content-addressed, so it reaches
-          # the script through the environment rather than shell interpolation.
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          body=$(git log -1 --format="%b" "$PR_HEAD_SHA")
-          if echo "$body" | grep -q "^Gate-Passed:"; then
-            echo "Found gate attestation on PR tip: $(echo "$body" | grep '^Gate-Passed:' | head -1)"
-          else
-            echo "ERROR: PR tip carries no Gate-Passed trailer (ancestors' trailers do not count — kanon#2399)."
-            echo "Run the local gate and commit with the trailer."
-            exit 1
-          fi
+        python3 -m pip install --user jsonschema
+
+        LYCHEE_VERSION=0.24.2
+        LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+        npm install -g pa11y-ci@latest @playwright/test@latest
+        npx playwright install --with-deps chromium
+        curl -L "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" -o lychee.tar.gz
+        echo "${LYCHEE_SHA256}  lychee.tar.gz" | sha256sum -c
+        mkdir -p lychee-extract
+        tar -xzf lychee.tar.gz -C lychee-extract --strip-components=1
+        sudo mv lychee-extract/lychee /usr/local/bin/
+        rm -rf lychee.tar.gz lychee-extract
+
+        ci/run-fixtures.sh
+      clippy_cmd: "true"
+      nextest_cmd: "true"
+      # WHY empty: no doctest concept outside a Cargo workspace.
+      doctest_cmd: ""
+      # WHY empty: no apt packages needed -- zola/lychee are pinned-hash
+      # tarball installs above, node/npm/python3 ship on the hosted image.
+      system_packages: ""
+      # WHY false: no Cargo.toml, so no git dependency to authenticate.
+      needs_fleet_repo_token: false
+      rust_cache_key: "gate-attestation"
+      ai_attribution_check: true
+      docs_only_exemption: true
+    secrets: inherit
