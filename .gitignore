@@ -1,5 +1,6 @@
 # Zola build output (consumers, not theme itself)
 public/
+public-local/
 .zola-cache/
 
 # Editor / OS
