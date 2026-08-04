@@ -10,14 +10,25 @@
 # Stages (fail-fast, emitted as JSONL):
 #     1. typikon-validate        frontmatter against JSON Schema
 #     2. zola check              internal links + asset references
-#     3. zola build              clean build with no warnings
-#     4. csp-enforce             grep public/ for inline script/style/on*= handlers
-#     5. lychee                  external link integrity (requires lychee binary)
-#     6. pa11y                   WCAG 2.1 AA accessibility (requires pa11y-ci)
-#     7. playwright              per-route smoke assertions (requires npx + tests/smoke/*.spec.ts)
+#     3. zola build              clean build with no warnings, output public/
+#     4. zola build (local base) rebuild to public-local/ with a loopback
+#                                 base_url — the copy browser gates serve
+#     5. csp-enforce             grep public/ for inline script/style/on*= handlers
+#     6. lychee                  external link integrity (requires lychee binary)
+#     7. pa11y                   WCAG 2.1 AA accessibility (requires pa11y-ci)
+#     8. playwright              per-route smoke assertions (requires npx + tests/smoke/*.spec.ts)
 #
-# Stages 5-7 emit `skip` when the underlying tool isn't installed; CI
+# Stages 6-8 emit `skip` when the underlying tool isn't installed; CI
 # always has them, local dev may not.
+#
+# Why public-local/ (forkwright/typikon#29): Zola renders every absolute
+# reference (get_url() output, canonical/og:url meta, JSON-LD, sitemap,
+# atom, robots.txt) from config.toml's production base_url. Serving the
+# public/ build straight to pa11y/playwright means those gates load a mix
+# of localhost HTML and production-origin resources for anything a
+# consumer template built with get_url() — validating the deployed site,
+# not the commit under test. public/ still deploys unmodified; only the
+# copy served to browser gates is rebuilt against a loopback origin.
 #
 # Output:
 #     One JSONL line per stage on stdout:
@@ -108,14 +119,29 @@ else
     emit "zola-build" "skip" 0 "zola binary not found on PATH"
 fi
 
-# Stage 4 — CSP enforcement against built public/.
+# Stage 4 — rebuild to public-local/ with a loopback base_url. This is
+# the copy pa11y/playwright serve (stages 7-8); public/ is left untouched
+# for csp-enforce/lychee and deploy. Unconditional (not gated on
+# pa11y-ci/npx presence) so the fixture always exists to verify against.
+if command -v zola >/dev/null 2>&1; then
+    # --force: unlike the default public/ (always cleaned), zola refuses
+    # to reuse an existing --output-dir. typikon-check is re-run
+    # repeatedly against the same checkout in local dev, so public-local/
+    # already existing from the prior run is the common case, not an
+    # error.
+    run_stage "zola-build-local" zola build --base-url "http://127.0.0.1:8080" --output-dir public-local --force || FAIL=1
+else
+    emit "zola-build-local" "skip" 0 "zola binary not found on PATH"
+fi
+
+# Stage 5 — CSP enforcement against built public/.
 if [[ -d public ]]; then
     run_stage "csp-enforce" "$TYPIKON_ROOT/ci/csp-enforce.sh" "$ROOT/public" || FAIL=1
 else
     emit "csp-enforce" "skip" 0 "no public/ dir (zola-build did not run)"
 fi
 
-# Stage 5 — external links via lychee. Skip if binary absent.
+# Stage 6 — external links via lychee. Skip if binary absent.
 if command -v lychee >/dev/null 2>&1; then
     if [[ -d public ]]; then
         BASE_HOST="$(base_host)"
@@ -136,41 +162,47 @@ else
     emit "lychee" "skip" 0 "lychee binary not on PATH (install: cargo install lychee or curl release)"
 fi
 
-# Stage 6 — pa11y a11y. Requires the built public/ to be served; we spin
-# up a quick http.server in the background. Skip if pa11y-ci not present.
+# Stage 7 — pa11y a11y. Requires public-local/ (built with a loopback
+# base_url — see stage 4) to be served; we spin up a quick http.server in
+# the background. Skip if pa11y-ci not present.
 if command -v pa11y-ci >/dev/null 2>&1; then
-    if [[ -d public ]]; then
-        cd public && python3 -m http.server 8080 >"$LOGDIR/server.log" 2>&1 &
+    if [[ -d public-local ]]; then
+        cd public-local && python3 -m http.server 8080 >"$LOGDIR/server.log" 2>&1 &
         SRV_PID=$!
         cd "$ROOT"
         sleep 1
         run_stage "pa11y" pa11y-ci --config "$TYPIKON_ROOT/ci/pa11y.config.js" || FAIL=1
         kill "$SRV_PID" 2>/dev/null || true
     else
-        emit "pa11y" "skip" 0 "no public/ dir"
+        emit "pa11y" "skip" 0 "no public-local/ dir"
     fi
 else
     emit "pa11y" "skip" 0 "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
 fi
 
-# Stage 7 — Playwright smoke tests, only when consumer ships any *.spec.ts
-# under tests/smoke/.
+# Stage 8 — Playwright smoke tests, only when consumer ships any *.spec.ts
+# under tests/smoke/. Serves public-local/ (see stage 4) for the same
+# reason as pa11y above.
 if [[ -d "$ROOT/tests/smoke" ]] && find "$ROOT/tests/smoke" -name '*.spec.ts' -print -quit | grep -q .; then
     if command -v npx >/dev/null 2>&1; then
-        # WARNING: never write to $ROOT/playwright.config.ts — a consumer may
-        # track its own. Stage the theme's config at a unique path and pass
-        # it explicitly so a pre-existing consumer config is never touched.
-        PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
-        cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
-        cd public && python3 -m http.server 8080 >"$LOGDIR/pw-server.log" 2>&1 &
-        PW_SRV_PID=$!
-        cd "$ROOT"
-        sleep 1
-        run_stage "playwright-smoke" npx playwright test --config "$PW_CONFIG" || FAIL=1
-        kill "$PW_SRV_PID" 2>/dev/null || true
-        rm -f "$PW_CONFIG"
-        PW_SRV_PID=""
-        PW_CONFIG=""
+        if [[ -d public-local ]]; then
+            # WARNING: never write to $ROOT/playwright.config.ts — a consumer may
+            # track its own. Stage the theme's config at a unique path and pass
+            # it explicitly so a pre-existing consumer config is never touched.
+            PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
+            cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
+            cd public-local && python3 -m http.server 8080 >"$LOGDIR/pw-server.log" 2>&1 &
+            PW_SRV_PID=$!
+            cd "$ROOT"
+            sleep 1
+            run_stage "playwright-smoke" npx playwright test --config "$PW_CONFIG" || FAIL=1
+            kill "$PW_SRV_PID" 2>/dev/null || true
+            rm -f "$PW_CONFIG"
+            PW_SRV_PID=""
+            PW_CONFIG=""
+        else
+            emit "playwright-smoke" "skip" 0 "no public-local/ dir"
+        fi
     else
         emit "playwright-smoke" "skip" 0 "npx not on PATH"
     fi

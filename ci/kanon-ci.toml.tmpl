@@ -22,10 +22,11 @@ stages = [
   "typikon-validate",
   "zola-check",
   "zola-build",
+  "zola-build-local",
   "copy-cloudflare-files",
   "csp-enforce",
   "lychee",
-  "serve-public",
+  "serve-public-local",
   "pa11y",
   "playwright",
   "teardown-static-server",
@@ -90,6 +91,24 @@ PATH="$PWD/.kanon-ci/bin:$PATH" zola build
 """
 timeout_secs = 120
 
+# pa11y and playwright render pages in a real browser, so any
+# get_url()-derived absolute asset href in the HTML resolves against
+# base_url — the real deployed domain, not the server serve-public-local
+# spins up below. Without this second build, the browser gates fetch
+# CSS/JS from the LIVE site and validate whatever's already deployed
+# there instead of the commit under test. This build, output separately,
+# is the only copy the browser gates ever see; public/ (above) stays
+# untouched for csp-enforce, lychee, and the Cloudflare deploy stage.
+[stages.zola-build-local]
+cmd = """
+set -euo pipefail
+# --force: unlike the default public/ (always cleaned), zola refuses to
+# reuse an existing --output-dir — a persistent forge-runner workspace
+# reusing this checkout across runs would otherwise fail on the second run.
+PATH="$PWD/.kanon-ci/bin:$PATH" zola build --base-url http://127.0.0.1:8080 --output-dir public-local --force
+"""
+timeout_secs = 120
+
 [stages.copy-cloudflare-files]
 cmd = """
 set -euo pipefail
@@ -118,10 +137,13 @@ PATH="$PWD/.kanon-ci/bin:$PATH" lychee --config themes/typikon/ci/lychee.toml --
 """
 timeout_secs = 300
 
-[stages.serve-public]
+# Serves the loopback-base_url build (zola-build-local above), not
+# public/ — csp-enforce and lychee already ran against public/ above and
+# are unaffected by this substitution.
+[stages.serve-public-local]
 cmd = """
 set -euo pipefail
-cd public
+cd public-local
 python3 -m http.server 8080 > ../.kanon-ci/http-server.log 2>&1 &
 echo $! > ../.kanon-ci/server.pid
 sleep 2

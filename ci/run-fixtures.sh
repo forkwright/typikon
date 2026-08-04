@@ -10,3 +10,9 @@ python3 "$ROOT/ci/check-triad-schema.py"
 
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-blog"
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-shop"
+
+# typikon-check's zola-build-local stage must have populated public-local/
+# with a loopback-base_url rebuild for the two lines above to have made
+# this a meaningful check — see ci/local-base-gate-check.sh.
+"$ROOT/ci/local-base-gate-check.sh" "$ROOT/examples/sample-blog"
+"$ROOT/ci/local-base-gate-check.sh" "$ROOT/examples/sample-shop"

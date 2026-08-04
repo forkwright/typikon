@@ -53,12 +53,14 @@ bin/typikon-check <consumer-site-root>
 
 Runs (in order, fail-fast):
 
-1. `zola check` (internal links + assets)
-2. `zola build` (no warnings tolerated)
-3. `csp-enforce.sh` (greps `public/` for inline `<script>`, `<style>`, `on*=` handlers)
-4. `lychee public/ --config ci/lychee.toml` (external links)
-5. `pa11y-ci --config ci/pa11y.config.js` (WCAG 2.1 AA)
-6. `playwright test` (per-route smoke assertions)
+1. `typikon-validate` (frontmatter against JSON Schema)
+2. `zola check` (internal links + assets)
+3. `zola build` (no warnings tolerated, output `public/`)
+4. `zola build --base-url http://127.0.0.1:8080 --output-dir public-local` (the copy browser gates serve — `public/` retains the real `base_url` for deploy)
+5. `csp-enforce.sh` (greps `public/` for inline `<script>`, `<style>`, `on*=` handlers)
+6. `lychee public/ --config ci/lychee.toml` (external links)
+7. `pa11y-ci --config ci/pa11y.config.js` (WCAG 2.1 AA, against `public-local/`)
+8. `playwright test` (per-route smoke assertions, against `public-local/`)
 
 Output is JSONL summarizing each gate. If anything fails, fix; do not push to bypass.
 
