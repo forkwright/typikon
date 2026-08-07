@@ -32,3 +32,7 @@ purpose = "Run local site gate: validation, Zola checks/build, CSP, and optional
 [[cli_commands]]
 name = "bin/typikon-migrate-template"
 purpose = "Apply template/schema migrations for consumers."
+
+[[cli_commands]]
+name = "bin/typikon-refresh"
+purpose = "Re-render consumer-side templates after an upstream bump."

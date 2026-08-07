@@ -1,7 +1,7 @@
 <!--
 scope: Fleet Zola theme, frontmatter schemas, scaffolds, and CI gates for agentic web-property substrate
 defers_to: docs/AGENTIC.md for the agent contract; docs/SCHEMAS.md for frontmatter rules; docs/BOOTSTRAP.md for scaffolder behaviour
-tightens: forge-primary push policy and strict CSP with no unsafe-inline narrow the kanon defaults for fleet web properties
+tightens: strict CSP with no unsafe-inline narrows the kanon defaults for fleet web properties
 -->
 
 # CLAUDE.md: Typikon
@@ -23,7 +23,7 @@ typikon/
 ├── sass/                   # reserved, currently empty
 ├── schemas/                # JSON Schema per content type
 ├── scaffolds/              # reserved, currently empty — typikon-init scaffolds content inline
-├── bin/                    # typikon-init, typikon-validate, typikon-check
+├── bin/                    # typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
 ├── ci/                     # strict gate config (lychee, pa11y, playwright, csp-enforce)
 ├── docs/                   # AGENTIC.md, SCHEMAS.md, BOOTSTRAP.md
 ├── _headers.tmpl           # Cloudflare Pages strict-CSP

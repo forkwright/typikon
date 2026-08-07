@@ -24,7 +24,7 @@ Typikon is a Zola theme + frontmatter schemas + CI gates for agentic fleet web p
 |--------|---------|
 | `bin/typikon-init` | Scaffold a new consumer site or content primitive. Usage: `bin/typikon-init <site-name> <dest>`. |
 | `bin/typikon-validate` | Validate frontmatter against schemas. Usage: `bin/typikon-validate <consumer-site-root>`. JSONL output on stderr. |
-| `bin/typikon-check` | Run the full local pre-push gate (7 stages). Usage: `bin/typikon-check <consumer-site-root>`. |
+| `bin/typikon-check` | Run the full local pre-push gate. Usage: `bin/typikon-check <consumer-site-root>`. |
 | `bin/typikon-refresh` | Bump consumer site submodule + re-render templates. Run from consumer site root. |
 | `bin/typikon-migrate-template` | Skeleton for schema-migration scripts. Copy and adapt when frontmatter changes incompatibly. |
 
@@ -35,7 +35,7 @@ All CLIs are idempotent; JSONL output for parsing.
 ### Theme changes
 
 1. Edit template, schema, scaffold, or CI gate in typikon.
-2. Validate: `cd <consumer-site> && themes/typikon/bin/typikon-check .` (all 7 stages pass).
+2. Validate: `cd <consumer-site> && themes/typikon/bin/typikon-check .` (every stage passes).
 3. Run the theme gate locally: `cd <typikon> && ci/run-fixtures.sh` (validates typikon's own fixtures).
 4. Commit with conventional commit (type: feat/fix/chore/docs). No inline scripts/styles. No unsafe-inline CSP.
 5. Push to origin (forge is primary). CI gate on forge runs kanon lint + fixtures.
@@ -45,7 +45,7 @@ All CLIs are idempotent; JSONL output for parsing.
 Consumer sites use typikon as a git submodule under `themes/typikon/` and scaffold content via the binaries above. When typikon changes:
 
 1. Consumer runs `themes/typikon/bin/typikon-refresh` (bumps submodule, re-renders templates).
-2. Consumer validates: `bin/typikon-check .` (all 7 stages).
+2. Consumer validates: `bin/typikon-check .` (every stage).
 3. Consumer commits the diff.
 
 ## Locked decisions

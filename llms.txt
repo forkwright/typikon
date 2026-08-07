@@ -26,5 +26,5 @@ Structured LLM corpus:
 - [README.md](README.md): overview, usage, and design
 - [CLAUDE.md](CLAUDE.md): agent contract and locked decisions
 - [schemas/](schemas/): frontmatter contracts
-- [scaffolds/](scaffolds/): content templates
-- [bin/](bin/): scaffolding and validation commands
+- [scaffolds/](scaffolds/): reserved, currently empty — typikon-init scaffolds content inline
+- [bin/](bin/): typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template

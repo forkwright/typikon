@@ -4,8 +4,7 @@
 # Usage:
 #     typikon-check <consumer-site-root>
 #
-# Runs every available gate stage in order, fail-fast. Stages currently
-# implemented are listed below; Phase 5 of the typikon v1 plan adds the rest.
+# Runs every gate stage in order, fail-fast.
 #
 # Stages (fail-fast, emitted as JSONL):
 #     1. typikon-validate        frontmatter against JSON Schema

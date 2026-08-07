@@ -34,7 +34,7 @@ role = "JSON Schemas for content frontmatter validation."
 [[architecture.crates]]
 name = "scaffolds"
 path = "scaffolds"
-role = "Content templates copied into consumer sites."
+role = "Reserved and currently empty; typikon-init scaffolds content inline."
 
 [[architecture.crates]]
 name = "bin"
