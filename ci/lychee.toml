@@ -22,7 +22,15 @@ retry_wait_time = 5
 # Stripe's buy.stripe.com endpoints reject HEAD requests with 405; the
 # URL is still valid and clicking it redirects to checkout. Same for
 # Buttondown's embed-subscribe POST endpoint.
-accept = [200, 204, 206, 301, 302, 303, 307, 308, 405]
+#
+# 429 is accepted because it is never evidence about the link. It reports
+# the checker's own request rate back at it; a resource that has actually
+# rotted answers 404 or 410, which stay failures. Treating it as rot makes
+# every deploy hostage to third-party throttling, and the retry settings
+# above do not clear a host that rate-limits regardless of cadence — the
+# instagram exclusion below was the first instance of that, handled per-host
+# until it recurred elsewhere.
+accept = [200, 204, 206, 301, 302, 303, 307, 308, 405, 429]
 
 # Don't follow these — they're known to be rate-limit-heavy or
 # protocol-mismatched.
