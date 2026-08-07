@@ -49,7 +49,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 - **Theme distribution**: git submodule under consumer's `themes/typikon/`. (Zola has no theme registry; submodule is current best practice.)
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on any inline script, style, or `on*=` handler.
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime. OFL families only.
-- **Forge-primary**: `origin` points at the forkwright forge (`http://127.0.0.1:7878/forkwright/typikon.git`). GitHub is push-mirror only via `kanon forge set-mirror`.
+- **Push authority**: `origin` is GitHub (`forkwright/typikon`); no forge remote is configured. The typed forge/GitHub authority split is unresolved — forkwright/kanon#3045 owns it.
 - **License**: AGPL-3.0-or-later. Matches dioptron, aletheia. AI-training prohibition in NOTICE.
 
 ## How an agent operates here
@@ -63,7 +63,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 
 ## Boundaries
 
-- **Push to `origin` (forge), not `github`.** Mirror handles GitHub. Verify with `git remote -v`.
+- **Push to `origin`.** It is GitHub; there is no mirror step. Verify with `git remote -v` rather than assuming.
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
 - **Schema changes are migrations.** When a schema changes incompatibly, the change PR ships a migration script for existing consumers in `bin/`.
 
