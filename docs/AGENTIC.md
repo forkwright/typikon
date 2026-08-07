@@ -94,11 +94,11 @@ When a schema field is renamed, removed, or changed incompatibly, the typikon PR
 
 The PR description must list every consumer affected and link the migration runs.
 
-### 8. Repos are forge-primary
+### 8. Check the push authority before pushing
 
-`origin` is the forkwright forge (`http://127.0.0.1:7878/forkwright/typikon.git`). `github` is the GitHub mirror (push only). Check with `git remote -v` before push.
+`origin` is GitHub (`forkwright/typikon`). No forge remote is configured and there is no mirror step, so a push to `origin` is a push to GitHub. Check with `git remote -v` rather than assuming either shape — this repo previously documented a forge-primary topology it did not have.
 
-`kanon forge set-mirror` configures the mirror push. Do not push directly to GitHub — the mirror handles it.
+Whether the fleet returns to a forge-primary split is an open question that forkwright/kanon#3045 owns.
 
 ### 9. Photography goes in `page.extra.images`
 
