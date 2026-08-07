@@ -107,7 +107,7 @@ run_stage "typikon-validate" "$TYPIKON_ROOT/bin/typikon-validate" "$ROOT" || FAI
 
 # Stage 2 — zola check (internal links + assets).
 if command -v zola >/dev/null 2>&1; then
-    run_stage "zola-check" zola check || FAIL=1
+    run_stage "zola-check" zola check --skip-external-links || FAIL=1
 else
     emit "zola-check" "skip" 0 "zola binary not found on PATH"
 fi
