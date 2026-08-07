@@ -94,7 +94,7 @@ jobs:
         run: themes/typikon/bin/typikon-validate .
 
       - name: zola check (internal links + assets)
-        run: zola check
+        run: zola check --skip-external-links
 
       - name: zola build
         run: zola build
