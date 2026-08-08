@@ -1,11 +1,11 @@
-# kanon-CI pipeline for typikon-consuming sites.
+# kanon-CI pipeline for {{ PROJECT_NAME }}.
 #
-# This file is a TEMPLATE. typikon-init copies it to a consumer site as
-# .kanon-ci.toml during scaffolding, substituting the two placeholders below.
+# Deploys to the `{{ PROJECT_NAME }}` Cloudflare Pages project. Zola is pinned
+# to {{ ZOLA_VERSION }} and wrangler to {{ WRANGLER_VERSION }}.
 #
-# Placeholders:
-#   {{ PROJECT_NAME }}   - Cloudflare Pages project slug (e.g. ardent-site)
-#   {{ ZOLA_VERSION }}   - pinned Zola version (current: 0.22.1)
+# NOTE: generated from typikon's ci/kanon-ci.toml.tmpl. Changes that belong to
+# every consumer go upstream to the template, not here; re-render an instance
+# with `themes/typikon/bin/typikon-refresh .`.
 #
 # Forge runners must provide:
 #   - CLOUDFLARE_API_TOKEN
@@ -200,7 +200,7 @@ curl -fsS -X PATCH \
   > /tmp/cf-edit.json
 echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
 
-npm install -g wrangler
+npm install -g wrangler@{{ WRANGLER_VERSION }}
 wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"
 """
 timeout_secs = 600

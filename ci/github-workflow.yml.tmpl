@@ -1,15 +1,12 @@
-# GitHub Actions workflow for typikon-consuming sites.
+# GitHub Actions deploy workflow for {{ PROJECT_NAME }}.
 #
-# This file is a TEMPLATE. typikon-init copies it to a consumer site as
-# .github/workflows/deploy.yml during scaffolding, substituting the two
-# placeholders below.
+# Runs the strict typikon gate, then deploys to the `{{ PROJECT_NAME }}`
+# Cloudflare Pages project on green pushes to main. Zola is pinned to
+# {{ ZOLA_VERSION }} and wrangler to {{ WRANGLER_VERSION }}.
 #
-# Placeholders (typikon-init replaces during scaffolding):
-#   {{ PROJECT_NAME }}   — Cloudflare Pages project slug (e.g. ardent-site)
-#   {{ ZOLA_VERSION }}   — pinned Zola version (current: 0.22.1)
-#
-# After substitution the workflow performs the strict gate, then deploys
-# to Cloudflare Pages on green pushes to main.
+# NOTE: generated from typikon's ci/github-workflow.yml.tmpl. Changes that
+# belong to every consumer go upstream to the template, not here; re-render
+# an instance with `themes/typikon/bin/typikon-refresh .`.
 #
 # Secrets the consumer must set in GitHub repo settings:
 #   - CLOUDFLARE_API_TOKEN
@@ -194,5 +191,5 @@ jobs:
             > /tmp/cf-edit.json
           echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
 
-          npm install -g wrangler
+          npm install -g wrangler@{{ WRANGLER_VERSION }}
           wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"

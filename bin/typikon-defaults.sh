@@ -22,3 +22,12 @@ set -euo pipefail
 # against a new Zola release. Consumer-side workflows pick this up on
 # their next `themes/typikon/bin/typikon-refresh` invocation.
 : "${ZOLA_VERSION:=0.22.1}"
+
+# Pinned wrangler version. An unpinned `npm install -g wrangler` runs inside
+# the deploy step, whose environment already holds CLOUDFLARE_API_TOKEN — so a
+# malicious release or install script would execute next to a credential that
+# can mutate the live Pages project. Pinning also makes a deploy reproducible:
+# unpinned, the version reaching production is whichever one the runner
+# happened to cache, and fleet consumers were observed running different ones.
+# Bump when a consumer deploy validates against a newer wrangler.
+: "${WRANGLER_VERSION:=4.112.0}"
