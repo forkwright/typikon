@@ -59,7 +59,11 @@ cmd = """
 set -euo pipefail
 LYCHEE_VERSION=0.24.2
 LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
-npm install -g pa11y-ci@latest @playwright/test@latest
+# Pinned for the same reason lychee is: @latest makes a gate run
+# non-reproducible, and a browser-gate result is only meaningful if
+# the tool that produced it is known. Versions match what the fleet
+# consumer ardent-tools-site already locks in its package.json.
+npm install -g pa11y-ci@4.1.1 @playwright/test@1.61.1
 npx playwright install --with-deps chromium
 curl -L "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" -o lychee.tar.gz
 echo "${LYCHEE_SHA256}  lychee.tar.gz" | sha256sum -c
@@ -200,7 +204,13 @@ curl -fsS -X PATCH \
   > /tmp/cf-edit.json
 echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
 
-npm install -g wrangler@{{ WRANGLER_VERSION }}
+# WHY --ignore-scripts: this install runs in the step whose environment
+# already holds CLOUDFLARE_API_TOKEN, so any lifecycle script in the
+# dependency tree would execute beside a credential that can mutate the
+# live Pages project. wrangler declares no install script of its own
+# (registry hasInstallScript is unset), so nothing is lost by refusing
+# them — the flag closes the transitive-dependency path.
+npm install -g --ignore-scripts wrangler@{{ WRANGLER_VERSION }}
 wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"
 """
 timeout_secs = 600
