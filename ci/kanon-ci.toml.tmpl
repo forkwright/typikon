@@ -59,6 +59,12 @@ cmd = """
 set -euo pipefail
 LYCHEE_VERSION=0.24.2
 LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+# NOT --ignore-scripts here, unlike the wrangler install below. pa11y-ci
+# depends on puppeteer, whose postinstall downloads the Chrome build that
+# pa11y-ci launches. Refusing scripts installs cleanly and even lets
+# `pa11y-ci --version` succeed, then fails at gate time with 'Could not
+# find Chrome'. The scripts are load-bearing; a scanner warning on this
+# line is a false positive.
 # Pinned for the same reason lychee is: @latest makes a gate run
 # non-reproducible, and a browser-gate result is only meaningful if
 # the tool that produced it is known. Versions match what the fleet
