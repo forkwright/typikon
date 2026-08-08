@@ -80,7 +80,7 @@ jobs:
           # non-reproducible, and a browser-gate result is only meaningful if
           # the tool that produced it is known. Versions match what the fleet
           # consumer ardent-tools-site already locks in its package.json.
-          npm install -g pa11y-ci@4.1.1 @playwright/test@1.61.1
+          npm install -g --ignore-scripts pa11y-ci@4.1.1 @playwright/test@1.61.1
           npx playwright install --with-deps chromium
           curl -L --proto '=https' --tlsv1.2 "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
             -o lychee.tar.gz
