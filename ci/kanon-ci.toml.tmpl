@@ -200,7 +200,7 @@ curl -fsS -X PATCH \
   > /tmp/cf-edit.json
 echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
 
-npm install -g wrangler
+npm install -g wrangler@{{ WRANGLER_VERSION }}
 wrangler pages deploy public --project-name={{ PROJECT_NAME }} --branch="${BRANCH}"
 """
 timeout_secs = 600

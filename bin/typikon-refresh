@@ -124,6 +124,7 @@ fi
 # shape (`TYPIKON_ZOLA_VERSION=... typikon-refresh`).
 # shellcheck source=./typikon-defaults.sh
 ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-}"
+WRANGLER_VERSION="${TYPIKON_WRANGLER_VERSION:-}"
 . "$TYPIKON_ROOT/bin/typikon-defaults.sh"
 
 # ----- Step 3 — re-render template instances -----
@@ -155,6 +156,7 @@ for spec in "${TMPL_TARGETS[@]}"; do
     mkdir -p "$(dirname "$dest_path")"
     sed -e "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|g" \
         -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
+        -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
         "$src_path" \
         > "$dest_path"
     RENDERED+=("$dest")
@@ -182,6 +184,7 @@ else
 fi
 echo "  PROJECT_NAME: $PROJECT_NAME"
 echo "  ZOLA_VERSION: $ZOLA_VERSION"
+echo "  WRANGLER_VERSION: $WRANGLER_VERSION"
 echo
 if [[ ${#RENDERED[@]} -gt 0 ]]; then
     echo "  re-rendered:"
