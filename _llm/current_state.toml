@@ -8,9 +8,9 @@ source_docs = [
 ]
 
 [state]
-summary = "Typikon is the active fleet Zola theme, schema, scaffolding, and gate substrate; ardent-site is the first consumer."
+summary = "Typikon is the active fleet Zola theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
 current_phase = "v1 substrate active with consumer adoption through submodules."
-updated = "2026-05-08"
+updated = "2026-08-09"
 
 [[recent]]
 date = "2026-05-05"

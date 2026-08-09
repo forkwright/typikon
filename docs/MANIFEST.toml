@@ -4,7 +4,7 @@
 path = "docs/BOOTSTRAP.md"
 type = "authored"
 evergreen = true
-description = "bin/typikon-init scaffolder: anticipated invocation, wiring, idempotency semantics."
+description = "bin/typikon-init scaffolder: invocation, wiring, idempotency semantics."
 
 [[doc]]
 path = "docs/SCHEMAS.md"
