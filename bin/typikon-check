@@ -4,9 +4,11 @@
 # Usage:
 #     typikon-check <consumer-site-root>
 #
-# Runs every gate stage in order, fail-fast.
+# Runs every gate stage in order. Stages do NOT stop at the first failure:
+# each records its verdict and the run reports them together, so one pass
+# surfaces every problem rather than only the earliest one.
 #
-# Stages (fail-fast, emitted as JSONL):
+# Stages (emitted as JSONL):
 #     1. typikon-validate        frontmatter against JSON Schema
 #     2. zola check              internal links + asset references
 #     3. zola build              clean build with no warnings, output public/
@@ -75,22 +77,35 @@ regex_escape() {
 run_stage() {
     local stage="$1"; shift
     local start=$(date +%s%3N)
-    if "$@" >/dev/null 2>"$LOGDIR/$stage.err"; then
+    # WHY both streams into one log: stdout used to go to /dev/null, so a
+    # failure pointed the reader at a file that held only stderr. zola, pa11y-ci
+    # and playwright all report their actual diagnostics on STDOUT, so the log
+    # named by the failure was routinely empty for exactly the stages hardest to
+    # diagnose. One combined file also preserves interleaving, which a split
+    # pair cannot.
+    if "$@" >"$LOGDIR/$stage.log" 2>&1; then
         local end=$(date +%s%3N)
         emit "$stage" "pass" "$((end - start))" "ok"
         return 0
     else
         local rc=$?
         local end=$(date +%s%3N)
-        emit "$stage" "fail" "$((end - start))" "exit $rc; see $LOGDIR/$stage.err"
+        emit "$stage" "fail" "$((end - start))" "exit $rc; see $LOGDIR/$stage.log"
         return 1
     fi
 }
 
 LOGDIR="$(mktemp -d -t typikon-check.XXXXXX)"
+SRV_PID=""
 PW_SRV_PID=""
 PW_CONFIG=""
+# WARNING: every background server this script starts must be registered here.
+# The pa11y stage's server was tracked in SRV_PID and the trap only knew about
+# PW_SRV_PID, so an interrupt during pa11y left an http.server holding port
+# 8080 — which then made the NEXT run fail to bind, with an error naming the
+# port rather than the abandoned process.
 cleanup() {
+    [[ -n "$SRV_PID" ]] && kill "$SRV_PID" 2>/dev/null
     [[ -n "$PW_SRV_PID" ]] && kill "$PW_SRV_PID" 2>/dev/null
     [[ -n "$PW_CONFIG" ]] && rm -f "$PW_CONFIG"
     echo "logs: $LOGDIR" >&2
@@ -166,12 +181,18 @@ fi
 # the background. Skip if pa11y-ci not present.
 if command -v pa11y-ci >/dev/null 2>&1; then
     if [[ -d public-local ]]; then
-        cd public-local && python3 -m http.server 8080 >"$LOGDIR/server.log" 2>&1 &
+        # WARNING: --directory, not `cd X && python3 ...`. A `cd X && cmd &` list
+        # runs in a background SUBSHELL, so $! is the subshell and the server is
+        # its child — `kill "$!"` then reaps the wrapper and leaves the server
+        # holding the port. Verified: a leaked http.server was found still bound
+        # to 8080, reparented to init, serving a directory that no longer existed.
+        # With --directory there is no list, so $! IS the server.
+        python3 -m http.server --directory public-local 8080 >"$LOGDIR/server.log" 2>&1 &
         SRV_PID=$!
-        cd "$ROOT"
         sleep 1
         run_stage "pa11y" pa11y-ci --config "$TYPIKON_ROOT/ci/pa11y.config.js" || FAIL=1
         kill "$SRV_PID" 2>/dev/null || true
+        SRV_PID=""
     else
         emit "pa11y" "skip" 0 "no public-local/ dir"
     fi
@@ -190,9 +211,9 @@ if [[ -d "$ROOT/tests/smoke" ]] && find "$ROOT/tests/smoke" -name '*.spec.ts' -p
             # it explicitly so a pre-existing consumer config is never touched.
             PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
             cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
-            cd public-local && python3 -m http.server 8080 >"$LOGDIR/pw-server.log" 2>&1 &
+            # WARNING: --directory for the same reason as the pa11y server above.
+            python3 -m http.server --directory public-local 8080 >"$LOGDIR/pw-server.log" 2>&1 &
             PW_SRV_PID=$!
-            cd "$ROOT"
             sleep 1
             run_stage "playwright-smoke" npx playwright test --config "$PW_CONFIG" || FAIL=1
             kill "$PW_SRV_PID" 2>/dev/null || true
