@@ -40,6 +40,11 @@
    the operator drops the placeholder <div class="product-images"> from
    markdown when photos arrive and the gallery takes its visual slot. #}
 {%- include "partials/product-gallery.html" -%}
+{# WHY: same product-shaped frontmatter that triggers ld-product.html above
+   must also render visibly — price/shipping/checkout were JSON-LD-only. #}
+{%- if page.extra.price and page.extra.stripe_url -%}
+{%- include "partials/product-purchase.html" -%}
+{%- endif -%}
 {{ page.content | safe }}
 {# Process video renders after page content when extra.video is set. #}
 {%- include "partials/video.html" -%}

@@ -24,4 +24,29 @@
 
 {% block content %}
 {{ section.content | safe }}
+
+{# NOTE: default child-page listing (e.g. content/products/_index.md).
+   WHY per-field-optional: mirrors journal-section.html's pattern — title
+   always shown, description/price shown only when the child defines them —
+   so one listing serves both product children and plain-page children. #}
+{%- if section.pages and section.pages | length > 0 %}
+<ul class="products-list">
+  {%- for item in section.pages %}
+  <li>
+    <a href="{{ item.permalink | safe }}">
+      <span class="product-name">{{ item.title }}</span>
+      {%- if item.description %}
+      <span class="product-materials">{{ item.description }}</span>
+      {%- endif %}
+      {%- if item.extra.price %}
+      <span class="product-price">{{ item.extra.price }}</span>
+      {%- endif %}
+    </a>
+  </li>
+  {%- endfor %}
+</ul>
+{%- if section.extra.list_caption %}
+<p class="specs">{{ section.extra.list_caption }}</p>
+{%- endif %}
+{%- endif %}
 {% endblock content %}

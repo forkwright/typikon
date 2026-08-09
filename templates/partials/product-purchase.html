@@ -1,0 +1,21 @@
+{# Visible storefront primitive for a schema-derived product page. Renders
+   when page.extra.price AND page.extra.stripe_url are both set (product.schema.json),
+   so price/shipping/checkout are never JSON-LD-only.
+
+   Inputs:
+     page.title                — product name
+     page.extra.price          — display price, e.g. "$150"
+     page.extra.shipping_note  — optional; falls back to the schema-documented default
+     page.extra.stripe_url     — direct checkout URL
+
+   WHY no assert here: page.html's ld_json block renders earlier (in <head>)
+   and already asserts this field combination; not repeated in this partial.
+
+   Schema: schemas/product.schema.json#extra
+#}
+<div class="product-header">
+  <p class="product-name">{{ page.title }}</p>
+  <p class="product-price-large">{{ page.extra.price }}</p>
+  <p class="product-shipping">{{ page.extra.shipping_note | default(value="Shipping included · Tax at checkout · Ships within one week") }}</p>
+  <a class="buy-btn" href="{{ page.extra.stripe_url | safe }}" aria-label="Buy {{ page.title }}">Buy now</a>
+</div>
