@@ -1,13 +1,15 @@
 +++
-title = "Sizing"
-description = "Sample sizing guide. Exercises required audience, measurement source, product type, and size table metadata."
+title = "Timed Sizing"
+description = "Sample sizing guide with a sourced duration, proving totalTime reproduces the exact supplied value."
 template = "sizing-guide.html"
 
 [extra]
-audience = "sample shop buyers"
+audience = "sample shop buyers timing the decision tree"
 product_type = "widget"
 measurement_unit = "inches"
 measurement_source = "sample fixture measurement table"
+duration = "PT2M"
+duration_source = "operator timed the two-step decision tree during fixture authoring"
 decision_tree = [
   "Measure the space where the widget will sit.",
   "Choose the smallest widget size that is equal to or larger than that measurement.",
@@ -24,4 +26,4 @@ width = "8"
 note = "Fits standard fixture spaces."
 +++
 
-This sample sizing guide proves the sizing-guide schema and template have a concrete fixture with all required metadata populated, and — carrying no `duration` — that an unsourced guide emits no HowTo `totalTime` at all. See `sizing-timed.md` for the sourced case.
+This sample sizing guide proves a sourced `duration` is reproduced exactly as HowTo `totalTime`, complementing `sizing.md`'s proof that an unsourced guide emits no `totalTime` at all.
