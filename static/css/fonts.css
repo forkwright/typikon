@@ -1,6 +1,19 @@
-/* Self-hosted webfonts (OFL-1.1). All families subsetted to:
- *   - Latin (U+0000-00FF)
- *   - Greek (U+0370-03FF) and Greek Extended (U+1F00-1FFF) for serif families
+/* Self-hosted webfonts (OFL-1.1). All families are subsetted to Latin
+ * (U+0000-00FF).
+ *
+ * WARNING: the serif families (Cormorant Garamond, Spectral) do NOT carry
+ * general Greek script coverage. Their upstream masters
+ * (CatharsisFonts/Cormorant, productiontype/Spectral) ship only the
+ * handful of Greek letters conventionally used as math/science symbols --
+ * Delta, Omega, mu, pi for Cormorant Garamond; Delta, mu, pi for Spectral
+ * -- not the alphabet, and no Greek Extended (polytonic) glyphs at all.
+ * This is a property of the upstream font files, not a subsetting choice:
+ * pulling the un-subsetted originals shows the identical gap. Every
+ * unicode-range below is exactly what its file's cmap contains; anything
+ * else in the Greek or Greek Extended blocks falls through to the
+ * visitor's system font stack. ci/check-font-coverage.py enforces this
+ * against the shipped WOFF2 cmap tables so the two cannot drift apart
+ * again (forkwright/typikon#35).
  *
  * Strict CSP `font-src 'self'` ensures no external font CDN is reachable
  * even if a stray @font-face URL is added by mistake.
@@ -21,7 +34,7 @@
   font-weight: 300 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00B4, U+00B6-00FF, U+0394, U+03A9, U+03BC, U+03C0;
 }
 @font-face {
   font-family: 'Cormorant Garamond';
@@ -30,7 +43,7 @@
   font-weight: 300 700;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00B4, U+00B6-00FF, U+0394, U+03A9, U+03BC, U+03C0;
 }
 
 /* Spectral — body */
@@ -40,7 +53,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0394, U+03BC, U+03C0;
 }
 @font-face {
   font-family: 'Spectral';
@@ -48,7 +61,7 @@
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0394, U+03BC, U+03C0;
 }
 @font-face {
   font-family: 'Spectral';
@@ -56,7 +69,7 @@
   font-weight: 400;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0394, U+03BC, U+03C0;
 }
 @font-face {
   font-family: 'Spectral';
@@ -64,7 +77,7 @@
   font-weight: 500;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0370-03FF, U+1F00-1FFF;
+  unicode-range: U+0020-007E, U+00A0-00AC, U+00AE-00FF, U+0394, U+03BC, U+03C0;
 }
 
 /* IBM Plex Mono — specs */

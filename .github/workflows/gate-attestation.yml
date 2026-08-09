@@ -101,7 +101,14 @@ jobs:
         rm -f zola.tar.gz
         zola --version
 
-        python3 -m pip install --user jsonschema
+        # WARNING: pin both. This gate pins zola, lychee, wrangler, and every
+        # action to an exact version or SHA; an unpinned pip install would be
+        # the one dependency able to change under an already-green commit.
+        # WARNING: Brotli is not optional here. fontTools reads a WOFF2 cmap only
+        # through it, and without it check-font-coverage.py fails at import with
+        # 'No module named brotli' — which passed locally, where it was already
+        # installed, and failed only in CI.
+        python3 -m pip install --user jsonschema==4.23.0 fonttools==4.62.1 Brotli==1.2.0
 
         LYCHEE_VERSION=0.24.2
         LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
