@@ -120,12 +120,20 @@ PATH="$PWD/.kanon-ci/bin:$PATH" zola build --base-url http://127.0.0.1:8080 --ou
 timeout_secs = 120
 
 [stages.copy-cloudflare-files]
+# WARNING: _headers/_redirects carry the site's CSP and routing contract —
+# REQUIRED, not optional. A missing source or a copy that silently didn't
+# land must fail the stage, not deploy short of the documented boundary.
 cmd = """
 set -euo pipefail
-[ -f _headers ] && cp _headers public/_headers
-[ -f _redirects ] && cp _redirects public/_redirects
+for f in _headers _redirects; do
+  if [ ! -f "$f" ]; then
+    echo "required deploy control file '$f' is missing from repo root" >&2
+    exit 1
+  fi
+  cp "$f" "public/$f"
+  cmp -s "$f" "public/$f" || { echo "copied public/$f does not match source $f" >&2; exit 1; }
+done
 [ -f public/404/index.html ] && cp public/404/index.html public/404.html
-true
 """
 timeout_secs = 30
 
@@ -208,7 +216,20 @@ curl -fsS -X PATCH \
   -H "Content-Type: application/json" \
   --data "{\\\"production_branch\\\": \\\"${BRANCH}\\\"}" \
   > /tmp/cf-edit.json
-echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
+
+# WHY: -fsS only catches HTTP-level failure. Cloudflare's API can return
+# HTTP 200 with a body-level "success": false, and it can accept the
+# request without setting production_branch to the value asked for.
+# Either case means Wrangler's deploy below would register under the
+# wrong environment semantics, so both must stop the stage before
+# Wrangler runs.
+CF_SUCCESS=$(jq -r '.success' /tmp/cf-edit.json)
+CF_BRANCH=$(jq -r '.result.production_branch // empty' /tmp/cf-edit.json)
+if [ "$CF_SUCCESS" != "true" ] || [ "$CF_BRANCH" != "$BRANCH" ]; then
+  echo "Cloudflare did not confirm production_branch=${BRANCH}: $(jq -c '.errors // .' /tmp/cf-edit.json)" >&2
+  exit 1
+fi
+echo "production_branch confirmed: ${CF_BRANCH}"
 
 # WHY --ignore-scripts: this install runs in the step whose environment
 # already holds CLOUDFLARE_API_TOKEN, so any lifecycle script in the

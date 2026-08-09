@@ -151,15 +151,24 @@ jobs:
         # Cloudflare Pages reads _headers and _redirects from the deploy
         # root. wrangler ships public/, so the files at repo root never
         # get applied. Copy them in (idempotent — overwrites if present).
+        # WARNING: _headers/_redirects carry the site's CSP and routing
+        # contract — REQUIRED, not optional. A missing source or a copy
+        # that silently didn't land must fail the gate, not deploy short
+        # of the documented boundary.
         # CF Pages also serves public/404.html for any 404, but Zola
         # generates content/404.md as public/404/index.html — copy it to
         # the expected name so the consumer's branded 404 page wins over
         # CF's generic one.
         run: |
-          [ -f _headers ] && cp _headers public/_headers
-          [ -f _redirects ] && cp _redirects public/_redirects
+          for f in _headers _redirects; do
+            if [ ! -f "$f" ]; then
+              echo "::error::required deploy control file '$f' is missing from repo root" >&2
+              exit 1
+            fi
+            cp "$f" "public/$f"
+            cmp -s "$f" "public/$f" || { echo "::error::copied public/$f does not match source $f" >&2; exit 1; }
+          done
           [ -f public/404/index.html ] && cp public/404/index.html public/404.html
-          true
 
       - name: csp-enforce (no inline script/style/handlers)
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's csp-enforce timeout_secs=120.
@@ -242,7 +251,20 @@ jobs:
             -H "Content-Type: application/json" \
             --data "{\"production_branch\": \"${BRANCH}\"}" \
             > /tmp/cf-edit.json
-          echo "production_branch set to: $(jq -r '.result.production_branch // .errors' /tmp/cf-edit.json)"
+
+          # WHY: -fsS only catches HTTP-level failure. Cloudflare's API can
+          # return HTTP 200 with a body-level "success": false, and it can
+          # accept the request without setting production_branch to the
+          # value asked for. Either case means Wrangler's deploy below would
+          # register under the wrong environment semantics, so both must
+          # stop the job before Wrangler runs.
+          CF_SUCCESS="$(jq -r '.success' /tmp/cf-edit.json)"
+          CF_BRANCH="$(jq -r '.result.production_branch // empty' /tmp/cf-edit.json)"
+          if [ "$CF_SUCCESS" != "true" ] || [ "$CF_BRANCH" != "$BRANCH" ]; then
+            echo "::error::Cloudflare did not confirm production_branch=${BRANCH}: $(jq -c '.errors // .' /tmp/cf-edit.json)" >&2
+            exit 1
+          fi
+          echo "production_branch confirmed: ${CF_BRANCH}"
 
           # WHY --ignore-scripts: this install runs in the step whose environment
           # already holds CLOUDFLARE_API_TOKEN, so any lifecycle script in the
