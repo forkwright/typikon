@@ -209,15 +209,18 @@ jobs:
       - name: pa11y (WCAG 2.1 AA)
         # WHY 5: mirrors ci/kanon-ci.toml.tmpl's pa11y timeout_secs=300.
         timeout-minutes: 5
-        run: pa11y-ci --config themes/typikon/ci/pa11y.config.js
-
+        # WARNING: --sitemap is required. The config ships urls: [] on purpose and
+        # pa11y-ci populates it from the fetched sitemap; without the flag it runs
+        # clean over ZERO routes and exits 0 — a gate that passes by testing nothing.
+        run: pa11y-ci --config themes/typikon/ci/pa11y.config.js --sitemap http://127.0.0.1:8080/sitemap.xml
       - name: playwright (per-route smoke)
         if: ${{ hashFiles('tests/smoke/**/*.spec.ts') != '' }}
         # WHY 5: mirrors ci/kanon-ci.toml.tmpl's playwright timeout_secs=300.
         timeout-minutes: 5
         run: |
           cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
-          npx playwright test
+          # WARNING: the config resolves its testDirs from these; it fails closed without them.
+          TYPIKON_ROOT=themes/typikon TYPIKON_CONSUMER_ROOT=. TYPIKON_BASE_URL=http://127.0.0.1:8080 npx playwright test
 
       - name: Tear down static server
         if: always()

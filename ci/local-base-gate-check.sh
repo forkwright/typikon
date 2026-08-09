@@ -73,10 +73,13 @@ if [[ -n "$LEAKS" ]]; then
     exit 1
 fi
 
-if ! grep -rlF "127.0.0.1:8080" "${FILES[@]}" >/dev/null 2>&1; then
+# WARNING: match the loopback HOST, not a fixed port. typikon-check now binds an
+# OS-allocated port so a stale server cannot intercept the gate on a known one;
+# a literal :8080 here would fail every correct run.
+if ! grep -rlE "127\.0\.0\.1:[0-9]+" "${FILES[@]}" >/dev/null 2>&1; then
     echo "local-base-gate-check: no file under public-local/ references" >&2
-    echo "  127.0.0.1:8080 — the loopback rebuild does not look like it ran" >&2
-    echo "  with --base-url http://127.0.0.1:8080." >&2
+    echo "  127.0.0.1:<port> — the loopback rebuild does not look like it ran" >&2
+    echo "  with a loopback --base-url." >&2
     exit 1
 fi
 

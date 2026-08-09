@@ -1,13 +1,17 @@
 // pa11y-ci config for typikon-consuming sites.
 // https://github.com/pa11y/pa11y-ci
 //
-// Run via: pa11y-ci --config ci/pa11y.config.js
-// Expects a Zola build artifact under public/ and a static server
-// (the GH Actions workflow spins one up at http://127.0.0.1:8080).
+// Run via: pa11y-ci --config ci/pa11y.config.js --sitemap <url>
 //
-// Per-route URL list comes from the consumer site's tests/smoke/urls.json
-// (one URL per line under the local server root). typikon ships only
-// the defaults below; consumers extend by adding entries to urls.json.
+// Per-route URL list comes from the loopback build's own generated
+// sitemap.xml (Zola writes one for every real page under public-local/ —
+// see typikon-check's zola-build-local stage), passed in by the caller
+// via the --sitemap CLI flag: that is what actually populates config.urls
+// at runtime (pa11y-ci's own loader appends the fetched sitemap entries to
+// this file's `urls` array — see loadSitemapIntoConfig in pa11y-ci's bin).
+// This file carries no route list itself (forkwright/typikon#52): a
+// hand-maintained list here would be a second, driftable source of routes
+// alongside the one Zola already derives from the actual content tree.
 //
 // Standard: WCAG 2.1 AA. The strict CSP guarantees no third-party scripts
 // load, so accessibility issues are entirely typikon's + content's
@@ -39,10 +43,8 @@ module.exports = {
     // require code churn.
     hideElements: '',
   },
-  // The list of URLs to test gets injected by the GH Actions workflow:
-  // it reads tests/smoke/urls.txt, prefixes each line with
-  // http://127.0.0.1:8080, and concatenates onto this default.
-  urls: [
-    'http://127.0.0.1:8080/',
-  ],
+  // Deliberately empty — see the header comment. The caller's --sitemap
+  // flag is the sole route source, so there is exactly one place a route
+  // can come from.
+  urls: [],
 };
