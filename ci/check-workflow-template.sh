@@ -72,6 +72,33 @@ while IFS= read -r line; do
     esac
 done < <(grep -E '^[[:space:]]*-?[[:space:]]*uses:[[:space:]]' "$TMPL")
 
+# WHY this check: wrangler's engines floor and the Node version this template
+# ships are independent values that must agree. When they drifted, a consumer's
+# deploy failed AFTER a green build with a message about Node, and nothing in
+# the repo related the two. The floor is read from the registry so the check
+# tracks the pinned version instead of a second copy of its requirement.
+#
+# WARNING: every probe below is `|| true`. This script runs under `set -e` with
+# pipefail, and a grep that matches nothing exits non-zero — which would abort
+# the whole check silently, turning a hardening step into a no-op.
+node_major="$(grep -oE "node-version: '[0-9]+'" "$TMPL" 2>/dev/null | head -1 | grep -oE '[0-9]+' || true)"
+wrangler_pin="$(grep -oE 'wrangler@[0-9]+\.[0-9]+\.[0-9]+' "$TMPL" 2>/dev/null | head -1 | cut -d@ -f2 || true)"
+if [[ -z "$wrangler_pin" ]]; then
+    # The template carries a {{ WRANGLER_VERSION }} placeholder; a rendered
+    # instance carries the literal. Resolve the placeholder from the defaults.
+    defaults="$(dirname "$0")/../bin/typikon-defaults.sh"
+    wrangler_pin="$(grep -oE 'WRANGLER_VERSION:=[0-9.]+' "$defaults" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+fi
+if [[ -n "$node_major" && -n "$wrangler_pin" ]]; then
+    floor="$(curl -fsS --max-time 10 "https://registry.npmjs.org/wrangler/${wrangler_pin}" 2>/dev/null \
+        | grep -oE '"node":"[^"]*"' | grep -oE '[0-9]+' | head -1 || true)"
+    if [[ -z "$floor" ]]; then
+        echo "note: npm registry unreachable; wrangler/Node pairing unverified" >&2
+    elif [[ "$node_major" -lt "$floor" ]]; then
+        fail "Node ${node_major} is below wrangler@${wrangler_pin} engines floor (>=${floor}) — the deploy fails after a green build"
+    fi
+fi
+
 if [[ "$FAIL" -eq 0 ]]; then
     echo '{"checked":"'"$TMPL"'","status":"pass"}'
 fi
