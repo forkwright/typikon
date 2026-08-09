@@ -8,17 +8,22 @@
 # WHY: the browser gates (pa11y, playwright) must exercise the commit
 # under test, not the site's live production origin — see #29 for the
 # regression this guards against. bin/typikon-check and the CI templates
-# build a second copy, public-local/, with --base-url http://127.0.0.1:8080
-# for the browser gates to consume; this script proves that copy exists
-# and that its HTML carries no reference to the site's configured
-# production origin.
+# each build a second copy, public-local/, against a loopback base_url for
+# the browser gates to consume; this script proves that copy exists and
+# that its HTML carries no reference to the site's configured production
+# origin.
 #
-# Scoped to *.html, same rationale as ci/csp-enforce.sh: a browser
-# rendering a page only loads what an HTML reference points it at.
-# Non-HTML output (atom.xml, sitemap.xml, robots.txt) can legitimately
-# carry an absolute production URL — an Atom <author><uri> is a portable
-# identifier by convention, not a resource the browser gates fetch — so
-# checking those would flag correct output as a regression.
+# NOTE: the two producers do not agree on the port, and this check does not
+# require them to. bin/typikon-check allocates a free one per run (#51); the
+# CI templates pass a fixed 127.0.0.1:8080. What is asserted here is the
+# absence of the production origin, which holds for either.
+#
+# NOTE: scoped to *.html, same rationale as ci/csp-enforce.sh: a browser
+# rendering a page only loads what an HTML reference points it at. Non-HTML
+# output (atom.xml, sitemap.xml, robots.txt) can legitimately carry an
+# absolute production URL — an Atom <author><uri> is a portable identifier
+# by convention, not a resource the browser gates fetch — so checking those
+# would flag correct output as a regression.
 #
 # Exit:
 #   0  public-local/ exists, contains *.html files, and none of them
