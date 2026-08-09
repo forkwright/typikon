@@ -83,7 +83,7 @@ When two consumer sites disagree on a primitive (a field, a layout, a color toke
 
 Do not fork the theme into a consumer to satisfy a one-off need. Forks become permanent and the design family fragments.
 
-### 7. Schema changes are migrations
+### 7. Schema changes are migrations, where a migration is possible
 
 When a schema field is renamed, removed, or changed incompatibly, the typikon PR also ships a migration script in `bin/typikon-migrate-<from>-<to>`. The script:
 
@@ -93,6 +93,27 @@ When a schema field is renamed, removed, or changed incompatibly, the typikon PR
 - Exits 0 on success with summary of files changed
 
 The PR description must list every consumer affected and link the migration runs.
+
+**Adding a required field is the exception, and it is deliberate.** A rename or a
+removal is a transformation of data that already exists, so a script can perform it.
+A new required field asks for information the consumer has never recorded, and no
+script can supply it.
+
+That matters most for the provenance fields — `words_source`, `price_source`,
+`measurement_source`. Each states where a rendered number came from. A migration that
+filled them with a placeholder would be writing a false provenance claim into content,
+which is the exact failure the fields were added to prevent. A schema that guarantees
+"this price is traceable" is worth less than nothing if the guarantee can be satisfied
+by a generated string.
+
+So typikon ships no migration for added required fields. The consequence is real and
+falls on the consumer: it cannot bump the theme submodule until it has authored the
+new fields for every affected content file. Budget that as content work, not as a
+version bump — `themes/typikon/bin/typikon-validate .` names each file and pointer, so
+the work is enumerable before it is started.
+
+The PR adding a required field must say so in its description, and list the consumers
+it blocks.
 
 ### 8. Check the push authority before pushing
 
