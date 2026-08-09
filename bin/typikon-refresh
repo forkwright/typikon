@@ -16,6 +16,19 @@
 #
 # Idempotent: re-running with no upstream changes is a no-op.
 #
+# Opt-out (per forkwright/typikon#94): a consumer that has deliberately
+# diverged from a rendered target declares that by putting the literal
+# comment line
+#     # typikon: local
+# anywhere in the rendered instance (both `.kanon-ci.toml` and the
+# workflow YAML accept `#` comments). typikon-refresh greps each dest
+# file for that marker before rendering; a match leaves the file
+# untouched and reports it under "declined" in the summary, distinct
+# from a source-missing skip. The declaration lives in the file
+# typikon-init already scaffolds, not in the file's absence — so a
+# stray typikon-init re-run cannot silently drop it the way an
+# absent-file opt-out would.
+#
 # Hand-edits in rendered files are clobbered by re-render. The contract
 # in `_headers.tmpl` / `_redirects.tmpl` notes that those instances are
 # operator-edited (they're NOT re-rendered here for that reason — only
@@ -139,8 +152,14 @@ declare -a TMPL_TARGETS=(
     "ci/github-workflow.yml.tmpl|.github/workflows/deploy.yml"
 )
 
+# A consumer declines a specific rendered target by leaving this exact
+# comment line anywhere in the existing dest file (see the opt-out note
+# in the file header). Checked before every overwrite.
+LOCAL_MARKER='# typikon: local'
+
 declare -a RENDERED=()
 declare -a SKIPPED=()
+declare -a DECLINED=()
 
 for spec in "${TMPL_TARGETS[@]}"; do
     src="${spec%%|*}"
@@ -150,6 +169,11 @@ for spec in "${TMPL_TARGETS[@]}"; do
 
     if [[ ! -f "$src_path" ]]; then
         SKIPPED+=("$dest (source $src missing in typikon)")
+        continue
+    fi
+
+    if [[ -f "$dest_path" ]] && grep -qxF "$LOCAL_MARKER" "$dest_path"; then
+        DECLINED+=("$dest (marked '$LOCAL_MARKER')")
         continue
     fi
 
@@ -190,9 +214,14 @@ if [[ ${#RENDERED[@]} -gt 0 ]]; then
     echo "  re-rendered:"
     for r in "${RENDERED[@]}"; do echo "    - $r"; done
 fi
+if [[ ${#DECLINED[@]} -gt 0 ]]; then
+    echo
+    echo "  declined (consumer-marked, left untouched):"
+    for d in "${DECLINED[@]}"; do echo "    - $d"; done
+fi
 if [[ ${#SKIPPED[@]} -gt 0 ]]; then
     echo
-    echo "  skipped:"
+    echo "  skipped (source missing in typikon):"
     for s in "${SKIPPED[@]}"; do echo "    - $s"; done
 fi
 echo
