@@ -37,6 +37,7 @@ from __future__ import annotations
 import datetime as _datetime
 import json
 import sys
+import re
 import tomllib
 from pathlib import Path
 
@@ -106,7 +107,18 @@ def serialize_frontmatter(fm: dict) -> str:
         return _basic_toml_dump(fm)
 
 
-def _basic_toml_dump(fm: dict, indent: str = "") -> str:
+_BARE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _basic_toml_dump(fm: dict, prefix: str = "") -> str:
+    """Serialize a frontmatter dict to TOML.
+
+    WARNING: `prefix` is load-bearing. A TOML table header is an ABSOLUTE
+    path, not a path relative to where it appears in the file, so a bare
+    `[contact]` written under `[extra]` declares a ROOT-level `contact`
+    table. Emitting nested tables without their dotted path silently
+    relocates data to a key nobody asked for, and the file still parses.
+    """
     lines: list[str] = []
     scalars: list[tuple[str, object]] = []
     tables: list[tuple[str, dict]] = []
@@ -121,20 +133,34 @@ def _basic_toml_dump(fm: dict, indent: str = "") -> str:
             scalars.append((key, value))
 
     for key, value in scalars:
-        lines.append(f"{key} = {_toml_value(value)}")
+        lines.append(f"{_toml_key(key)} = {_toml_value(value)}")
 
     for key, value in tables:
+        path = f"{prefix}{_toml_key(key)}"
         lines.append("")
-        lines.append(f"[{key}]")
-        lines.append(_basic_toml_dump(value).rstrip())
+        lines.append(f"[{path}]")
+        lines.append(_basic_toml_dump(value, f"{path}.").rstrip())
 
     for key, value_list in arrays_of_tables:
+        path = f"{prefix}{_toml_key(key)}"
         for item in value_list:
             lines.append("")
-            lines.append(f"[[{key}]]")
-            lines.append(_basic_toml_dump(item).rstrip())
+            lines.append(f"[[{path}]]")
+            lines.append(_basic_toml_dump(item, f"{path}.").rstrip())
 
     return "\n".join(lines) + "\n"
+
+
+def _toml_key(key: str) -> str:
+    """Quote a key that cannot be written bare.
+
+    WHY: an unquoted dot inside a key reads as a path separator, so the
+    key `a.b` would declare a table `b` nested under `a` rather than one
+    key literally named `a.b`.
+    """
+    if _BARE_KEY.match(key):
+        return key
+    return json.dumps(key, ensure_ascii=False)
 
 
 def _toml_value(v: object) -> str:
@@ -144,13 +170,43 @@ def _toml_value(v: object) -> str:
         return str(v)
     if isinstance(v, str):
         if "\n" in v:
-            return f'"""\n{v}\n"""'
+            # WHY a literal ''' string first: it performs NO escape processing,
+            # so backslashes and double quotes in prose survive verbatim. The
+            # basic """ form interprets backslash escapes, which silently
+            # rewrites any Windows path or regex in a content body.
+            #
+            # WHY no newline before the closing delimiter: TOML trims a newline
+            # that immediately FOLLOWS the opening delimiter but keeps one that
+            # precedes the closing delimiter, so writing it would append a
+            # newline to the value on every migration round-trip.
+            if "'''" not in v and not v.endswith("'"):
+                return f"'''\n{v}'''"
+            esc = v.replace("\\", "\\\\").replace('"', '\\"')
+            return f'"""\n{esc}"""'
         return json.dumps(v, ensure_ascii=False)
     if isinstance(v, _datetime.date):
         return v.isoformat()
     if isinstance(v, list):
         return "[" + ", ".join(_toml_value(x) for x in v) + "]"
     raise ValueError(f"unsupported scalar type: {type(v).__name__}")
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    """Replace a file's contents in one step, or not at all.
+
+    WHY: this script's whole job is rewriting the consumer's content files.
+    A direct write that fails partway — disk full, interrupt — leaves a
+    half-written file, and catching that exception per-file would turn a
+    loud crash into a silent corruption. Writing beside the target and
+    renaming makes the failure mode "nothing changed" instead.
+    """
+    tmp = path.with_name(f"{path.name}.typikon-migrate.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def _coerce_dates(obj):
@@ -186,23 +242,31 @@ def main(argv: list[str]) -> int:
         file_label = str(rel)
         checked += 1
 
+        # WHY the whole per-file body is inside one try: migrate() is
+        # fill-in-the-blank code the migration author writes, and
+        # serialize_frontmatter() raises on any value type _toml_value cannot
+        # emit. Isolating only read+parse let either of those abort the batch
+        # from whichever file happened to trigger it — losing every remaining
+        # file and printing no summary, which contradicts the exit-code
+        # contract in this file's own docstring.
         try:
             text = path.read_text(encoding="utf-8")
             fm, body_start, body_end = parse_frontmatter(text, file_label)
+
+            before = json.loads(json.dumps(_coerce_dates(fm)))  # deep-copy via JSON
+            after = migrate(fm, file_label)
+
+            if json.dumps(_coerce_dates(after), sort_keys=True) == json.dumps(before, sort_keys=True):
+                continue
+
+            new_block = serialize_frontmatter(after).rstrip()
+            new_text = f"+++\n{new_block}\n+++{text[body_start:]}"
+            _write_atomic(path, new_text)
         except Exception as exc:
             print(json.dumps({"file": file_label, "error": str(exc)}), file=sys.stderr)
             errors += 1
             continue
 
-        before = json.loads(json.dumps(_coerce_dates(fm)))  # deep-copy via JSON
-        after = migrate(fm, file_label)
-
-        if json.dumps(_coerce_dates(after), sort_keys=True) == json.dumps(before, sort_keys=True):
-            continue
-
-        new_block = serialize_frontmatter(after).rstrip()
-        new_text = f"+++\n{new_block}\n+++{text[body_start:]}"
-        path.write_text(new_text, encoding="utf-8")
         print(
             json.dumps(
                 {
