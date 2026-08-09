@@ -224,9 +224,21 @@ jobs:
         # WHY 5: mirrors ci/kanon-ci.toml.tmpl's playwright timeout_secs=300.
         timeout-minutes: 5
         run: |
-          cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
-          # WARNING: the config resolves its testDirs from these; it fails closed without them.
-          TYPIKON_ROOT=themes/typikon TYPIKON_CONSUMER_ROOT=. TYPIKON_BASE_URL=http://127.0.0.1:8080 npx playwright test
+          # WARNING: never write playwright.config.ts into the consumer tree — a
+          # consumer may keep its own (forkwright/typikon#39). mktemp puts it outside,
+          # which is also why TYPIKON_ROOT/TYPIKON_CONSUMER_ROOT must be ABSOLUTE: the
+          # config resolves testDirs from them, and a relative path would resolve
+          # against the config file's directory rather than the workspace.
+          PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
+          cp themes/typikon/ci/playwright.config.ts "$PW_CONFIG"
+          # WARNING: NODE_PATH is what lets a config outside the tree resolve
+          # @playwright/test, which is installed globally by the install step above.
+          # Without it playwright dies with MODULE_NOT_FOUND before running a thing.
+          NODE_PATH="$(npm root -g)" \
+          TYPIKON_ROOT="$GITHUB_WORKSPACE/themes/typikon" \
+          TYPIKON_CONSUMER_ROOT="$GITHUB_WORKSPACE" \
+          TYPIKON_BASE_URL=http://127.0.0.1:8080 \
+            npx playwright test --config "$PW_CONFIG"
 
       - name: Tear down static server
         if: always()
