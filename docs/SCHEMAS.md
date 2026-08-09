@@ -27,9 +27,9 @@ Top-level pages and section children that aren't journal entries or products.
 
 **Optional core:** `description`, `date`, `updated`, `path`, `template`, `weight`, `draft`.
 
-**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`.
+**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`.
 
-**Constraints:** title ≤80 chars; description ≤200; path matches `^/[a-z0-9/_-]*/?$`; template matches `^[a-z0-9_-]+\.html$`; og_image ends in `.svg|.png|.jpg|.webp`.
+**Constraints:** title ≤80 chars; description ≤200; path matches `^/[a-z0-9/_-]*/?$`; template matches `^[a-z0-9_-]+\.html$`; og_image ends in `.svg|.png|.jpg|.webp`. Setting any one of `price`, `stripe_url`, or `price_source` triggers `ld-product` JSON-LD in `page.html`, which then requires all four of `audience`, `price`, `price_source`, and `stripe_url` together (enforced by the schema's `if`/`then` on `extra`, matching the template's assertions exactly). A dedicated product page under `content/products/` should use the `product` schema instead — these fields exist here for the rare non-product-section page that still needs a buy block.
 
 **Example:**
 
@@ -190,6 +190,7 @@ Any page with `template = "sizing-guide.html"`. Renders a measurement table, an 
 - size_table rows: required `size`; optional `waist`, `length`, `width`, `note`; column rendering is conditional on the first row's keys
 - diagram (optional): path under static/ to an `.svg` file; loaded inline via `load_data`
 - decision_tree (optional): array of strings, rendered as ordered list
+- duration (optional): ISO 8601 duration, hours/minutes/seconds only (e.g. `PT2M`); requires duration_source; emitted as HowTo `totalTime` only when both are set — never guessed
 
 **Example:**
 

@@ -79,15 +79,27 @@
           "type": "string",
           "description": "Override the brand author for this page. Falls back to config.extra.author.name."
         },
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended buyer or reader context. Required alongside price, price_source, and stripe_url when any one of the three is set — see the extra-level dependency below."
+        },
         "price": {
           "type": "string",
           "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
-          "description": "Used in product context. Triggers ld-product JSON-LD when paired with stripe_url."
+          "description": "Display price with optional leading $ (e.g. '$150', '85'). Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
+        },
+        "price_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the rendered price claim, e.g. the Stripe price object, SKU ledger, or fixture note. Required alongside audience, price, and stripe_url when any one of the three is set — see the extra-level dependency below."
         },
         "stripe_url": {
           "type": "string",
           "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
-          "description": "Used in product context. Triggers ld-product JSON-LD when paired with price."
+          "description": "Stripe direct-checkout URL. Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
         },
         "video": {
           "type": "object",
@@ -123,6 +135,16 @@
             }
           }
         }
+      },
+      "if": {
+        "anyOf": [
+          { "required": ["price"] },
+          { "required": ["stripe_url"] },
+          { "required": ["price_source"] }
+        ]
+      },
+      "then": {
+        "required": ["audience", "price", "price_source", "stripe_url"]
       }
     }
   }
