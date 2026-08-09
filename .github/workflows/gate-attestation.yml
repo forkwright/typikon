@@ -101,7 +101,7 @@ jobs:
         rm -f zola.tar.gz
         zola --version
 
-        python3 -m pip install --user jsonschema
+        python3 -m pip install --user jsonschema fonttools
 
         LYCHEE_VERSION=0.24.2
         LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a

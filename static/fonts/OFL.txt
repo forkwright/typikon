@@ -3,10 +3,16 @@ SIL Open Font License (OFL) 1.1 — Attributions
 
 The WOFF2 files shipped in this directory are subsets of three font
 families distributed under the SIL Open Font License, Version 1.1.
-Subsetting was performed with fonttools `pyftsubset` to keep only the
+Subsetting was performed with fonttools `pyftsubset`, requesting the
 Latin (U+0000–00FF), Greek (U+0370–03FF), and Greek Extended
-(U+1F00–1FFF) ranges for the serif families, and Latin only for the
-monospace family.
+(U+1F00–1FFF) ranges for the serif families and Latin only for the
+monospace family. pyftsubset keeps only glyphs that exist in the source
+master: neither Cormorant Garamond nor Spectral's upstream masters carry
+general Greek-script or Greek-Extended glyphs, so the shipped Greek
+coverage is limited to the handful of letters those masters ship as
+math/science symbols (Delta, Omega, mu, pi for Cormorant Garamond;
+Delta, mu, pi for Spectral) — see static/css/fonts.css for the exact
+per-file unicode-range this actually supports.
 
 The OFL requires that every distribution preserve the copyright notice
 of the original font. All three notices are reproduced below. The full
