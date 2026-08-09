@@ -58,5 +58,36 @@ for (const route of routes) {
     expect(title.trim(), `${route} should have a non-empty <title>`).not.toBe('');
 
     expect(consoleErrors, `${route} should load with no console errors: ${consoleErrors.join('; ')}`).toEqual([]);
+
+    // WHY read the accessibility tree rather than the DOM (forkwright/typikon#61):
+    // an aria-label override on .faq-anchor passed pa11y's WCAG2AA ruleset
+    // while collapsing every question's computed accessible name to one
+    // repeated string. ariaSnapshot() reads what a screen reader actually
+    // gets, so a future aria-label/aria-labelledby regression fails here
+    // regardless of route content. Runs only on routes that render the FAQ
+    // template; a non-FAQ route has zero .faq-anchor elements and the
+    // block is skipped.
+    const faqAnchors = page.locator('.faq-anchor');
+    const faqAnchorCount = await faqAnchors.count();
+    if (faqAnchorCount > 0) {
+      const visibleTexts = await faqAnchors.evaluateAll((elements) =>
+        elements.map((element) => element.textContent?.trim() ?? ''),
+      );
+      const snapshot = await page.locator('.faq-list').ariaSnapshot();
+      const accessibleNames = [...snapshot.matchAll(/-\s*link\s+"([^"]*)"/g)].map((match) => match[1]);
+
+      expect(
+        accessibleNames.length,
+        `${route} FAQ accessibility tree should expose exactly one link per question: ${snapshot}`,
+      ).toBe(faqAnchorCount);
+      expect(
+        accessibleNames,
+        `${route} each FAQ link's computed accessible name should match its own visible question text, in order`,
+      ).toEqual(visibleTexts);
+      expect(
+        new Set(accessibleNames).size,
+        `${route} FAQ link accessible names should be unique within the page: ${JSON.stringify(accessibleNames)}`,
+      ).toBe(accessibleNames.length);
+    }
   });
 }
