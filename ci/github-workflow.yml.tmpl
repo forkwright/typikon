@@ -77,7 +77,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          # WARNING: must stay >= the engines floor of the wrangler pinned below.
+          # wrangler 4.112.0 requires Node >=22; on 20 it refuses to run and the
+          # deploy fails AFTER a green build, which reads as a deploy problem
+          # rather than a version pairing. Raise both together or neither.
+          node-version: '22'
 
       - name: Install pa11y-ci, lychee, playwright
         # WHY 15: mirrors ci/kanon-ci.toml.tmpl's setup-node-tooling
