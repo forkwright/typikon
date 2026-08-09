@@ -50,6 +50,11 @@
   --thanatochromia-aged: #382838;
   --aporia: #5C8E63;
   --aporia-aged: #4A7A5A;
+  /* WHY: --aporia is the true dye hue (used for swatches/backgrounds) and
+     only reaches 3.44:1 on --bg, below WCAG 2.2 AA's 4.5:1 for small text.
+     Interactive text uses this darker same-hue token instead; the dye
+     tokens above stay unmutated so swatches keep their accurate color. */
+  --aporia-interactive: #4A7350;
   --natural: #8B5A2B;
   --natural-aged: #5C3A1F;
   
@@ -191,7 +196,7 @@ nav {
 /* Nav links get dye colors on hover */
 .nav-links a:nth-child(1):hover { color: var(--aima); }
 .nav-links a:nth-child(2):hover { color: var(--thanatochromia); }
-.nav-links a:nth-child(3):hover { color: var(--aporia); }
+.nav-links a:nth-child(3):hover { color: var(--aporia-interactive); }
 .nav-links a:nth-child(4):hover { color: var(--text-mid); }
 .nav-links a:nth-child(5):hover { color: var(--natural); }
 .nav-links a:nth-child(6):hover { color: var(--text); }
@@ -1105,7 +1110,7 @@ main hr {
 /* Colors */
 .triad-1 { color: var(--aima); }
 .triad-2 { color: var(--thanatochromia); }
-.triad-3 { color: var(--aporia); }
+.triad-3 { color: var(--aporia-interactive); }
 
 /* Background color shift on hover (only when settled, using :has) */
 .home-page::before,
