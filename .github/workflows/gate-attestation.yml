@@ -77,7 +77,12 @@ permissions:
 
 jobs:
   gate:
-    uses: forkwright/.github/.github/workflows/hybrid-gate.yml@main
+    # WHY pinned to a commit SHA, not @main: a mutable branch ref lets the
+    # remote workflow's behavior change under an already-merged typikon
+    # commit. Refresh via:
+    #   gh api repos/forkwright/.github/commits/main --jq '.sha'
+    # and review the diff at forkwright/.github before bumping.
+    uses: forkwright/.github/.github/workflows/hybrid-gate.yml@84a39d3344660e4010c32755b33a6a88912ad929 # main
     with:
       # WHY empty: no rust-toolchain.toml exists (there is no Rust code at
       # all) -- auto-detect applies. The setup-rust-toolchain step runs
@@ -122,4 +127,8 @@ jobs:
       rust_cache_key: "gate-attestation"
       ai_attribution_check: true
       docs_only_exemption: true
-    secrets: inherit
+    # WHY no secrets block: the reusable's only declared secret is
+    # FLEET_REPO_TOKEN, required solely when needs_fleet_repo_token is
+    # true (set false above). check_cmd consumes no repository secret
+    # either. `secrets: inherit` would hand this call every secret this
+    # repo exposes for a workflow that needs none of them.
