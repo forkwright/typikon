@@ -9,6 +9,12 @@
 #}
 {% macro breadcrumb(title, permalink, ancestors) %}
 {%- if ancestors and ancestors | length > 0 %}
+{#- WHY: trailing-slash spelling varies (config.base_url is user-entered,
+   ancestor/page permalinks come from Zola); strip the trailing slash before
+   comparing so the root is deduplicated regardless of spelling, instead of
+   comparing one unnormalized slash form. #}
+{%- set base_key = config.base_url | trim_end_matches(pat="/") -%}
+{%- set page_key = permalink | trim_end_matches(pat="/") -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -21,9 +27,12 @@
       "item": {{ config.base_url | json_encode | safe }}
     }
     {%- set position = 2 -%}
+    {%- set_global seen = [base_key] -%}
     {%- for ancestor_path in ancestors -%}
       {%- set ancestor = get_section(path=ancestor_path) -%}
-      {%- if ancestor.title and ancestor.permalink and ancestor.permalink != config.base_url ~ "/" -%},
+      {%- if ancestor.title and ancestor.permalink -%}
+        {%- set ancestor_key = ancestor.permalink | trim_end_matches(pat="/") -%}
+        {%- if not ancestor_key in seen and ancestor_key != page_key -%},
     {
       "@type": "ListItem",
       "position": {{ position }},
@@ -31,6 +40,8 @@
       "item": {{ ancestor.permalink | json_encode | safe }}
     }
         {%- set_global position = position + 1 -%}
+        {%- set_global seen = seen | concat(with=ancestor_key) -%}
+        {%- endif -%}
       {%- endif -%}
     {%- endfor -%},
     {
