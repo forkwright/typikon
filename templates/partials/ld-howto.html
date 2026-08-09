@@ -7,8 +7,12 @@
    surface in Google search.
 
    Inputs:
-     page.extra.product_type  — what the guide sizes (becomes part of name)
-     page.extra.decision_tree — array of strings, one step per item
+     page.extra.product_type     — what the guide sizes (becomes part of name)
+     page.extra.decision_tree    — array of strings, one step per item
+     page.extra.duration         — optional, ISO 8601 (e.g. "PT2M"); requires
+                                    duration_source (schema dependentRequired).
+                                    totalTime is omitted, not guessed, when unset.
+     page.extra.duration_source  — optional; provenance for the duration claim
 
    Schema reference: https://schema.org/HowTo
 #}
@@ -24,7 +28,9 @@
   "@type": "HowTo",
   "name": {{ howto_name | json_encode | safe }},
   "description": {{ page.description | json_encode | safe }},
-  "totalTime": "PT2M",
+  {%- if page.extra.duration is defined and page.extra.duration %}
+  "totalTime": {{ page.extra.duration | json_encode | safe }},
+  {%- endif %}
   "step": [
     {%- for line in page.extra.decision_tree -%}
     {

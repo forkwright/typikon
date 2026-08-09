@@ -36,7 +36,7 @@
     {%- set anchor = item.anchor | default(value=item.q | slugify) %}
     <div class="faq-item" id="{{ anchor }}">
       <dt class="faq-question">
-        <a href="#{{ anchor }}" class="faq-anchor" aria-label="Link to this question">{{ item.q }}</a>
+        <a href="#{{ anchor }}" class="faq-anchor">{{ item.q }}</a>
       </dt>
       <dd class="faq-answer">
         {%- for paragraph in item.a | split(pat="\n\n") %}

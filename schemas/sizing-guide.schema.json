@@ -78,11 +78,26 @@
             "maxLength": 300
           }
         },
+        "duration": {
+          "type": "string",
+          "pattern": "^PT(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+S)?$",
+          "description": "ISO 8601 duration for how long the decision_tree steps take (e.g. 'PT2M'). Emitted as HowTo totalTime only when both duration and duration_source are set — omitted otherwise rather than guessed."
+        },
+        "duration_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the duration claim, e.g. a timed run of the steps or an operator estimate stated as such. Required alongside duration."
+        },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
         "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$" },
         "skip_sitemap": { "type": "boolean" },
         "author": { "type": "string" }
+      },
+      "dependentRequired": {
+        "duration": ["duration_source"],
+        "duration_source": ["duration"]
       }
     }
   }
