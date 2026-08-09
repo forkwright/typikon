@@ -214,7 +214,13 @@ jobs:
         # clean over ZERO routes and exits 0 — a gate that passes by testing nothing.
         run: pa11y-ci --config themes/typikon/ci/pa11y.config.js --sitemap http://127.0.0.1:8080/sitemap.xml
       - name: playwright (per-route smoke)
-        if: ${{ hashFiles('tests/smoke/**/*.spec.ts') != '' }}
+        # WARNING: do not gate this step on the consumer having tests/smoke/. It ran
+        # behind `if: hashFiles('tests/smoke/**/*.spec.ts') != ''`, which skipped the
+        # WHOLE step — including typikon's own mandatory ci/smoke/ specs, which always
+        # exist — for every consumer that ships none. The step then reported `skipped`,
+        # which reads as fine. The config's consumer-smoke project tolerates a missing
+        # testDir: bin/typikon-check runs playwright unconditionally and passes against
+        # examples/sample-blog, which has no tests/smoke/ (forkwright/typikon#52).
         # WHY 5: mirrors ci/kanon-ci.toml.tmpl's playwright timeout_secs=300.
         timeout-minutes: 5
         run: |

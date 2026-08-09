@@ -179,15 +179,18 @@ pa11y-ci --config themes/typikon/ci/pa11y.config.js --sitemap http://127.0.0.1:8
 timeout_secs = 300
 
 [stages.playwright]
+# WARNING: do not gate this stage on the consumer having tests/smoke/. It ran behind
+# `if find tests/smoke ... | grep -q .`, which skipped the WHOLE stage — including
+# typikon's own mandatory ci/smoke/ specs, which always exist — for every consumer
+# that ships none, while printing a reassuring "skip playwright" line. The config's
+# consumer-smoke project tolerates a missing testDir: bin/typikon-check runs
+# playwright unconditionally and passes against examples/sample-blog, which has no
+# tests/smoke/ (forkwright/typikon#52).
 cmd = """
 set -euo pipefail
-if find tests/smoke -type f -name '*.spec.ts' | grep -q .; then
-  cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
-  # WARNING: the config resolves its testDirs from these; it fails closed without them.
-  TYPIKON_ROOT=themes/typikon TYPIKON_CONSUMER_ROOT=. TYPIKON_BASE_URL=http://127.0.0.1:8080 npx playwright test
-else
-  echo "skip playwright: no tests/smoke/**/*.spec.ts files"
-fi
+cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
+# WARNING: the config resolves its testDirs from these; it fails closed without them.
+TYPIKON_ROOT=themes/typikon TYPIKON_CONSUMER_ROOT=. TYPIKON_BASE_URL=http://127.0.0.1:8080 npx playwright test
 """
 timeout_secs = 300
 
