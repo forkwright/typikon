@@ -47,6 +47,17 @@
           "maxLength": 200,
           "description": "Override the default shipping line. Defaults to 'Shipping included · Tax at checkout · Ships within one week'."
         },
+        "availability": {
+          "type": "string",
+          "enum": ["InStock", "OutOfStock", "PreOrder", "BackOrder", "LimitedAvailability", "Discontinued"],
+          "description": "Schema.org Offer.availability state. Emitted in JSON-LD only alongside availability_source; never defaulted to InStock."
+        },
+        "availability_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the availability claim, e.g. inventory count or a manual stock check. Required alongside availability."
+        },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
         "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$" },
@@ -80,6 +91,10 @@
             }
           }
         }
+      },
+      "dependentRequired": {
+        "availability": ["availability_source"],
+        "availability_source": ["availability"]
       }
     }
   }

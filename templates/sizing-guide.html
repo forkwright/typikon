@@ -45,25 +45,40 @@
   {%- endif %}
 
   {%- set unit_label = page.extra.measurement_unit | default(value="inches") %}
+  {# INVARIANT: header and row cells share one column set, computed across
+     ALL rows — not row 0 alone, since a later row can carry a field row 0
+     lacks. WHY: deriving headers from row 0 only let a later row's value
+     land under the wrong heading; a row missing a field now renders a
+     blank cell in place instead of shifting later columns left. #}
+  {%- set_global has_waist = false -%}
+  {%- set_global has_length = false -%}
+  {%- set_global has_width = false -%}
+  {%- set_global has_note = false -%}
+  {%- for row in page.extra.size_table %}
+    {%- if row.waist is defined %}{% set_global has_waist = true %}{% endif %}
+    {%- if row.length is defined %}{% set_global has_length = true %}{% endif %}
+    {%- if row.width is defined %}{% set_global has_width = true %}{% endif %}
+    {%- if row.note is defined %}{% set_global has_note = true %}{% endif %}
+  {%- endfor %}
   <table class="sizing-table">
     <caption>{{ page.extra.product_type | capitalize }} sizes ({{ unit_label }})</caption>
     <thead>
       <tr>
         <th scope="col">Size</th>
-        {%- if page.extra.size_table[0].waist is defined %}<th scope="col">Waist</th>{% endif %}
-        {%- if page.extra.size_table[0].length is defined %}<th scope="col">Length</th>{% endif %}
-        {%- if page.extra.size_table[0].width is defined %}<th scope="col">Width</th>{% endif %}
-        {%- if page.extra.size_table[0].note is defined %}<th scope="col">Note</th>{% endif %}
+        {%- if has_waist %}<th scope="col">Waist</th>{% endif %}
+        {%- if has_length %}<th scope="col">Length</th>{% endif %}
+        {%- if has_width %}<th scope="col">Width</th>{% endif %}
+        {%- if has_note %}<th scope="col">Note</th>{% endif %}
       </tr>
     </thead>
     <tbody>
       {%- for row in page.extra.size_table %}
       <tr>
         <th scope="row">{{ row.size }}</th>
-        {%- if row.waist is defined %}<td>{{ row.waist }}</td>{% endif %}
-        {%- if row.length is defined %}<td>{{ row.length }}</td>{% endif %}
-        {%- if row.width is defined %}<td>{{ row.width }}</td>{% endif %}
-        {%- if row.note is defined %}<td>{{ row.note }}</td>{% endif %}
+        {%- if has_waist %}<td>{{ row.waist | default(value="") }}</td>{% endif %}
+        {%- if has_length %}<td>{{ row.length | default(value="") }}</td>{% endif %}
+        {%- if has_width %}<td>{{ row.width | default(value="") }}</td>{% endif %}
+        {%- if has_note %}<td>{{ row.note | default(value="") }}</td>{% endif %}
       </tr>
       {%- endfor %}
     </tbody>

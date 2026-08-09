@@ -11,6 +11,10 @@
      page.extra.og_image   — primary product image (becomes image)
      config.title          — brand name (Product.brand)
      config.base_url       — for image absolute URL
+
+   NOTE: Offer.availability is emitted only when both page.extra.availability
+   and page.extra.availability_source are set — never defaulted, since an
+   unverified stock claim in structured data misleads search engines.
 #}
 {% import "partials/assert.html" as assert %}
 {{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-product.html") }}
@@ -38,8 +42,13 @@
   "offers": {
     "@type": "Offer",
     "price": {{ price_numeric | json_encode | safe }},
-    "priceCurrency": "USD",
-    "availability": "https://schema.org/InStock",
+    "priceCurrency": "USD"
+    {%- if page.extra.availability and page.extra.availability_source -%}
+    {%- set availability_url = "https://schema.org/" ~ page.extra.availability -%}
+    ,
+    "availability": {{ availability_url | json_encode | safe }}
+    {%- endif -%}
+    ,
     "url": {{ page.extra.stripe_url | json_encode | safe }}
   }
   {%- if image_url -%},
