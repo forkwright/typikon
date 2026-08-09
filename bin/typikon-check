@@ -9,6 +9,8 @@
 # surfaces every problem rather than only the earliest one.
 #
 # Stages (emitted as JSONL):
+#     0. gate-artifacts-ignored  the working-tree paths this script writes are
+#                                 ignored by the consumer and not already tracked
 #     1. typikon-validate        frontmatter against JSON Schema
 #     2. zola check              internal links + asset references
 #     3. zola build              clean build with no warnings, output public/
@@ -206,6 +208,52 @@ sys.exit(0 if body == os.environ["TYPIKON_WAIT_TOKEN"] else 1)
     done
     return 1
 }
+
+# Stage 0 — the working-tree paths this script writes must be ignored, and must
+# not already be tracked. Runs before any stage writes, so a consumer is told
+# what to ignore rather than discovering it from the commit that swept it in.
+#
+# WHY this is checked rather than left to each consumer's .gitignore: the list of
+# artifacts is knowable only here, by the script that creates them, so a consumer
+# maintaining its own copy of that list is guessing. Two consumers guessed
+# `.lychee_cache/`, which is not a name lychee has ever written — the real
+# `.lycheecache` went unignored in both.
+#
+# What a miss costs: `git add -A` commits public-local/, and CI's own
+# `zola build --output-dir public-local` then aborts with "Directory
+# 'public-local' already exists" — a green local gate producing a red CI run
+# whose error names the directory instead of the missing ignore rule.
+# WARNING: a directory artifact MUST keep its trailing slash here. `git
+# check-ignore public-local` consults the filesystem to decide whether the path
+# is a directory, so a `public-local/` ignore rule does not match it while the
+# directory happens to be absent — the same repository then reports "ignored"
+# after a build and "not ignored" before one. `public-local/` is matched from
+# the pattern alone, so the verdict describes the repository rather than the
+# moment. Verified both ways against a fixture repo.
+GATE_ARTIFACTS=(public-local/ .lycheecache)
+if git rev-parse --git-dir >/dev/null 2>&1; then
+    ARTIFACT_PROBLEMS=()
+    for artifact in "${GATE_ARTIFACTS[@]}"; do
+        if [[ -n "$(git ls-files -- "$artifact")" ]]; then
+            ARTIFACT_PROBLEMS+=("$artifact is tracked (git rm -r --cached $artifact)")
+        elif ! git check-ignore -q "$artifact"; then
+            ARTIFACT_PROBLEMS+=("$artifact is not ignored (add '$artifact' to .gitignore)")
+        fi
+    done
+    if (( ${#ARTIFACT_PROBLEMS[@]} > 0 )); then
+        # NOTE: IFS joins on its FIRST character only, so a two-character
+        # separator has to be applied by hand rather than via IFS='; '.
+        printf -v artifact_detail '%s; ' "${ARTIFACT_PROBLEMS[@]}"
+        emit "gate-artifacts-ignored" "fail" 0 "${artifact_detail%; }"
+        FAIL=1
+    else
+        emit "gate-artifacts-ignored" "pass" 0 "ok"
+    fi
+else
+    # Not a taint: no work tree means nothing can be committed, so the property
+    # holds vacuously. This is absence of the hazard, not absence of an instrument.
+    emit "gate-artifacts-ignored" "skip" 0 "not a git work tree — nothing can be committed here"
+fi
 
 # Stage 1 — frontmatter schemas.
 run_stage "typikon-validate" "$TYPIKON_ROOT/bin/typikon-validate" "$ROOT" || FAIL=1
