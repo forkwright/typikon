@@ -56,7 +56,12 @@ set +e  # count-and-continue: no-match greps below must not abort under -e
 # 1. Inline <script>...body...</script>. The body must contain at least
 #    one non-whitespace char. <script src="..." defer></script> is fine.
 #    We greedy-match-against-line inside one line; then a multi-line check.
-inline_script_count=$(grep -E -c '<script[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" 2>/dev/null | grep -vE ':0$' | wc -l)
+# WHY grep -l and not `grep -c | grep -v ':0$'`: with exactly ONE file in
+# the list, grep -c omits the filename prefix and prints a bare count, so a
+# clean build's `0` does not match the `:0$` filter and is counted as a
+# violation. grep -l prints one line per MATCHING file and nothing otherwise,
+# which is the quantity this check actually wants and needs no filtering.
+inline_script_count=$(grep -lE '<script[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" 2>/dev/null | wc -l)
 if [[ $inline_script_count -gt 0 ]]; then
     echo "csp-enforce: inline <script>...content...</script> found:" >&2
     grep -nHE '<script[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" >&2
@@ -64,7 +69,12 @@ if [[ $inline_script_count -gt 0 ]]; then
 fi
 
 # 2. Inline <style>...body...</style>.
-inline_style_count=$(grep -E -c '<style[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" 2>/dev/null | grep -vE ':0$' | wc -l)
+# WHY grep -l and not `grep -c | grep -v ':0$'`: with exactly ONE file in
+# the list, grep -c omits the filename prefix and prints a bare count, so a
+# clean build's `0` does not match the `:0$` filter and is counted as a
+# violation. grep -l prints one line per MATCHING file and nothing otherwise,
+# which is the quantity this check actually wants and needs no filtering.
+inline_style_count=$(grep -lE '<style[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" 2>/dev/null | wc -l)
 if [[ $inline_style_count -gt 0 ]]; then
     echo "csp-enforce: inline <style>...content...</style> found:" >&2
     grep -nHE '<style[^>]*>[[:space:]]*[^[:space:]<]' "${FILES[@]}" >&2
