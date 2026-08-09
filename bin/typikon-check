@@ -16,11 +16,20 @@
 #                                 base_url — the copy browser gates serve
 #     5. csp-enforce             grep public/ for inline script/style/on*= handlers
 #     6. lychee                  external link integrity (requires lychee binary)
-#     7. pa11y                   WCAG 2.1 AA accessibility (requires pa11y-ci)
-#     8. playwright              per-route smoke assertions (requires npx + tests/smoke/*.spec.ts)
+#     7. pa11y                   WCAG 2.1 AA accessibility across every route in
+#                                 the build's own sitemap.xml (requires pa11y-ci)
+#     8. playwright              per-route smoke assertions: this repo's mandatory
+#                                 ci/smoke/ specs, plus the consumer's tests/smoke/
+#                                 if it has any (requires npx)
 #
-# Stages 6-8 emit `skip` when the underlying tool isn't installed; CI
-# always has them, local dev may not.
+# Modes (TYPIKON_CHECK_MODE, default "full"):
+#     full  every declared stage is mandatory. A missing prerequisite tool
+#           or an empty coverage corpus (sitemap.xml with zero routes) is a
+#           gate FAILURE, not a skip — a green run must mean the instruments
+#           ran, not that they were unavailable (forkwright/typikon#49).
+#     dev   missing prerequisites still `skip` as before, but the run's
+#           terminal status is `incomplete` (exit 3), never the same result
+#           as a clean pass — see Exit codes below.
 #
 # Why public-local/ (forkwright/typikon#29): Zola renders every absolute
 # reference (get_url() output, canonical/og:url meta, JSON-LD, sitemap,
@@ -31,15 +40,29 @@
 # not the commit under test. public/ still deploys unmodified; only the
 # copy served to browser gates is rebuilt against a loopback origin.
 #
+# Browser-gate server readiness (forkwright/typikon#51): the loopback
+# port is allocated once (an OS-assigned free port, not a fixed number)
+# and reused for the build's base_url and every server this script starts
+# against that build. Each server start is followed by a poll that
+# requires BOTH the server process still being alive AND a per-run
+# build-identity sentinel file responding with this run's token before
+# any browser gate is allowed to proceed — a bind failure, a premature
+# exit, or another process already answering on that port all fail the
+# corresponding stage immediately instead of racing a fixed sleep.
+#
 # Output:
 #     One JSONL line per stage on stdout:
-#         {"stage": "...", "status": "pass|fail|skip", "duration_ms": N, "detail": "..."}
+#         {"stage": "...", "status": "pass|fail|skip|info", "duration_ms": N, "detail": "..."}
+#     `info` lines are coverage receipts (route/check counts), not verdicts.
 #     Detail surface on stderr (each tool's native output).
 #
 # Exit codes:
-#     0  every implemented stage passed
-#     1  at least one stage failed
-#     2  invocation error (missing root, no content/, etc.)
+#     0  every implemented stage passed, nothing was skipped
+#     1  at least one stage failed (or, in full mode, was missing)
+#     2  invocation error (missing root, no content/, bad TYPIKON_CHECK_MODE)
+#     3  dev mode only: every attempted stage passed but at least one was
+#        skipped — deliberately distinct from 0 so "some tools were
+#        missing" can never look identical to "everything passed"
 
 set -uo pipefail
 
@@ -54,6 +77,12 @@ usage() {
 
 ROOT="$(realpath "$1")"
 [[ -d "$ROOT/content" ]] || { echo "error: $ROOT has no content/ dir" >&2; exit 2; }
+
+MODE="${TYPIKON_CHECK_MODE:-full}"
+case "$MODE" in
+    full|dev) ;;
+    *) echo "error: TYPIKON_CHECK_MODE must be 'full' or 'dev' (got: $MODE)" >&2; exit 2 ;;
+esac
 
 emit() {
     local stage="$1"; local status="$2"; local duration_ms="$3"; local detail="$4"
@@ -115,6 +144,68 @@ trap cleanup EXIT INT TERM
 cd "$ROOT"
 
 FAIL=0
+INCOMPLETE=0
+
+# require_or_skip: the fail-closed/fail-open split for a missing
+# prerequisite tool or an empty coverage corpus (forkwright/typikon#49).
+# In full mode (default) a green run must mean the instruments actually
+# ran, so absence is a FAILURE. In dev mode it stays a `skip`, but taints
+# INCOMPLETE so the run's exit code (below) can never read as a clean pass.
+require_or_skip() {
+    local stage="$1" reason="$2"
+    if [[ "$MODE" == "full" ]]; then
+        emit "$stage" "fail" 0 "$reason (fail-closed: TYPIKON_CHECK_MODE=full requires every declared stage)"
+        FAIL=1
+    else
+        emit "$stage" "skip" 0 "$reason"
+        INCOMPLETE=1
+    fi
+}
+
+# Loopback port + build-identity sentinel (forkwright/typikon#51). Picked
+# once and reused for the loopback build's base_url and every server this
+# script starts against that build, so build-time URLs (sitemap.xml,
+# canonical, og:url, ...) and serve-time URLs always agree — the port
+# cannot be decided per-server because it has to be baked into the HTML
+# before any server exists. The pick-then-bind gap this creates is caught,
+# not ignored: wait_for_ready below fails closed on a lost race.
+LOOPBACK_PORT="$(python3 -c '
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+')"
+SENTINEL_FILE=".typikon-check-sentinel"
+SENTINEL_TOKEN="typikon-check-$$-$(date +%s%N)"
+
+# wait_for_ready: block until $pid is alive AND a GET of $sentinel_path
+# returns exactly this run's token, or fail within $timeout seconds.
+# Proves readiness (something is listening) and identity (it is THIS
+# build being served, not a stale process left holding the port, and not
+# a stale build left over from a prior run) in one check, instead of a
+# fixed sleep that proves neither (forkwright/typikon#51).
+wait_for_ready() {
+    local pid="$1" port="$2" sentinel_path="$3" timeout="$4"
+    local deadline=$(( $(date +%s) + timeout ))
+    while (( $(date +%s) < deadline )); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            return 1
+        fi
+        if TYPIKON_WAIT_URL="http://127.0.0.1:${port}${sentinel_path}" TYPIKON_WAIT_TOKEN="$SENTINEL_TOKEN" python3 -c '
+import os, sys, urllib.request
+try:
+    body = urllib.request.urlopen(os.environ["TYPIKON_WAIT_URL"], timeout=1).read().decode().strip()
+except Exception:
+    sys.exit(1)
+sys.exit(0 if body == os.environ["TYPIKON_WAIT_TOKEN"] else 1)
+' 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.2
+    done
+    return 1
+}
 
 # Stage 1 — frontmatter schemas.
 run_stage "typikon-validate" "$TYPIKON_ROOT/bin/typikon-validate" "$ROOT" || FAIL=1
@@ -123,14 +214,14 @@ run_stage "typikon-validate" "$TYPIKON_ROOT/bin/typikon-validate" "$ROOT" || FAI
 if command -v zola >/dev/null 2>&1; then
     run_stage "zola-check" zola check --skip-external-links || FAIL=1
 else
-    emit "zola-check" "skip" 0 "zola binary not found on PATH"
+    require_or_skip "zola-check" "zola binary not found on PATH"
 fi
 
 # Stage 3 — zola build (clean output to public/).
 if command -v zola >/dev/null 2>&1; then
     run_stage "zola-build" zola build || FAIL=1
 else
-    emit "zola-build" "skip" 0 "zola binary not found on PATH"
+    require_or_skip "zola-build" "zola binary not found on PATH"
 fi
 
 # Stage 4 — rebuild to public-local/ with a loopback base_url. This is
@@ -143,16 +234,23 @@ if command -v zola >/dev/null 2>&1; then
     # repeatedly against the same checkout in local dev, so public-local/
     # already existing from the prior run is the common case, not an
     # error.
-    run_stage "zola-build-local" zola build --base-url "http://127.0.0.1:8080" --output-dir public-local --force || FAIL=1
+    if run_stage "zola-build-local" zola build --base-url "http://127.0.0.1:${LOOPBACK_PORT}" --output-dir public-local --force; then
+        # WHY after the build, not before: --force fully re-cleans
+        # public-local/ on every run, so a sentinel written earlier would
+        # be deleted along with everything else zola doesn't own.
+        printf '%s' "$SENTINEL_TOKEN" > "public-local/$SENTINEL_FILE"
+    else
+        FAIL=1
+    fi
 else
-    emit "zola-build-local" "skip" 0 "zola binary not found on PATH"
+    require_or_skip "zola-build-local" "zola binary not found on PATH"
 fi
 
 # Stage 5 — CSP enforcement against built public/.
 if [[ -d public ]]; then
     run_stage "csp-enforce" "$TYPIKON_ROOT/ci/csp-enforce.sh" "$ROOT/public" || FAIL=1
 else
-    emit "csp-enforce" "skip" 0 "no public/ dir (zola-build did not run)"
+    require_or_skip "csp-enforce" "no public/ dir (zola-build did not run)"
 fi
 
 # Stage 6 — external links via lychee. Skip if binary absent.
@@ -170,64 +268,113 @@ if command -v lychee >/dev/null 2>&1; then
             run_stage "lychee" lychee --config "$TYPIKON_ROOT/ci/lychee.toml" public || FAIL=1
         fi
     else
-        emit "lychee" "skip" 0 "no public/ dir"
+        require_or_skip "lychee" "no public/ dir"
     fi
 else
-    emit "lychee" "skip" 0 "lychee binary not on PATH (install: cargo install lychee or curl release)"
+    require_or_skip "lychee" "lychee binary not on PATH (install: cargo install lychee or curl release)"
 fi
 
 # Stage 7 — pa11y a11y. Requires public-local/ (built with a loopback
 # base_url — see stage 4) to be served; we spin up a quick http.server in
-# the background. Skip if pa11y-ci not present.
+# the background. Route corpus is derived from the build's own generated
+# sitemap.xml, not a hand-maintained list — an empty or missing sitemap
+# fails closed rather than silently checking only "/" (forkwright/typikon#52).
 if command -v pa11y-ci >/dev/null 2>&1; then
     if [[ -d public-local ]]; then
-        # WARNING: --directory, not `cd X && python3 ...`. A `cd X && cmd &` list
-        # runs in a background SUBSHELL, so $! is the subshell and the server is
-        # its child — `kill "$!"` then reaps the wrapper and leaves the server
-        # holding the port. Verified: a leaked http.server was found still bound
-        # to 8080, reparented to init, serving a directory that no longer existed.
-        # With --directory there is no list, so $! IS the server.
-        python3 -m http.server --directory public-local 8080 >"$LOGDIR/server.log" 2>&1 &
-        SRV_PID=$!
-        sleep 1
-        run_stage "pa11y" pa11y-ci --config "$TYPIKON_ROOT/ci/pa11y.config.js" || FAIL=1
-        kill "$SRV_PID" 2>/dev/null || true
-        SRV_PID=""
-    else
-        emit "pa11y" "skip" 0 "no public-local/ dir"
-    fi
-else
-    emit "pa11y" "skip" 0 "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
-fi
-
-# Stage 8 — Playwright smoke tests, only when consumer ships any *.spec.ts
-# under tests/smoke/. Serves public-local/ (see stage 4) for the same
-# reason as pa11y above.
-if [[ -d "$ROOT/tests/smoke" ]] && find "$ROOT/tests/smoke" -name '*.spec.ts' -print -quit | grep -q .; then
-    if command -v npx >/dev/null 2>&1; then
-        if [[ -d public-local ]]; then
-            # WARNING: never write to $ROOT/playwright.config.ts — a consumer may
-            # track its own. Stage the theme's config at a unique path and pass
-            # it explicitly so a pre-existing consumer config is never touched.
-            PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
-            cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
-            # WARNING: --directory for the same reason as the pa11y server above.
-            python3 -m http.server --directory public-local 8080 >"$LOGDIR/pw-server.log" 2>&1 &
-            PW_SRV_PID=$!
-            sleep 1
-            run_stage "playwright-smoke" npx playwright test --config "$PW_CONFIG" || FAIL=1
-            kill "$PW_SRV_PID" 2>/dev/null || true
-            rm -f "$PW_CONFIG"
-            PW_SRV_PID=""
-            PW_CONFIG=""
+        ROUTE_COUNT="$(grep -c '<loc>' public-local/sitemap.xml 2>/dev/null || true)"
+        ROUTE_COUNT="${ROUTE_COUNT:-0}"
+        if [[ -f public-local/sitemap.xml && "$ROUTE_COUNT" -gt 0 ]]; then
+            # WARNING: --directory, not `cd X && python3 ...`. A `cd X && cmd &` list
+            # runs in a background SUBSHELL, so $! is the subshell and the server is
+            # its child — `kill "$!"` then reaps the wrapper and leaves the server
+            # holding the port. Verified: a leaked http.server was found still bound
+            # to 8080, reparented to init, serving a directory that no longer existed.
+            # With --directory there is no list, so $! IS the server.
+            python3 -m http.server --directory public-local "$LOOPBACK_PORT" >"$LOGDIR/server.log" 2>&1 &
+            SRV_PID=$!
+            if wait_for_ready "$SRV_PID" "$LOOPBACK_PORT" "/$SENTINEL_FILE" 10; then
+                run_stage "pa11y" pa11y-ci --config "$TYPIKON_ROOT/ci/pa11y.config.js" \
+                    --sitemap "http://127.0.0.1:${LOOPBACK_PORT}/sitemap.xml" || FAIL=1
+                emit "pa11y-coverage" "info" 0 "${ROUTE_COUNT} routes"
+            else
+                emit "pa11y" "fail" 0 "static server on port ${LOOPBACK_PORT} never became ready (bind failure, premature exit, or identity mismatch); see $LOGDIR/server.log"
+                FAIL=1
+            fi
+            kill "$SRV_PID" 2>/dev/null || true
+            SRV_PID=""
         else
-            emit "playwright-smoke" "skip" 0 "no public-local/ dir"
+            require_or_skip "pa11y" "empty or missing route corpus (public-local/sitemap.xml has no <loc> entries)"
         fi
     else
-        emit "playwright-smoke" "skip" 0 "npx not on PATH"
+        require_or_skip "pa11y" "no public-local/ dir"
     fi
 else
-    emit "playwright-smoke" "skip" 0 "no tests/smoke/*.spec.ts"
+    require_or_skip "pa11y" "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
 fi
 
-exit "$FAIL"
+# Stage 8 — Playwright smoke tests. ci/smoke/ ships mandatory shared
+# semantic assertions that always run (forkwright/typikon#52 — a consumer
+# with no tests/smoke/ used to make this whole stage report skip, so the
+# gate could go green having exercised zero routes); the consumer's own
+# tests/smoke/ runs alongside as an addition, never a substitute. Serves
+# public-local/ (see stage 4) for the same reason as pa11y above.
+if command -v npx >/dev/null 2>&1; then
+    if [[ -d public-local ]]; then
+        # WARNING: never write to $ROOT/playwright.config.ts — a consumer may
+        # track its own. Stage the theme's config at a unique path and pass
+        # it explicitly so a pre-existing consumer config is never touched.
+        PW_CONFIG="$(mktemp -t typikon-playwright-config.XXXXXX.ts)"
+        cp "$TYPIKON_ROOT/ci/playwright.config.ts" "$PW_CONFIG"
+        # WARNING: --directory for the same reason as the pa11y server above.
+        python3 -m http.server --directory public-local "$LOOPBACK_PORT" >"$LOGDIR/pw-server.log" 2>&1 &
+        PW_SRV_PID=$!
+        if wait_for_ready "$PW_SRV_PID" "$LOOPBACK_PORT" "/$SENTINEL_FILE" 10; then
+            # WHY env, not a bare prefix assignment: the staged config lives
+            # outside the consumer tree (forkwright/typikon#50), so its own
+            # `import { defineConfig } from '@playwright/test'` cannot walk
+            # up to a node_modules that has it — NODE_PATH is what makes that
+            # bare specifier resolve regardless of where the file was staged.
+            # TYPIKON_ROOT/TYPIKON_CONSUMER_ROOT are what let the config turn
+            # relative testDir into absolute paths instead of resolving them
+            # against the staged file's own directory.
+            run_stage "playwright-smoke" env \
+                "NODE_PATH=$(npm root -g 2>/dev/null)" \
+                "TYPIKON_ROOT=$TYPIKON_ROOT" \
+                "TYPIKON_CONSUMER_ROOT=$ROOT" \
+                "TYPIKON_BASE_URL=http://127.0.0.1:${LOOPBACK_PORT}" \
+                npx playwright test --config "$PW_CONFIG" || FAIL=1
+            CHECK_COUNT="$(PW_JSON="$ROOT/test-results/playwright.json" python3 -c '
+import json, os
+path = os.environ["PW_JSON"]
+try:
+    with open(path) as f:
+        d = json.load(f)
+except Exception:
+    print(0)
+else:
+    s = d.get("stats", {})
+    print(s.get("expected", 0) + s.get("unexpected", 0) + s.get("flaky", 0))
+' 2>/dev/null || echo 0)"
+            emit "playwright-coverage" "info" 0 "${CHECK_COUNT} checks"
+        else
+            emit "playwright-smoke" "fail" 0 "static server on port ${LOOPBACK_PORT} never became ready (bind failure, premature exit, or identity mismatch); see $LOGDIR/pw-server.log"
+            FAIL=1
+        fi
+        kill "$PW_SRV_PID" 2>/dev/null || true
+        rm -f "$PW_CONFIG"
+        PW_SRV_PID=""
+        PW_CONFIG=""
+    else
+        require_or_skip "playwright-smoke" "no public-local/ dir"
+    fi
+else
+    require_or_skip "playwright-smoke" "npx not on PATH"
+fi
+
+if [[ "$FAIL" -eq 1 ]]; then
+    exit 1
+elif [[ "$INCOMPLETE" -eq 1 ]]; then
+    exit 3
+else
+    exit 0
+fi
