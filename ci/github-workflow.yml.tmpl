@@ -39,6 +39,13 @@ permissions:
 jobs:
   gate-and-deploy:
     runs-on: ubuntu-latest
+    # WHY 60: sum of ci/kanon-ci.toml.tmpl's per-stage timeout_secs across
+    # every stage this job mirrors is ~57 minutes; 60 leaves slack for
+    # checkout + setup-node, which the toml pipeline runs outside its
+    # per-stage budget. Without a job-level ceiling GitHub Actions defaults
+    # to 360 (a stuck playwright/pa11y/curl step burns metered minutes for
+    # up to 6 hours before anything stops it).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -47,6 +54,8 @@ jobs:
 
       # ── Tooling install ────────────────────────────────────────
       - name: Install Zola
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's install-zola timeout_secs=120.
+        timeout-minutes: 2
         env:
           # Pinned per typikon Stage 2a. Refresh when ZOLA_VERSION bumps via:
           #   curl -sL https://github.com/getzola/zola/releases/download/v<X>/zola-v<X>-x86_64-unknown-linux-gnu.tar.gz | sha256sum
@@ -60,6 +69,8 @@ jobs:
           zola --version
 
       - name: Install Python deps for typikon-validate
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's install-python-deps timeout_secs=120.
+        timeout-minutes: 2
         run: |
           python3 -m pip install --user jsonschema
 
@@ -69,6 +80,10 @@ jobs:
           node-version: '20'
 
       - name: Install pa11y-ci, lychee, playwright
+        # WHY 15: mirrors ci/kanon-ci.toml.tmpl's setup-node-tooling
+        # timeout_secs=900 — the playwright chromium download is the
+        # slowest install in the pipeline.
+        timeout-minutes: 15
         env:
           # lychee pinned to a specific version (releases/latest is non-reproducible).
           # Refresh when LYCHEE_VERSION bumps via:
@@ -98,15 +113,23 @@ jobs:
 
       # ── Strict gate ────────────────────────────────────────────
       - name: typikon-validate (frontmatter schemas)
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's typikon-validate timeout_secs=120.
+        timeout-minutes: 2
         run: themes/typikon/bin/typikon-validate .
 
       - name: zola check (internal links + assets)
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's zola-check timeout_secs=120.
+        timeout-minutes: 2
         run: zola check --skip-external-links
 
       - name: zola build
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's zola-build timeout_secs=120.
+        timeout-minutes: 2
         run: zola build
 
       - name: zola build (loopback base_url, for browser gates)
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's zola-build-local timeout_secs=120.
+        timeout-minutes: 2
         # pa11y and playwright render pages in a real browser, so any
         # get_url()-derived absolute asset href in the HTML resolves
         # against base_url — the real deployed domain, not the server
@@ -119,6 +142,8 @@ jobs:
         run: zola build --base-url http://127.0.0.1:8080 --output-dir public-local
 
       - name: Copy _headers + _redirects + 404 into public/
+        # WHY 1: mirrors ci/kanon-ci.toml.tmpl's copy-cloudflare-files timeout_secs=30.
+        timeout-minutes: 1
         # Cloudflare Pages reads _headers and _redirects from the deploy
         # root. wrangler ships public/, so the files at repo root never
         # get applied. Copy them in (idempotent — overwrites if present).
@@ -133,9 +158,13 @@ jobs:
           true
 
       - name: csp-enforce (no inline script/style/handlers)
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's csp-enforce timeout_secs=120.
+        timeout-minutes: 2
         run: themes/typikon/ci/csp-enforce.sh public/
 
       - name: lychee (external links)
+        # WHY 5: mirrors ci/kanon-ci.toml.tmpl's lychee timeout_secs=300.
+        timeout-minutes: 5
         # Self-host absolute URLs (the site's own base_url) get excluded
         # at link-check time, otherwise lychee checks the LIVE site for
         # pages this very build is trying to deploy — a chicken-and-egg
@@ -153,6 +182,8 @@ jobs:
             public/
 
       - name: Serve public-local/ for browser-based gates
+        # WHY 1: mirrors ci/kanon-ci.toml.tmpl's serve-public-local timeout_secs=30.
+        timeout-minutes: 1
         # Serves the loopback-base_url build (see the "zola build
         # (loopback base_url...)" step above), not public/ — csp-enforce
         # and lychee already ran against public/ above and are
@@ -163,16 +194,22 @@ jobs:
           sleep 2
 
       - name: pa11y (WCAG 2.1 AA)
+        # WHY 5: mirrors ci/kanon-ci.toml.tmpl's pa11y timeout_secs=300.
+        timeout-minutes: 5
         run: pa11y-ci --config themes/typikon/ci/pa11y.config.js
 
       - name: playwright (per-route smoke)
         if: ${{ hashFiles('tests/smoke/**/*.spec.ts') != '' }}
+        # WHY 5: mirrors ci/kanon-ci.toml.tmpl's playwright timeout_secs=300.
+        timeout-minutes: 5
         run: |
           cp themes/typikon/ci/playwright.config.ts ./playwright.config.ts
           npx playwright test
 
       - name: Tear down static server
         if: always()
+        # WHY 1: mirrors ci/kanon-ci.toml.tmpl's teardown-static-server timeout_secs=30.
+        timeout-minutes: 1
         run: |
           kill "$(cat /tmp/server.pid 2>/dev/null)" 2>/dev/null || true
 
@@ -184,6 +221,8 @@ jobs:
       # drift.
       - name: Deploy to Cloudflare Pages
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        # WHY 10: mirrors ci/kanon-ci.toml.tmpl's deploy-cloudflare-pages timeout_secs=600.
+        timeout-minutes: 10
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
