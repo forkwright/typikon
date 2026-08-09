@@ -22,6 +22,6 @@ caption = "Optional figcaption beneath the second photo."
 
 # Widget
 
-A widget that costs fifty dollars in this fixture. The product gallery partial would render two `<picture>` elements for the images above — but the source files are placeholders, so the fixture skips the build of the responsive variants by leaving `static/img/widget-*.jpg` absent.
+A widget that costs fifty dollars in this fixture. `static/img/widget-1.jpg` and `widget-2.jpg` are real fixture JPEGs, so the product gallery partial renders two `<picture>` elements, each with the full hero/medium/small `resize_image` variant set.
 
 The price + stripe_url combination triggers the Product JSON-LD include in `page.html`, so the rendered HTML carries `application/ld+json` schema entries for Organization (always-on) and Product (conditional).

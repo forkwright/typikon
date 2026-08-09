@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project follows semantic versioning.
 
-This file is maintained by [release-please](https://github.com/googleapis/release-please). Do not edit by hand; use `git commit` with conventional commits, and release-please will populate this file during version cuts.
+No version has been cut yet — everything below is unreleased work on `main`. Once release-please automation is wired (RELEASES.md § Required configuration files), version cuts populate this file with dated, tagged sections below `## Unreleased`.
 
 ## Unreleased
 
@@ -27,9 +27,3 @@ This file is maintained by [release-please](https://github.com/googleapis/releas
 
 - **repo**: Align with FLEET-REPO-SETUP standard (forge-primary) (#13) — add .gitattributes with markdown trailing-whitespace carve-out (D-055), bootstrap empty CHANGELOG.md.
 - **lint**: Preserve typikon prose voice — scoped `.kanon-lint-ignore` for typikon#9 (substrate/example prose) and typikon#15 (CSP scan full-report behavior). Per operator decision, em-dash policy is intentional and preserved.
-
----
-
-## Previous releases
-
-Full release history is available in the [Git log](https://github.com/forkwright/typikon/commits/main).

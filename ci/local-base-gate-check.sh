@@ -5,19 +5,12 @@
 # Usage:
 #     ci/local-base-gate-check.sh <consumer-site-root>
 #
-# Regression coverage for forkwright/typikon#29: the CI/local gate used
-# to build once with the site's production base_url and serve that same
-# public/ to pa11y and playwright. Any get_url()-derived absolute
-# reference baked into the rendered HTML (canonical link, og:url,
-# JSON-LD, a consumer's own get_url()'d asset href, ...) then pointed
-# the browser at the LIVE deployed site instead of the commit under
-# test — a change could pass browser gates by matching what's already
-# in production, or fail them by mismatching a local-only fix.
-#
-# bin/typikon-check and the CI templates now build a second copy,
-# public-local/, with --base-url http://127.0.0.1:8080 — the only copy
-# the browser gates ever see. This script proves that copy exists and
-# that its HTML carries no reference to the site's configured
+# WHY: the browser gates (pa11y, playwright) must exercise the commit
+# under test, not the site's live production origin — see #29 for the
+# regression this guards against. bin/typikon-check and the CI templates
+# build a second copy, public-local/, with --base-url http://127.0.0.1:8080
+# for the browser gates to consume; this script proves that copy exists
+# and that its HTML carries no reference to the site's configured
 # production origin.
 #
 # Scoped to *.html, same rationale as ci/csp-enforce.sh: a browser
