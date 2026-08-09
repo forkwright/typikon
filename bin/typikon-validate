@@ -46,6 +46,13 @@ except ImportError:
     )
     sys.exit(2)
 
+# INVARIANT: Draft202012Validator does not check "format" unless a
+# FormatChecker is attached — undeclared, it silently treats declared
+# formats as annotations and passes any string. FORMAT_CHECKER is the
+# same checker Draft202012Validator uses when constructed with
+# `format_checker=Draft202012Validator.FORMAT_CHECKER`.
+FORMAT_CHECKER = Draft202012Validator.FORMAT_CHECKER
+
 
 THEME_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = THEME_ROOT / "schemas"
@@ -132,7 +139,7 @@ def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> l
     if schema is None:
         return [{"file": file_label, "pointer": "", "error": f"no schema for class '{schema_name}'"}]
 
-    validator = Draft202012Validator(schema)
+    validator = Draft202012Validator(schema, format_checker=FORMAT_CHECKER)
     failures = []
     for err in sorted(validator.iter_errors(fm), key=lambda e: e.path):
         pointer = "/" + "/".join(str(p) for p in err.absolute_path)
@@ -145,6 +152,19 @@ def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> l
     return failures
 
 
+def _declared_formats(node, found: set[str]) -> None:
+    """Recursively collect every "format" value declared anywhere in a schema."""
+    if isinstance(node, dict):
+        fmt = node.get("format")
+        if isinstance(fmt, str):
+            found.add(fmt)
+        for v in node.values():
+            _declared_formats(v, found)
+    elif isinstance(node, list):
+        for v in node:
+            _declared_formats(v, found)
+
+
 def load_schemas() -> dict[str, dict]:
     schemas: dict[str, dict] = {}
     for slug in ("page", "section", "journal-entry", "product", "faq", "sizing-guide"):
@@ -152,7 +172,29 @@ def load_schemas() -> dict[str, dict]:
         if not p.exists():
             print(json.dumps({"error": f"missing schema: {p}"}), file=sys.stderr)
             sys.exit(2)
-        schemas[slug] = json.loads(p.read_text(encoding="utf-8"))
+        schema = json.loads(p.read_text(encoding="utf-8"))
+
+        # WARNING: a format declared in a schema but not registered on
+        # FORMAT_CHECKER validates as a no-op annotation, not a check —
+        # the exact silent-pass this validator exists to prevent. Refuse
+        # to run rather than enforce a schema's formats partially.
+        declared = set()
+        _declared_formats(schema, declared)
+        unsupported = declared - set(FORMAT_CHECKER.checkers)
+        if unsupported:
+            print(
+                json.dumps({
+                    "error": (
+                        f"schema '{slug}' declares unsupported format(s) "
+                        f"{sorted(unsupported)}; FormatChecker has no checker "
+                        "registered for them and would silently skip enforcement"
+                    ),
+                }),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        schemas[slug] = schema
     return schemas
 
 
