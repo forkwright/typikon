@@ -18,3 +18,9 @@ python3 "$ROOT/ci/check-release-config.py"
 # this a meaningful check — see ci/local-base-gate-check.sh.
 "$ROOT/ci/local-base-gate-check.sh" "$ROOT/examples/sample-blog"
 "$ROOT/ci/local-base-gate-check.sh" "$ROOT/examples/sample-shop"
+
+# The XML feeds are the only built output no other stage parses. Checked against
+# public/ (the production build) rather than public-local/, since that is what
+# consumers deploy.
+"$ROOT/ci/check-xml-output.sh" "$ROOT/examples/sample-blog/public"
+"$ROOT/ci/check-xml-output.sh" "$ROOT/examples/sample-shop/public"

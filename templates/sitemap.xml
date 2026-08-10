@@ -1,12 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
 {# Sitemap override. Filters out pages with extra.skip_sitemap = true so
    /404/ and /thanks/ (or any other transient utility page) don't get
    indexed. Zola's built-in sitemap doesn't support per-page exclusion.
 
-   NOTE: the comment must close with `-#}` (not `#}`) — Tera strips the
-   comment body but not the trailing newline, so a bare `#}` here emits a
-   blank line before the XML declaration and breaks strict XML parsers.
--#}
-<?xml version="1.0" encoding="UTF-8"?>
+   WARNING: the XML declaration stays on line 1, ahead of this comment. A
+   leading comment leaves a newline the trimming close does not reliably
+   remove, and a declaration that is not at byte zero is rejected outright by
+   strict parsers even when the rest of the document is valid.
+
+   WARNING: never write a comment-closing delimiter inside this comment, even
+   as an example in prose. Tera ends the comment at the first one it sees and
+   emits everything after it as literal text. ci/check-xml-output.sh is what
+   catches both mistakes. #}
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   {%- for sitemap_entry in entries %}
     {%- if not sitemap_entry.extra or not sitemap_entry.extra.skip_sitemap %}
