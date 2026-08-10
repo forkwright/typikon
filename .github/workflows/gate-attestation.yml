@@ -51,8 +51,8 @@
 # epistole's own workflow falls back to a `::warning::` when the token is
 # absent rather than actually running it. `kanon lint` therefore stays
 # forge-only in practice (AGENTS.md: "CI gate on forge runs kanon lint +
-# fixtures") for both the old and the new GH workflow — not a coverage
-# regression from this migration, but a known, pre-existing gap.
+# fixtures"), so the GH gate does not cover it. A known gap, not an
+# oversight.
 #
 # WHY a push trigger and not just pull_request: a squash merge does not
 # carry the source commits' trailers, so no commit on main has a

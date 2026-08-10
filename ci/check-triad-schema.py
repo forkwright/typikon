@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """check-triad-schema — regression test for extra.triad cardinality."""
 
-# WHY: schemas/section.schema.json used to validate `greek` and `english`
-# independently at 2-4 items with no equal-cardinality constraint.
-# templates/index.html indexes english[loop.index0] for every greek entry,
-# and static/js/triad.js + the .triad-1/.triad-2/.triad-3 CSS rules are
-# hard-coded for exactly three terms. A schema-valid mismatched-cardinality
-# fixture (e.g. 4 greek / 2 english) passed bin/typikon-validate and then
-# failed Zola's render with an out-of-bounds index. Fixed by pinning both
-# arrays to minItems=maxItems=3. This script proves the fixture that used
-# to slip through validation is now rejected at the schema boundary, and
+# WHY: templates/index.html indexes english[loop.index0] for every greek
+# entry, and static/js/triad.js + the .triad-1/.triad-2/.triad-3 CSS rules
+# are hard-coded for exactly three terms. schemas/section.schema.json must
+# therefore constrain both greek and english to minItems=maxItems=3 — a
+# schema that validated them independently would admit a mismatched-
+# cardinality fixture that passes bin/typikon-validate and then fails
+# Zola's render with an out-of-bounds index. This script proves a
+# mismatched-cardinality fixture is rejected at the schema boundary, and
 # that a valid three-term triad still passes.
 #
 # NOTE: runs standalone (no consumer site needed) as part of ci/run-fixtures.sh.

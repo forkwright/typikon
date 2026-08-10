@@ -1,10 +1,9 @@
 name: Release Please
 
 # WHY this exists: release-please-config.json and .release-please-manifest.json
-# have been present since the repo was scaffolded, but nothing ran them — so the
-# manifest asserted 0.1.0 while `git tag` returned nothing and CHANGELOG.md carried
-# only an `## Unreleased` section (forkwright/typikon#73). Config without a runner
-# is a version number with nothing behind it.
+# declare intent only — without a workflow that runs them, the manifest can
+# assert a version that no tag, GitHub release, or CHANGELOG entry backs
+# (forkwright/typikon#73).
 
 on:
   push:
@@ -44,9 +43,8 @@ jobs:
       # yet exist, and can 422 with "Published releases must have a valid tag" while
       # that tag is still propagating server-side. It is a GitHub-side race, not
       # manifest drift. One retry clears it; a genuine failure still fails the job.
-      # kanon hit this first (kanon#2436) — this is the second copy of the same
-      # workaround in the fleet, so it belongs in a shared reusable workflow rather
-      # than here. Tracked in the PR that introduced this file.
+      # This retry belongs in a shared reusable workflow, not duplicated per-repo
+      # (see kanon#2436).
       - name: Wait for tag propagation before retry
         if: steps.release.outcome == 'failure'
         run: sleep 15
