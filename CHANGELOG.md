@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/forkwright/typikon/compare/v0.1.1...v0.1.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* **templates:** stop emitting comment text ahead of the XML declaration ([#133](https://github.com/forkwright/typikon/issues/133)) ([4f8c153](https://github.com/forkwright/typikon/commit/4f8c1531a3c947a2c5f8c8babd18b72cd060cbce))
+
 ## [0.1.1](https://github.com/forkwright/typikon/compare/v0.1.0...v0.1.1) (2026-08-10)
 
 
