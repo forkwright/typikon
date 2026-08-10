@@ -38,7 +38,8 @@ All CLIs are idempotent; JSONL output for parsing.
 2. Validate: `cd <consumer-site> && themes/typikon/bin/typikon-check .` (every stage passes).
 3. Run the theme gate locally: `cd <typikon> && ci/run-fixtures.sh` (validates typikon's own fixtures).
 4. Commit with conventional commit (type: feat/fix/chore/docs). No inline scripts/styles. No unsafe-inline CSP.
-5. Push to origin (forge is primary). CI gate on forge runs kanon lint + fixtures.
+5. Push to origin (GitHub). The gate is .github/workflows/gate-attestation.yml; no forge
+   remote is configured, so the `.kanon-ci.toml` lint stage does not execute anywhere.
 
 ### Consumer site updates
 
@@ -60,7 +61,8 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 
 ## Boundaries
 
-- **Push to origin (forge), not github.** Git remote verify: `git remote -v`.
+- **Push to origin, which is GitHub.** There is no forge remote and no mirror step.
+  Verify with `git remote -v` rather than assuming either shape.
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
 - **Schema changes are migrations.** When a schema changes incompatibly, ship a migration script in `bin/`.
 - **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema here; do not fork the theme.
