@@ -19,7 +19,7 @@ theme_color = "#F0EFE5"
 og_locale = "en_US"
 founding_date = "2026"
 
-font_preload = ["/fonts/cormorant-garamond-variable.woff2", "/fonts/spectral-400.woff2"]
+font_preload = ["/fonts/eb-garamond-variable.woff2", "/fonts/spectral-400.woff2"]
 
 nav_items = [
   { url = "/products/", label = "products", greek = "ἔργα" },
