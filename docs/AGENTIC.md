@@ -149,7 +149,7 @@ For a routine content edit:
 2. edit the markdown body              # frontmatter is already correct
 3. typikon-validate <site-root>        # exits 0 = good
 4. typikon-check <site-root>           # exits 0 = ready to push
-5. git commit + git push origin main   # forge primary, mirror to GH
+5. git commit + git push origin main
 6. CI re-runs the gate; deploys on green
 ```
 
