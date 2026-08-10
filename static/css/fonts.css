@@ -26,24 +26,34 @@
  * per the original issue scope (variable upstream is not yet stable).
  */
 
-/* Cormorant Garamond — display (variable, weight axis 300-700) */
+/* EB Garamond — display (variable, weight axis 400-800).
+ *
+ * WHY this face and not Cormorant Garamond: the Greek vocabulary is load-bearing
+ * for consuming brands, and Cormorant's masters carry only Δ Ω μ π — the handful of
+ * Greek letters used as maths symbols, no alphabet and no polytonic (#35). Real
+ * Greek fell back to whatever the visitor's system had. EB Garamond carries 94/144
+ * of Greek and 233/256 of Greek Extended, verified from the shipped cmap.
+ *
+ * WARNING: the unicode-range below is derived from the subset's cmap, not authored.
+ * Regenerate both together — ci/check-font-coverage.py fails on any declared code
+ * point the file does not actually contain. */
 @font-face {
-  font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-variable.woff2') format('woff2-variations'),
-       url('/fonts/cormorant-garamond-variable.woff2') format('woff2');
-  font-weight: 300 700;
+  font-family: 'EB Garamond';
+  src: url('/fonts/eb-garamond-variable.woff2') format('woff2-variations'),
+       url('/fonts/eb-garamond-variable.woff2') format('woff2');
+  font-weight: 400 800;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0020-007E, U+00A0-00B4, U+00B6-00FF, U+0394, U+03A9, U+03BC, U+03C0;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0374-0375, U+037A, U+037E, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03CF, U+03D1-03D7, U+03D9, U+03DB-03DD, U+03E1, U+03F0-03F2, U+03F9, U+03FB, U+1F00-1F15, U+1F18-1F1D, U+1F20-1F45, U+1F48-1F4D, U+1F50-1F57, U+1F59, U+1F5B, U+1F5D, U+1F5F-1F7D, U+1F80-1FB4, U+1FB6-1FC4, U+1FC6-1FD3, U+1FD6-1FDB, U+1FDD-1FEF, U+1FF2-1FF4, U+1FF6-1FFE;
 }
 @font-face {
-  font-family: 'Cormorant Garamond';
-  src: url('/fonts/cormorant-garamond-variable-italic.woff2') format('woff2-variations'),
-       url('/fonts/cormorant-garamond-variable-italic.woff2') format('woff2');
-  font-weight: 300 700;
+  font-family: 'EB Garamond';
+  src: url('/fonts/eb-garamond-variable-italic.woff2') format('woff2-variations'),
+       url('/fonts/eb-garamond-variable-italic.woff2') format('woff2');
+  font-weight: 400 800;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0020-007E, U+00A0-00B4, U+00B6-00FF, U+0394, U+03A9, U+03BC, U+03C0;
+  unicode-range: U+0020-007E, U+00A0-00B1, U+00B4-00B8, U+00BA-00FF, U+0374-0375, U+037A, U+037E, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03D7, U+03DC, U+03F0-03F1, U+03F9, U+1F00-1F15, U+1F18-1F1D, U+1F20-1F45, U+1F48-1F4D, U+1F50-1F57, U+1F59, U+1F5B, U+1F5D, U+1F5F-1F7D, U+1F80-1FB4, U+1FB6-1FC4, U+1FC6-1FD3, U+1FD6-1FDB, U+1FDD-1FEF, U+1FF2-1FF4, U+1FF6-1FFE;
 }
 
 /* Spectral — body */

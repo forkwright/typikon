@@ -7,12 +7,12 @@ Subsetting was performed with fonttools `pyftsubset`, requesting the
 Latin (U+0000–00FF), Greek (U+0370–03FF), and Greek Extended
 (U+1F00–1FFF) ranges for the serif families and Latin only for the
 monospace family. pyftsubset keeps only glyphs that exist in the source
-master: neither Cormorant Garamond nor Spectral's upstream masters carry
-general Greek-script or Greek-Extended glyphs, so the shipped Greek
-coverage is limited to the handful of letters those masters ship as
-math/science symbols (Delta, Omega, mu, pi for Cormorant Garamond;
-Delta, mu, pi for Spectral) — see static/css/fonts.css for the exact
-per-file unicode-range this actually supports.
+master, so requesting a range is not the same as shipping it: EB Garamond
+carries real Greek and polytonic Greek Extended, while Spectral's upstream
+master carries only the handful of letters it ships as math/science symbols
+(Delta, mu, pi). See static/css/fonts.css for the exact per-file
+unicode-range each file actually supports — those declarations are derived
+from the shipped cmaps and verified by ci/check-font-coverage.py.
 
 The OFL requires that every distribution preserve the copyright notice
 of the original font. All three notices are reproduced below. The full
@@ -20,19 +20,19 @@ OFL 1.1 text is available at https://openfontlicense.org.
 
 
 --------------------------------------------------------------------
-Cormorant Garamond
-  Files: cormorant-garamond-variable.woff2 (upright, weight axis 300-700)
-         cormorant-garamond-variable-italic.woff2 (italic, weight axis 300-700)
-  Source: https://github.com/CatharsisFonts/Cormorant
-  Build:  fonts/variable/CormorantGaramond[wght].ttf and
-          fonts/variable/CormorantGaramond-Italic[wght].ttf
-          subsetted via `pyftsubset --flavor=woff2
-          --unicodes=U+0000-00FF,U+0370-03FF,U+1F00-1FFF
-          --layout-features='*' --no-hinting --desubroutinize`
+EB Garamond
+  Files: eb-garamond-variable.woff2 (upright, weight axis 400-800)
+         eb-garamond-variable-italic.woff2 (italic, weight axis 400-800)
+  Source: https://github.com/octaviopardo/EBGaramond12
+  Build:  ofl/ebgaramond/EBGaramond[wght].ttf and
+          EBGaramond-Italic[wght].ttf from google/fonts, subsetted via
+          `python3 -m fontTools.subset --flavor=woff2
+          --unicodes=U+0020-00FF,U+0370-03FF,U+1F00-1FFF
+          --layout-features='*'`
 --------------------------------------------------------------------
 
-Copyright 2015 the Cormorant Project Authors
-(github.com/CatharsisFonts/Cormorant)
+Copyright 2017 The EB Garamond Project Authors
+(https://github.com/octaviopardo/EBGaramond12)
 
 This Font Software is licensed under the SIL Open Font License,
 Version 1.1.
