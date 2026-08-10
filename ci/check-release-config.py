@@ -16,6 +16,7 @@ Exit 0 when there is nothing to say, 1 when the pin has outlived its release.
 """
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -24,12 +25,32 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "release-please-config.json"
 
 
+CHANGELOG = ROOT / "CHANGELOG.md"
+
+
 def tags() -> set[str]:
     out = subprocess.run(
         ["git", "-C", str(ROOT), "tag", "--list"],
         capture_output=True, text=True, check=False,
     )
     return {t.strip() for t in out.stdout.splitlines() if t.strip()}
+
+
+def released(version: str) -> bool:
+    """Has `version` actually been released?
+
+    WARNING: do not ask git alone. actions/checkout defaults to fetch-depth 1 and
+    fetches NO tags, so `git tag --list` is empty in CI — this check would pass on
+    every run there while failing locally, which is the blindness it exists to
+    prevent, relocated. The changelog section release-please writes is committed
+    content, so it survives any checkout depth; the tag is the belt to its braces.
+    """
+    if version in tags() or f"v{version}" in tags():
+        return True
+    if CHANGELOG.exists():
+        heading = re.compile(rf"^##\s*\[?{re.escape(version)}\]?", re.M)
+        return bool(heading.search(CHANGELOG.read_text(encoding="utf-8")))
+    return False
 
 
 def find_pins(node, path="") -> list[tuple[str, str]]:
@@ -62,15 +83,11 @@ def main() -> None:
         print("check-release-config: ok (no release-as pin)")
         return
 
-    existing = tags()
     problems = []
     for where, pinned in pins:
-        # release-please tags as `vX.Y.Z` for release-type "simple"; accept either
-        # spelling rather than assuming, since a mismatch here would report a live
-        # pin as expired and let it keep pinning.
-        if pinned in existing or f"v{pinned}" in existing:
+        if released(pinned):
             problems.append(
-                f"{where} pins release-as={pinned!r}, but a tag for it already exists "
+                f"{where} pins release-as={pinned!r}, which has already been released "
                 f"— remove the pin or every later release repeats {pinned}"
             )
         else:
