@@ -2,7 +2,7 @@
 """check-font-coverage — CSS unicode-range must be derived from the bytes.
 
 WHY: a declared unicode-range is a claim about the shipped font, not a fact
-about it — an upstream font master can omit codepoints inside a range a
+about it — an upstream font file can omit codepoints inside a range a
 CSS unicode-range asserts as covered (e.g. Greek letters present only as
 math/science symbols), and when that happens matching text silently falls
 back to the visitor's system font while the CSS still asserts self-hosted
