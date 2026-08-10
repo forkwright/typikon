@@ -92,7 +92,7 @@ def main() -> None:
             )
         else:
             print(f"check-release-config: {where} pins release-as={pinned!r}, not yet "
-                  f"released — pin is doing its job")
+                  "released — pin is doing its job")
 
     if problems:
         for p in problems:

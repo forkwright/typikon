@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
+# WARNING: -e matters here. Every failure path in this script exits explicitly and
+# the script ends in `exit 0`, so without it an UNEXPECTED command failure — a
+# missing grep, an unreadable path — falls through to that `exit 0` and the gate
+# reports pass on its own internal error. Sibling scripts (csp-enforce.sh,
+# run-fixtures.sh) already set it; bin/typikon-check deliberately does not, because
+# it accumulates per-stage verdicts instead of exiting at the first failure.
+
 # local-base-gate-check — prove the browser-based gates (pa11y, playwright)
 # are pointed at a loopback build, not the site's production origin.
 #
@@ -31,8 +40,6 @@
 #   1  regression: public-local/ missing/empty, or its HTML leaks the
 #      production origin
 #   2  invocation error
-
-set -uo pipefail
 
 usage() {
     echo "usage: ci/local-base-gate-check.sh <consumer-site-root>" >&2

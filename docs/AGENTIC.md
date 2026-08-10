@@ -95,8 +95,8 @@ When a schema field is renamed, removed, or changed incompatibly, the typikon PR
 The PR description must list every consumer affected and link the migration runs.
 
 **Adding a required field is the exception, and it is deliberate.** A rename or a
-removal is a transformation of data that already exists, so a script can perform it.
-A new required field asks for information the consumer has never recorded, and no
+removal is a transformation of content that already exists, so a script can perform it.
+A new required field asks for a value the consumer has never recorded, and no
 script can supply it.
 
 That matters most for the provenance fields — `words_source`, `price_source`,
@@ -117,7 +117,7 @@ it blocks.
 
 ### 8. Check the push authority before pushing
 
-`origin` is GitHub (`forkwright/typikon`). No forge remote is configured and there is no mirror step, so a push to `origin` is a push to GitHub. Check with `git remote -v` rather than assuming either shape — this repo previously documented a forge-primary topology it did not have.
+`origin` is GitHub (`forkwright/typikon`). No forge remote is configured and there is no mirror step, so a push to `origin` is a push to GitHub. Check with `git remote -v` instead of assuming either shape.
 
 Whether the fleet returns to a forge-primary split is an open question that forkwright/kanon#3045 owns.
 
