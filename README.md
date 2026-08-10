@@ -16,7 +16,7 @@ Optimized for agentic operation. Humans should not need to develop here. The sub
 - **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
 - **Headers** (`_headers.tmpl`, `_redirects.tmpl`) - Cloudflare Pages strict-CSP + redirect templates.
 
-## Sovereignty
+## Visitor runtime
 
 - Self-hosted WOFF2 fonts; zero external CDN dependencies at visitor runtime.
 - Strict CSP with no `unsafe-inline` anywhere. Inline scripts and styles are CI failures.

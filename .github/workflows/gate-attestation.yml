@@ -1,3 +1,4 @@
+# kanon:ignore YAML/missing-concurrency -- hybrid-gate.yml declares the group and its own comment forbids callers repeating it; a duplicate self-cancels the shared group
 # WHY(kanon#2522): replaces the standalone trailer-only workflow (waived on
 # `github.actor`, the identity of whoever caused the CURRENT run — flips to a
 # maintainer login on "Re-run failed jobs" and re-arms the trailer check on a
