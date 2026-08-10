@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """check-font-coverage — CSS unicode-range must be derived from the bytes.
 
-WHY: fonts.css declared full Greek (U+0370-03FF) and Greek Extended
-(U+1F00-1FFF) coverage for Cormorant Garamond and Spectral, but the
-shipped WOFF2 cmaps carry only a handful of Greek letters used as
-math/science symbols (upstream masters, not a subsetting mistake --
-verified by pulling CatharsisFonts/Cormorant and productiontype/Spectral
-directly and finding the same gap in the un-subsetted originals). Real
-Greek text fell back to the visitor's system font glyph-by-glyph while
-the CSS asserted self-hosted coverage. This script treats the shipped
+WHY: a declared unicode-range is a claim about the shipped font, not a fact
+about it — an upstream font master can omit codepoints inside a range a
+CSS unicode-range asserts as covered (e.g. Greek letters present only as
+math/science symbols), and when that happens matching text silently falls
+back to the visitor's system font while the CSS still asserts self-hosted
+coverage (forkwright/typikon#35). This script treats the shipped WOFF2
 cmap as the single source of truth and fails if a declared unicode-range
-codepoint is not actually present in the font it is declared on -- the
-exact class of drift that produced forkwright/typikon#35. Control
+codepoint is not actually present in the font it is declared on. Control
 characters (Unicode category Cc) are excluded: no font maps a glyph to
 them and no browser ever requests one, so their absence from cmap is not
 a coverage gap.

@@ -108,12 +108,10 @@ regex_escape() {
 run_stage() {
     local stage="$1"; shift
     local start=$(date +%s%3N)
-    # WHY both streams into one log: stdout used to go to /dev/null, so a
-    # failure pointed the reader at a file that held only stderr. zola, pa11y-ci
-    # and playwright all report their actual diagnostics on STDOUT, so the log
-    # named by the failure was routinely empty for exactly the stages hardest to
-    # diagnose. One combined file also preserves interleaving, which a split
-    # pair cannot.
+    # WHY both streams go to one log: zola, pa11y-ci, and playwright all
+    # report their actual diagnostics on STDOUT, so a failure log must
+    # capture stdout to be useful. One combined file also preserves
+    # interleaving, which separate stdout/stderr files cannot.
     if "$@" >"$LOGDIR/$stage.log" 2>&1; then
         local end=$(date +%s%3N)
         emit "$stage" "pass" "$((end - start))" "ok"
@@ -335,9 +333,7 @@ if command -v pa11y-ci >/dev/null 2>&1; then
             # WARNING: --directory, not `cd X && python3 ...`. A `cd X && cmd &` list
             # runs in a background SUBSHELL, so $! is the subshell and the server is
             # its child — `kill "$!"` then reaps the wrapper and leaves the server
-            # holding the port. Verified: a leaked http.server was found still bound
-            # to 8080, reparented to init, serving a directory that no longer existed.
-            # With --directory there is no list, so $! IS the server.
+            # holding the port. With --directory there is no list, so $! IS the server.
             python3 -m http.server --directory public-local "$LOOPBACK_PORT" >"$LOGDIR/server.log" 2>&1 &
             SRV_PID=$!
             if wait_for_ready "$SRV_PID" "$LOOPBACK_PORT" "/$SENTINEL_FILE" 10; then
@@ -361,11 +357,11 @@ else
 fi
 
 # Stage 8 — Playwright smoke tests. ci/smoke/ ships mandatory shared
-# semantic assertions that always run (forkwright/typikon#52 — a consumer
-# with no tests/smoke/ used to make this whole stage report skip, so the
-# gate could go green having exercised zero routes); the consumer's own
-# tests/smoke/ runs alongside as an addition, never a substitute. Serves
-# public-local/ (see stage 4) for the same reason as pa11y above.
+# semantic assertions that always run (forkwright/typikon#52): this stage
+# must never report skip merely because a consumer ships no tests/smoke/,
+# or the gate could go green having exercised zero routes. The consumer's
+# own tests/smoke/ runs alongside as an addition, never a substitute.
+# Serves public-local/ (see stage 4) for the same reason as pa11y above.
 if command -v npx >/dev/null 2>&1; then
     if [[ -d public-local ]]; then
         # WARNING: never write to $ROOT/playwright.config.ts — a consumer may

@@ -4,13 +4,14 @@ set -euo pipefail
 # hardening in ci/github-workflow.yml.tmpl.
 #
 # WHY: this template is copied verbatim into every typikon-consuming site's
-# .github/workflows/deploy.yml. A prior version shipped without a
-# concurrency group, without a least-privilege permissions block, with
-# actions/checkout and actions/setup-node pinned to a mutable major-version
-# tag instead of a commit SHA, and without persist-credentials: false on
-# checkout — every consumer inherited the gap. typikon's own
-# .github/workflows/gate-attestation.yml already follows this hardening
-# pattern; this script proves the consumer template matches it.
+# .github/workflows/deploy.yml, so any gap here becomes a gap in every
+# consumer. It must always carry: a top-level concurrency group (so
+# overlapping pushes queue rather than race), a least-privilege top-level
+# permissions block, persist-credentials: false on checkout, and every
+# actions/* reference pinned to a commit SHA rather than a mutable
+# major-version tag. typikon's own .github/workflows/gate-attestation.yml
+# follows this same hardening pattern; this script proves the consumer
+# template matches it.
 #
 # Usage:
 #     ci/check-workflow-template.sh <path-to-template>
@@ -38,12 +39,10 @@ grep -qE '^\s*persist-credentials:\s*false' "$TMPL" || fail "no persist-credenti
 # Every `uses: owner/repo@REF` must pin REF to a 40-char commit SHA, not a
 # mutable tag/branch. A trailing `# vX` comment naming the human-readable
 # version is fine and expected.
-# WARNING: this loop must see EVERY `uses:` line, and must FAIL on a form it
-# cannot classify rather than skip it. The previous version selected lines with
-# a pattern requiring exactly `owner/repo@ref`, so any other shape matched
-# nothing and was never pin-checked — silently. `owner/repo/subdir@ref` is a
-# real and common action shape (a composite action in a subdirectory), and it
-# fell straight through the check that exists to catch it.
+# WARNING: this loop must see EVERY `uses:` line and classify it, including
+# `owner/repo/subdir@ref` (a composite action in a subdirectory — a real and
+# common shape). A `uses:` line the classifier cannot match must FAIL rather
+# than be silently skipped, or an unrecognized shape passes unpinned.
 while IFS= read -r line; do
     spec="$(printf '%s' "$line" \
         | sed -E 's/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*//' \
