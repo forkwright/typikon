@@ -1,11 +1,10 @@
 // Shared semantic smoke assertions for every typikon-consuming site.
 //
-// WHY these run regardless of consumer specs (forkwright/typikon#52): a
-// consumer with no tests/smoke/*.spec.ts previously made the whole
-// playwright-smoke stage report skip, so the browser gate could go green
-// having exercised zero routes. This file always exists, so the stage
-// always has at least this coverage; consumers add to it, they cannot
-// subtract from it (typikon-check does not let a consumer file replace it).
+// WHY these run regardless of consumer specs (forkwright/typikon#52): the
+// browser gate must never report a verdict having exercised zero routes.
+// This file always exists, so the stage always carries at least this
+// coverage; consumers add to it and cannot subtract from it — typikon-check
+// does not let a consumer file replace it.
 //
 // WHY the route list comes from public-local/sitemap.xml rather than a
 // hand-maintained list here: sitemap.xml is Zola's own generated manifest
