@@ -1,0 +1,53 @@
+name: Release Please
+
+# WHY this exists: release-please-config.json and .release-please-manifest.json
+# have been present since the repo was scaffolded, but nothing ran them — so the
+# manifest asserted 0.1.0 while `git tag` returned nothing and CHANGELOG.md carried
+# only an `## Unreleased` section (forkwright/typikon#73). Config without a runner
+# is a version number with nothing behind it.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# WHY narrower than kanon's: this repo publishes no binaries and signs no
+# artifacts, so it needs neither `attestations: write` nor `id-token: write`.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # WHY pinned to a SHA: a mutable tag lets the action's behaviour change under
+      # an already-reviewed workflow. Same pin as forkwright/kanon.
+      - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
+        id: release
+        continue-on-error: true
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # NOTE: GitHub's release-create API creates the tag inline when it does not
+      # yet exist, and can 422 with "Published releases must have a valid tag" while
+      # that tag is still propagating server-side. It is a GitHub-side race, not
+      # manifest drift. One retry clears it; a genuine failure still fails the job.
+      # kanon hit this first (kanon#2436) — this is the second copy of the same
+      # workaround in the fleet, so it belongs in a shared reusable workflow rather
+      # than here. Tracked in the PR that introduced this file.
+      - name: Wait for tag propagation before retry
+        if: steps.release.outcome == 'failure'
+        run: sleep 15
+
+      - name: Retry release-please after transient tag-validation race
+        if: steps.release.outcome == 'failure'
+        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

@@ -4,7 +4,7 @@
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md",
-      "version-file": ".release-please-manifest.json"
+      "release-as": "0.1.0"
     }
   },
   "prerelease": false,
