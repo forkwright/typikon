@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/forkwright/typikon/compare/v0.1.0...v0.1.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* clear every kanon lint violation in this repo ([#129](https://github.com/forkwright/typikon/issues/129)) ([f962068](https://github.com/forkwright/typikon/commit/f962068f6baa6f5f85f150845ef28e6183777f8e))
+
 ## [0.1.0](https://github.com/forkwright/typikon/compare/v0.1.0...v0.1.0) (2026-08-10)
 
 
