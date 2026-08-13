@@ -24,7 +24,7 @@ typikon/
 ├── schemas/                # JSON Schema per content type
 ├── scaffolds/              # reserved, currently empty — typikon-init scaffolds content inline
 ├── bin/                    # typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
-├── ci/                     # strict gate config (lychee, pa11y, playwright, csp-enforce)
+├── ci/                     # strict gate config (lychee, pa11y, playwright, csp-enforce, asset-provenance)
 ├── docs/                   # AGENTIC.md, SCHEMAS.md, BOOTSTRAP.md
 ├── _headers.tmpl           # Cloudflare Pages strict-CSP
 ├── _redirects.tmpl         # Cloudflare Pages redirects

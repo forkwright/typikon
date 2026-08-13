@@ -203,6 +203,12 @@ nav_items = []
 
 # Footer link list. Each item: { url, label, rel? }.
 footer_links = []
+
+# Declared exceptions for the asset-provenance gate stage (glob paths,
+# matched against each asset's URL under /). Leave unset to fail the gate
+# on any embedded C2PA manifest; declare a path here only for an asset
+# whose Content Credentials this site deliberately keeps.
+# c2pa_declared_assets = ["/img/photography/*.jpg"]
 EOF
 )
 "
