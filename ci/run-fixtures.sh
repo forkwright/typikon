@@ -8,6 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 python3 "$ROOT/ci/check-triad-schema.py"
 python3 "$ROOT/ci/check-font-coverage.py"
 python3 "$ROOT/ci/check-release-config.py"
+python3 "$ROOT/ci/check-asset-provenance.py"
 "$ROOT/ci/check-workflow-template.sh" "$ROOT/ci/github-workflow.yml.tmpl"
 
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-blog"

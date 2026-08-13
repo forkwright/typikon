@@ -16,11 +16,13 @@
 #     3. zola build              clean build with no warnings, output public/
 #     4. zola build (local base) rebuild to public-local/ with a loopback
 #                                 base_url — the copy browser gates serve
-#     5. csp-enforce             grep public/ for inline script/style/on*= handlers
-#     6. lychee                  external link integrity (requires lychee binary)
-#     7. pa11y                   WCAG 2.1 AA accessibility across every route in
+#     5. csp-enforce             parse public/ HTML for inline script/style/on*= handlers
+#     6. asset-provenance        parse public/ image containers (PNG/JPEG/SVG) for
+#                                 an embedded C2PA manifest undeclared in config.toml
+#     7. lychee                  external link integrity (requires lychee binary)
+#     8. pa11y                   WCAG 2.1 AA accessibility across every route in
 #                                 the build's own sitemap.xml (requires pa11y-ci)
-#     8. playwright              per-route smoke assertions: this repo's mandatory
+#     9. playwright              per-route smoke assertions: this repo's mandatory
 #                                 ci/smoke/ specs, plus the consumer's tests/smoke/
 #                                 if it has any (requires npx)
 #
@@ -299,7 +301,16 @@ else
     require_or_skip "csp-enforce" "no public/ dir (zola-build did not run)"
 fi
 
-# Stage 6 — external links via lychee. Skip if binary absent.
+# Stage 6 — asset provenance against built public/. No prerequisite tool
+# (stdlib-only container parsing), so this stage is never eligible for
+# require_or_skip — a missing dependency can't excuse it in either mode.
+if [[ -d public ]]; then
+    run_stage "asset-provenance" "$TYPIKON_ROOT/ci/asset-provenance.sh" "$ROOT" || FAIL=1
+else
+    require_or_skip "asset-provenance" "no public/ dir (zola-build did not run)"
+fi
+
+# Stage 7 — external links via lychee. Skip if binary absent.
 if command -v lychee >/dev/null 2>&1; then
     if [[ -d public ]]; then
         BASE_HOST="$(base_host)"
@@ -320,7 +331,7 @@ else
     require_or_skip "lychee" "lychee binary not on PATH (install: cargo install lychee or curl release)"
 fi
 
-# Stage 7 — pa11y a11y. Requires public-local/ (built with a loopback
+# Stage 8 — pa11y a11y. Requires public-local/ (built with a loopback
 # base_url — see stage 4) to be served; we spin up a quick http.server in
 # the background. Route corpus is derived from the build's own generated
 # sitemap.xml, not a hand-maintained list — an empty or missing sitemap
@@ -356,7 +367,7 @@ else
     require_or_skip "pa11y" "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
 fi
 
-# Stage 8 — Playwright smoke tests. ci/smoke/ ships mandatory shared
+# Stage 9 — Playwright smoke tests. ci/smoke/ ships mandatory shared
 # semantic assertions that always run (forkwright/typikon#52): this stage
 # must never report skip merely because a consumer ships no tests/smoke/,
 # or the gate could go green having exercised zero routes. The consumer's
