@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/forkwright/typikon/compare/v0.1.2...v0.2.0) (2026-08-13)
+
+
+### Features
+
+* **ci:** fail the gate on an undeclared C2PA manifest in a shipped asset ([#138](https://github.com/forkwright/typikon/issues/138)) ([64ed711](https://github.com/forkwright/typikon/commit/64ed711b47d6e44e743c00b537b3ce34d301d805))
+
 ## [0.1.2](https://github.com/forkwright/typikon/compare/v0.1.1...v0.1.2) (2026-08-10)
 
 
