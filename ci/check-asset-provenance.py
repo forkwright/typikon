@@ -40,13 +40,14 @@ THEME_ROOT = Path(__file__).resolve().parent.parent
 STAGE = THEME_ROOT / "ci" / "asset-provenance.sh"
 
 LABEL_PNG = "acme-imaging-suite:png-manifest"
+LABEL_PNG_LYING_LENGTH = "acme-imaging-suite:png-lying-length"
 LABEL_JPEG_SINGLE = "acme-imaging-suite:jpeg-single-segment"
 LABEL_JPEG_SPLIT = "acme-imaging-suite:jpeg-split-segment"
 LABEL_SVG = "acme-imaging-suite:svg-manifest"
 LABEL_DECLARED = "acme-imaging-suite:declared"
 
 # INVARIANT: none of these labels contain "c2pa" — see module docstring.
-for _label in (LABEL_PNG, LABEL_JPEG_SINGLE, LABEL_JPEG_SPLIT, LABEL_SVG, LABEL_DECLARED):
+for _label in (LABEL_PNG, LABEL_PNG_LYING_LENGTH, LABEL_JPEG_SINGLE, LABEL_JPEG_SPLIT, LABEL_SVG, LABEL_DECLARED):
     assert "c2pa" not in _label
 
 
@@ -87,6 +88,30 @@ def build_png(manifest_label: str | None) -> bytes:
         chunks.append(png_chunk(b"caBX", manifest_store(manifest_label)))
     chunks.append(png_chunk(b"IDAT", zlib.compress(b"\x00\x00\x00\x00\x00")))
     chunks.append(png_chunk(b"IEND", b""))
+    return PNG_SIGNATURE + b"".join(chunks)
+
+
+def build_png_with_lying_chunk(manifest_label: str) -> bytes:
+    """A caBX manifest preceded by a private chunk whose declared length overflows past EOF.
+
+    Regression fixture for the chunk-length-overflow bypass: a corrupt
+    chunk's untrustworthy length must not end the scan before a genuine
+    caBX chunk that follows it (forkwright/typikon#137 gate defect).
+    """
+    ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)  # 1x1 RGBA
+    # WHY no payload/CRC on this chunk: the declared length (0xFFFFFFF0)
+    # overflows the file's actual remaining bytes by construction, and the
+    # genuine caBX header begins immediately after this chunk's 8-byte
+    # frame -- exactly the shape a naive walker that trusts the declared
+    # length to skip to the next chunk cannot reach.
+    lying_chunk = struct.pack(">I", 0xFFFFFFF0) + b"zzZz"
+    chunks = [
+        png_chunk(b"IHDR", ihdr),
+        lying_chunk,
+        png_chunk(b"caBX", manifest_store(manifest_label)),
+        png_chunk(b"IDAT", zlib.compress(b"\x00\x00\x00\x00\x00")),
+        png_chunk(b"IEND", b""),
+    ]
     return PNG_SIGNATURE + b"".join(chunks)
 
 
@@ -160,6 +185,7 @@ def main() -> int:
         fixtures = {
             "clean.png": build_png(None),
             "manifest.png": build_png(LABEL_PNG),
+            "manifest-lying-chunk.png": build_png_with_lying_chunk(LABEL_PNG_LYING_LENGTH),
             "clean.jpg": build_jpeg(b""),
             "manifest-single.jpg": jpeg_single_segment(LABEL_JPEG_SINGLE),
             "manifest-split.jpg": jpeg_split_segments(LABEL_JPEG_SPLIT),
@@ -176,7 +202,7 @@ def main() -> int:
         # containing "c2pa" (that's what the parse keys on), so a grep would
         # already find a real SVG manifest; SVG's false-positive case (a
         # mention inside a comment, not a real manifest) is checked below.
-        for undetectable in ("manifest.png", "manifest-single.jpg", "manifest-split.jpg"):
+        for undetectable in ("manifest.png", "manifest-lying-chunk.png", "manifest-single.jpg", "manifest-split.jpg"):
             if b"c2pa" in fixtures[undetectable]:
                 failures.append(f"fixture bug: {undetectable} contains literal 'c2pa' — invalidates the false-negative proof")
         if b"c2pa" not in fixtures["clean.svg"]:
@@ -196,6 +222,7 @@ def main() -> int:
 
         expected_violations = {
             "manifest.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG})",
+            "manifest-lying-chunk.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG_LYING_LENGTH})",
             "manifest-single.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SINGLE})",
             "manifest-split.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SPLIT})",
             "manifest.svg": f"SVG: undeclared C2PA manifest present (label={LABEL_SVG})",

@@ -133,6 +133,19 @@ def extract_png_manifest(data: bytes) -> bytes | None:
     caBX is the ancillary PNG chunk type the C2PA spec reserves for embedding
     a JUMBF manifest store — its presence is the channel-level signal, walked
     chunk-by-chunk rather than searched for as a byte pattern.
+
+    INVARIANT: an earlier chunk's declared length lying about its own extent
+    must not end the scan (module docstring, lines 14-21) — only that one
+    chunk's framing is corrupt, not the rest of the file. This is the
+    detection gate itself, not enrichment (unlike iter_jumbf_boxes below), so
+    a chunk this walk cannot trust must not read as "no manifest": on an
+    untrustworthy length it resyncs on the literal `caBX` chunk-type token in
+    the unread remainder instead of returning. That token is a fixed,
+    unobfuscatable part of PNG's byte grammar — it cannot occur without
+    wrapping an actual chunk header — so finding it is a complete check for
+    a caBX chunk's presence in the region the corrupt length made
+    unreachable by normal in-order walking, not the same class of heuristic
+    text search the module docstring rules out for human-readable content.
     """
     if not data.startswith(PNG_SIGNATURE):
         return None
@@ -143,12 +156,42 @@ def extract_png_manifest(data: bytes) -> bytes | None:
         chunk_type = data[pos + 4 : pos + 8]
         data_start = pos + 8
         data_end = data_start + length
-        if data_end + 4 > end:
-            return None  # truncated chunk
+        length_untrustworthy = data_end < data_start or data_end + 4 > end
         if chunk_type == b"caBX":
+            if length_untrustworthy:
+                # WARNING: this caBX chunk's own declared length lies too --
+                # still the positive detection signal (INVARIANT above), so
+                # return the available bytes rather than nothing.
+                return data[data_start:end]
             return data[data_start:data_end]
+        if length_untrustworthy:
+            return _resync_png_cabx(data, data_start, end)
         pos = data_end + 4  # skip the trailing CRC
     return None
+
+
+def _resync_png_cabx(data: bytes, search_from: int, end: int) -> bytes | None:
+    """Recover a caBX chunk's payload after an earlier chunk's length lied.
+
+    Locates the literal `caBX` token, then reads the 4 bytes immediately
+    preceding it as that chunk's own length field — chunk type always
+    follows length with no gap, so if the token marks a genuine header,
+    those ARE its length bytes. Self-consistent against the buffer -> exact
+    payload. Otherwise this chunk's length is untrustworthy too, so the
+    remainder from the token onward is returned as a best-effort payload
+    rather than None: an unverifiable chunk is not the same as an absent
+    one (see extract_png_manifest's INVARIANT).
+    """
+    marker = data.find(b"caBX", search_from)
+    if marker == -1:
+        return None
+    data_start = marker + 4
+    if marker >= 4:
+        length = int.from_bytes(data[marker - 4 : marker], "big")
+        data_end = data_start + length
+        if data_start <= data_end <= end:
+            return data[data_start:data_end]
+    return data[data_start:end]
 
 
 def extract_jpeg_manifest(data: bytes) -> bytes | None:

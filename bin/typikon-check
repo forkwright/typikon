@@ -16,7 +16,7 @@
 #     3. zola build              clean build with no warnings, output public/
 #     4. zola build (local base) rebuild to public-local/ with a loopback
 #                                 base_url — the copy browser gates serve
-#     5. csp-enforce             grep public/ for inline script/style/on*= handlers
+#     5. csp-enforce             parse public/ HTML for inline script/style/on*= handlers
 #     6. asset-provenance        parse public/ image containers (PNG/JPEG/SVG) for
 #                                 an embedded C2PA manifest undeclared in config.toml
 #     7. lychee                  external link integrity (requires lychee binary)
