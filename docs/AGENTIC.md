@@ -187,6 +187,7 @@ The substrate is design-family neutral. Brand-specific values go in `config.toml
 | `brand_name`                | header, footer, JSON-LD Organization name   |
 | `brand_greek`               | nav-logo hover and footer attribution       |
 | `logo_path`                 | header logo + JSON-LD Organization.logo     |
+| `favicon_path`              | `<link rel="icon">`; defaults to `img/favicon.svg` |
 | `theme_color`               | `<meta name="theme-color">` browser chrome  |
 | `og_image`                  | default Open Graph image when a page omits its own |
 | `font_preload`              | which `.woff2` files preload at first paint |
