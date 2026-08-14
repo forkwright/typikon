@@ -39,7 +39,13 @@
   --text-mid: #44403C;
   --text-light: #6B6661;  /* INVARIANT: must satisfy WCAG 2.1 AA contrast (4.5:1) against --bg */
   --rule: #D6D3CD;
-  
+  /* INVARIANT: form-control boundaries need WCAG 1.4.11 non-text contrast
+     (3:1) against both --bg and --bg-accent; --rule alone measures 1.35:1
+     and 1.26:1 against them, and raising --rule itself to clear the floor
+     would over-darken purely decorative dividers. Interactive controls use
+     this darker split token instead. */
+  --control-border: #827E77;  /* 3.64:1 vs --bg, 3.40:1 vs --bg-accent */
+
   /* Default brand accents — ardent's iron-mordanted botanical dye palette.
      Other typikon consumers should redeclare these (or rename them) in
      site-specific CSS. Class hooks like .swatch-aima / .dye-entry-aima are
@@ -629,7 +635,7 @@ th {
   font-family: var(--font-body);
   font-size: var(--step-0);
   padding: var(--space-xs) var(--space-s);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--control-border);
   background: var(--bg);
   width: 100%;
   max-width: 140px;
@@ -1189,7 +1195,7 @@ main hr {
   font-family: var(--font-body);
   font-size: var(--step-0);
   padding: var(--space-xs) var(--space-s);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--control-border);
   background: var(--bg);
   color: var(--text);
 }
