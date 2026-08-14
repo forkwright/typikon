@@ -189,6 +189,7 @@ smart_punctuation = true
 brand_name = "${SITE_NAME}"
 # brand_greek = "Greek motto for footer + nav-logo hover"
 # logo_path = "img/logo.svg"
+# favicon_path = "img/favicon.svg"
 # theme_color = "#F7F3E8"
 # og_locale = "en_US"
 # og_image = "img/og-cover.png"
