@@ -24,12 +24,15 @@ from the copyright holder exercising rights not addressed by the AGPL.
 THIRD-PARTY ASSETS
 
 Self-hosted webfonts shipped under static/fonts/ are distributed
-under the SIL Open Font License (OFL) 1.1:
+under the SIL Open Font License (OFL) 1.1.
 
-  - Cormorant Garamond — © Catharsis Fonts. github.com/CatharsisFonts/Cormorant
-  - Spectral — © Production Type. github.com/ProductionType/Spectral
-  - IBM Plex Mono — © IBM Corp. github.com/IBM/plex
+static/fonts/OFL.txt is the authority for which families ship, their
+upstream sources, and the per-family attributions the OFL requires
+derivative binaries (subsets, web conversions) to preserve. It is
+maintained alongside the font files themselves.
 
-The OFL requires that derivative font binaries (subsets, web conversions)
-preserve the original copyright notice. See static/fonts/OFL.txt
-for the full license text and per-family attributions.
+This notice deliberately does not restate that list. It previously did,
+and drifted: it credited a family the theme had stopped shipping while
+omitting the one that replaced it, which is an attribution gap rather
+than a cosmetic staleness. A second copy of a fact only has to be
+forgotten once.
