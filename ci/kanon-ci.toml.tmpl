@@ -30,6 +30,7 @@ stages = [
   "pa11y",
   "playwright",
   "teardown-static-server",
+  "consumer-checks",
   "deploy-cloudflare-pages",
 ]
 
@@ -211,6 +212,22 @@ set -euo pipefail
 kill "$(cat .kanon-ci/server.pid 2>/dev/null)" 2>/dev/null || true
 """
 timeout_secs = 30
+
+# The declared extension point (forkwright/typikon#117): a consumer that
+# ships ci/consumer-check.sh gets it run here, after every build/browser-gate
+# stage (so it can inspect built output) and before deploy (so a failure
+# blocks it). Mirrors ci/github-workflow.yml.tmpl's hashFiles-guarded
+# "Consumer checks" step stage-for-stage, same as every other stage in this
+# file. kanon-ci has no hashFiles() equivalent, so the no-op-when-absent
+# guard is a plain file test instead of a job-step `if:` condition.
+[stages.consumer-checks]
+cmd = """
+set -euo pipefail
+if [ -f ci/consumer-check.sh ]; then
+  bash ci/consumer-check.sh
+fi
+"""
+timeout_secs = 120
 
 [stages.deploy-cloudflare-pages]
 cmd = """
