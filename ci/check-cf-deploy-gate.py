@@ -12,8 +12,8 @@ and executes it under stubbed curl/npm/wrangler, so the fixtures exercise the
 literal shipped shell text.
 
 Stubs (installed ahead of the real tools on PATH):
-    curl      cats $CF_FIXTURE_JSON to stdout — the block's own
-              `> /tmp/cf-edit.json` redirect captures it, same as the real step
+    curl      cats $CF_FIXTURE_JSON to stdout — the block's own redirect
+              captures it, same as the real step
     npm       no-op
     wrangler  appends an invocation marker to $CF_WRANGLER_MARKER, so a bad
               fixture that reaches Wrangler is observable instead of silently
@@ -23,6 +23,14 @@ Invoked with `--noprofile --norc -eo pipefail`, matching GitHub Actions' actual
 default shell for `run:` steps — a case that only halts because of `set -e`
 (e.g. a jq parse error aborting the script) is still a real halt in production,
 not a false pass in this harness.
+
+WARNING: the extracted block is executed verbatim EXCEPT for one substitution —
+the shipped step hardcodes its CF-response scratch file at SHIPPED_TMP_PATH
+(a fixed, shared, world-writable location outside any per-run temp dir); see
+namespace_shared_tmp_path() for why this harness redirects that one literal
+before executing, and note this is a test-harness hygiene fix only — the
+shipped step in ci/github-workflow.yml.tmpl still writes the real path, which
+is a separate production concern this branch does not touch.
 
 NOTE: runs standalone (no consumer site needed) as part of ci/run-fixtures.sh.
 """
@@ -38,6 +46,13 @@ from pathlib import Path
 THEME_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = THEME_ROOT / "ci" / "github-workflow.yml.tmpl"
 STEP_MARKER = "- name: Deploy to Cloudflare Pages"
+
+# NOTE: the literal the shipped step hardcodes for its CF-response scratch
+# file (ci/github-workflow.yml.tmpl's `> /tmp/cf-edit.json` redirect and the
+# three `jq` reads that follow it). Tracked as a constant, not a hardcoded
+# string at each use, so extraction drift is a single comparison instead of
+# four scattered ones.
+SHIPPED_TMP_PATH = "/tmp/cf-edit.json"
 
 MALFORMED_BODY = '{"success": true, "result": {'
 
@@ -88,6 +103,29 @@ def extract_run_block(template_text: str) -> str:
     return "\n".join(l[pad:] if l.strip() else "" for l in body)
 
 
+def namespace_shared_tmp_path(block: str, target: Path) -> str:
+    """Redirect the shipped step's hardcoded SHIPPED_TMP_PATH write to `target`.
+
+    WARNING: this is a test-hygiene substitution, not a rewrite of the
+    block's logic — it exists ONLY so re-executing the extracted step under
+    this harness doesn't inherit the real, shared, world-writable path.
+    Every occurrence is the same literal string (the redirect and the three
+    `jq` reads after it), so a single str.replace covers all of them
+    identically; nothing about the control flow being tested changes.
+
+    INVARIANT: fails closed if SHIPPED_TMP_PATH is absent from `block` —
+    silently no-op'ing here would mean the harness quietly went back to
+    writing the real path the moment the shipped step's text changed.
+    """
+    if SHIPPED_TMP_PATH not in block:
+        raise SystemExit(
+            f"error: expected literal {SHIPPED_TMP_PATH!r} in the extracted "
+            f"run: block under {STEP_MARKER!r} — the shipped step's scratch-file "
+            "path changed and this harness's namespacing substitution needs updating"
+        )
+    return block.replace(SHIPPED_TMP_PATH, str(target))
+
+
 def make_stub(path: Path, body: str) -> None:
     path.write_text(f"#!/usr/bin/env bash\n{body}\n")
     path.chmod(path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
@@ -133,7 +171,18 @@ def main() -> int:
         make_stub(bindir / "wrangler", 'echo "WRANGLER_INVOKED $*" >> "$CF_WRANGLER_MARKER"')
 
         script_path = workdir / "deploy-step.sh"
-        script_path.write_text(block)
+        namespaced_block = namespace_shared_tmp_path(block, workdir / "cf-edit.json")
+        script_path.write_text(namespaced_block)
+
+        # WHY: proves the substitution above actually took — a real fixture
+        # bug, confirmed on this branch, had every case reach through to the
+        # shipped step's literal SHIPPED_TMP_PATH, so concurrent harness runs
+        # collided on one shared world-writable file and it survived past the
+        # TemporaryDirectory this run otherwise cleans up. Snapshotting
+        # (exists, mtime) rather than just existence also catches the case
+        # where the path was already present before this run started.
+        shared_path = Path(SHIPPED_TMP_PATH)
+        pre_state = (shared_path.exists(), shared_path.stat().st_mtime if shared_path.exists() else None)
 
         failed = []
         for label, fixture_body, expect_wrangler in CASES:
@@ -144,6 +193,13 @@ def main() -> int:
                 want = "deploy" if expect_wrangler else "halt before Wrangler"
                 got = f"exit={rc} wrangler_invoked={wrangler_ran}"
                 failed.append(f"{label}: expected {want}, got {got}")
+
+        post_state = (shared_path.exists(), shared_path.stat().st_mtime if shared_path.exists() else None)
+        if post_state != pre_state:
+            failed.append(
+                f"hygiene: {SHIPPED_TMP_PATH} changed during the run — a fixture "
+                "wrote the shared host path instead of the namespaced workdir copy"
+            )
 
         if failed:
             for line in failed:
