@@ -116,11 +116,24 @@ INHERIT_SENTINEL = "INHERIT"
 
 
 def _prop_var_re(prop_alt: str) -> re.Pattern:
-    return re.compile(rf"(?:{prop_alt})\s*:\s*[^;]*var\(--([\w-]+)\)[^;]*;")
+    # WHY the (?:^|;) anchor: mirrors COLOR_AFFECTING_RE's boundary above —
+    # without it, prop_alt="color" matches the "color:" substring inside
+    # "background-color:"/"border-color:"/"outline-color:"/etc. and
+    # silently resolves the WRONG property's value with no error.
+    return re.compile(
+        rf"(?:^|;)\s*(?:{prop_alt})\s*:\s*[^;]*var\(--([\w-]+)\)[^;]*;",
+        re.MULTILINE,
+    )
 
 
 def _prop_inherit_re(prop_alt: str) -> re.Pattern:
-    return re.compile(rf"(?:{prop_alt})\s*:\s*(?:inherit|unset|currentColor)\s*;")
+    # WHY the same anchor as _prop_var_re: unanchored, prop_alt="color"
+    # would equally match the "color: inherit;" substring inside
+    # "background-color: inherit;".
+    return re.compile(
+        rf"(?:^|;)\s*(?:{prop_alt})\s*:\s*(?:inherit|unset|currentColor)\s*;",
+        re.MULTILINE,
+    )
 
 
 def find_declared_var(css_text: str, selector: str, prop_alt: str) -> str | None:
@@ -279,10 +292,11 @@ MATRIX = [
     (".entry-nav a:hover", "hover", [".entry-nav a:hover"], ("literal", "bg"), 13.3, 400,
      "hover rule sets color directly"),
 
-    # --- FAQ deep-link anchor. Nested inside .faq-question (templates/faq.html:38-39),
-    # so its `color: inherit` genuinely means "look at .faq-question" — and if
+    # --- FAQ deep-link anchor ---
+    # WHY nested inside .faq-question (templates/faq.html:38-39): its
+    # `color: inherit` genuinely means "look at .faq-question" — and if
     # .faq-item is the URL's :target, that ancestor's background becomes
-    # --bg-accent (style.css:1340-1346), so both backgrounds are checked. ---
+    # --bg-accent (style.css:1340-1346), so both backgrounds are checked.
     (".faq-anchor", "default", [".faq-anchor", ".faq-question"], ("literal", "bg"), 23.04, 500,
      "color:inherit defers to the parent .faq-question, which sets color:var(--text) directly"),
     (".faq-anchor", "default (:target ancestor)", [".faq-anchor", ".faq-question"], ("literal", "bg-accent"), 23.04, 500,
@@ -293,10 +307,11 @@ MATRIX = [
     (".faq-anchor:hover", "hover (:target ancestor)", [".faq-anchor:hover"], ("literal", "bg-accent"), 23.04, 500,
      "same hover color; checked against the :target ancestor's --bg-accent too"),
 
-    # --- home triad mark: color is set outside :hover and never
-    # overridden by it (only the nested .english/.greek opacity toggles),
-    # so hover resolves through the SAME chain as default — verified
-    # explicitly by re-walking the chain, not assumed unaffected ---
+    # --- home triad mark ---
+    # WHY hover resolves through the SAME chain as default: color is set
+    # outside :hover and never overridden by it (only the nested
+    # .english/.greek opacity toggles) — verified explicitly by re-walking
+    # the chain below, not assumed unaffected.
     (".triad-1", "default", [".triad-1"], ("literal", "bg"), 23.04, 400,
      "resting color of the first triad word"),
     (".triad-1", "hover (unchanged)", [".triad-1"], ("literal", "bg"), 23.04, 400,
