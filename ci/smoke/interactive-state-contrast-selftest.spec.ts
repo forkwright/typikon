@@ -9,6 +9,13 @@
 // it up with no new pipeline wiring — it runs in the same
 // `npx playwright test` invocation that already runs the other two specs.
 //
+// WHY the imports below come from ./interactive-contrast, a non-spec
+// module, and not from interactive-state-contrast.spec.ts directly:
+// Playwright refuses to load a test file that another test file imports
+// ("should not import test file"), which failed test collection entirely
+// (`Total: 0 tests in 0 files`) when this file imported straight from the
+// spec. See interactive-contrast.ts's header for the reproduce command.
+//
 // WHY this exists at all: the static Python counterpart
 // (ci/check-interactive-contrast.py) shipped with an unanchored property
 // regex that silently resolved the WRONG CSS property's value with no
@@ -21,7 +28,7 @@
 // that breaks the threshold comparison — not the color, the LOGIC — fails
 // here before it ever reaches a live route.
 import { test, expect } from '@playwright/test';
-import { assertContrast, contrastRatio, textContrastFloor, type EffectiveStyle } from './interactive-state-contrast.spec';
+import { assertContrast, contrastRatio, textContrastFloor, type EffectiveStyle } from './interactive-contrast';
 
 // static/css/style.css's real :root tokens, converted to the rgb() shape
 // getComputedStyle reports. Kept in sync by hand deliberately, not

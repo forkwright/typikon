@@ -213,13 +213,15 @@ MATRIX = [
      "dye-color hover override"),
     (".nav-links a:nth-child(6):hover", "hover", [".nav-links a:nth-child(6):hover"], ("literal", "bg"), 11.1, 400,
      "dye-color hover override"),
-    # .nav-links a:hover::after (Greek-label reveal) has no color of its
-    # own — a pseudo-element with no `color` declaration inherits the
+    # WHY .nav-links a:hover::after (Greek-label reveal) has no entry of
+    # its own: a pseudo-element with no `color` declaration inherits the
     # originating element's COMPUTED color, so during hover it renders in
     # whichever of the six rows above applied. Not a distinct pair.
 
-    # --- home-page secondary nav: no :hover rule touches color at all, so
-    # the chain for "hover" correctly falls through to the default rule ---
+    # --- home-page secondary nav ---
+    # WHY .home-nav a:hover has no own color entry: no :hover rule touches
+    # color at all, so the chain for "hover" correctly falls through to
+    # the default rule below.
     (".home-nav a", "default", [".home-nav a"], ("literal", "bg"), 13.3, 400,
      "base rule sets color directly"),
     (".home-nav a:hover", "hover", [".home-nav a:hover", ".home-nav a"], ("literal", "bg"), 13.3, 400,
@@ -334,11 +336,13 @@ MATRIX = [
      "::after rule, which sets color:var(--text) directly (style.css:854)"),
 ]
 
-# Selectors whose interactive state changes something OTHER than a text
-# color, a text-bearing background, or opacity (a transform, a decorative
-# underline color, a non-text focus outline, or a pre-adjudicated
-# decorative background-gradient tint) — listed so the sweep is visibly
-# complete rather than silently partial, per-selector reason inline.
+# WHY this dict exists, not just a coverage-scan skip: selectors here
+# change something OTHER than a text color, a text-bearing background, or
+# opacity (a transform, a decorative underline color, a non-text focus
+# outline, or a pre-adjudicated decorative background-gradient tint).
+# Listing each one with its reason keeps the coverage sweep VISIBLY
+# complete rather than silently partial — an unlisted exclusion would be
+# indistinguishable from one nobody checked.
 NOT_TEXT_CONTRAST = {
     ".logo:hover span": "opacity toggle only, no color",
     ".nav-links a:hover::after": "opacity toggle of the Greek-label pseudo-element; it has no "

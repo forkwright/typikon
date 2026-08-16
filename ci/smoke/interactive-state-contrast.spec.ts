@@ -22,9 +22,15 @@
 // WHY the route list comes from public-local/sitemap.xml rather than a
 // hand-maintained list here: see ci/smoke/shared.spec.ts's header comment
 // (forkwright/typikon#52) — same reasoning, same mechanism.
-import { test, expect, type Locator } from '@playwright/test';
+//
+// The pure contrast/threshold math lives in ./interactive-contrast, not
+// here: see that file's header for why — Playwright forbids a test file
+// importing another test file, and the negative-case selftest needs these
+// symbols independent of a live route or browser.
+import { test, type Locator } from '@playwright/test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { assertContrast, type EffectiveStyle } from './interactive-contrast';
 
 const CONSUMER_ROOT = process.env.TYPIKON_CONSUMER_ROOT;
 if (!CONSUMER_ROOT) {
@@ -47,12 +53,13 @@ if (routes.length === 0) {
   throw new Error(`sitemap.xml at ${sitemapPath} has no <loc> entries; refusing to run zero shared assertions`);
 }
 
-// Every selector this theme renders as clickable/focusable text whose
-// color or background changes (or is asserted unchanged) across an
-// interactive state — kept in step with ci/check-interactive-contrast.py's
-// MATRIX. `.mark`, the `.home-page:has(...)` decorative-gradient hovers,
-// and the `:focus-visible` outline are deliberately absent here for the
-// same reasons that script's module docstring gives: no text color is
+// WHY these selectors and no others: every one is clickable/focusable
+// text whose color or background changes (or is asserted unchanged)
+// across an interactive state, kept in step with
+// ci/check-interactive-contrast.py's MATRIX. `.mark`, the
+// `.home-page:has(...)` decorative-gradient hovers, and the
+// `:focus-visible` outline are deliberately absent here for the same
+// reasons that script's module docstring gives: no text color is
 // involved, or the class is pre-adjudicated elsewhere.
 const TARGETS = [
   '.nav-links a',
@@ -66,58 +73,6 @@ const TARGETS = [
   '.products-list a',
   '.journal-list a',
 ];
-
-// WCAG technique G18/G145 "large scale" text: >=24px at every weight, or
-// >=14pt (18.66px) at bold (>=700) weight. Read live from the element's
-// own computed style rather than hardcoded per-selector, so a font-size
-// change in style.css is reflected here automatically instead of needing
-// a matching edit to this file.
-const LARGE_TEXT_PX_REGULAR = 24;
-const LARGE_TEXT_PX_BOLD = 18.66;
-const BOLD_WEIGHT_THRESHOLD = 700;
-const TEXT_FLOOR_NORMAL = 4.5;
-const TEXT_FLOOR_LARGE = 3.0;
-
-export function textContrastFloor(fontPx: number, fontWeight: number): number {
-  const isLarge = fontPx >= LARGE_TEXT_PX_REGULAR
-    || (fontPx >= LARGE_TEXT_PX_BOLD && fontWeight >= BOLD_WEIGHT_THRESHOLD);
-  return isLarge ? TEXT_FLOOR_LARGE : TEXT_FLOOR_NORMAL;
-}
-
-// WHY exported: interactive-state-contrast-selftest.spec.ts imports these
-// pure functions directly to prove the threshold/assertion logic itself
-// fails on a known-bad input, independent of a live route or browser.
-export function parseRgb(css: string): [number, number, number] {
-  const match = css.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
-  if (!match) {
-    throw new Error(`could not parse a computed color as rgb()/rgba(): "${css}"`);
-  }
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function srgbToLinear(channel: number): number {
-  const c = channel / 255;
-  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-}
-
-function relativeLuminance([r, g, b]: [number, number, number]): number {
-  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
-}
-
-export function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  const lighter = Math.max(la, lb);
-  const darker = Math.min(la, lb);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-export interface EffectiveStyle {
-  color: string;
-  backgroundColor: string;
-  fontSizePx: number;
-  fontWeight: number;
-}
 
 // WHY walk ancestors in-page: none of this theme's interactive text sets
 // its own `background` in the common case (.nav-links a, .footer-links a,
@@ -145,18 +100,6 @@ async function readEffectiveStyle(locator: Locator): Promise<EffectiveStyle> {
       fontWeight: parseInt(computed.fontWeight, 10) || 400,
     };
   });
-}
-
-export function assertContrast(context: string, style: EffectiveStyle): void {
-  const fg = parseRgb(style.color);
-  const bg = parseRgb(style.backgroundColor);
-  const ratio = contrastRatio(fg, bg);
-  const floor = textContrastFloor(style.fontSizePx, style.fontWeight);
-  expect(
-    ratio,
-    `${context}: ${style.color} on ${style.backgroundColor} = ${ratio.toFixed(2)}:1, `
-      + `needs ${floor}:1 at ${style.fontSizePx}px/${style.fontWeight} (WCAG 1.4.3)`,
-  ).toBeGreaterThanOrEqual(floor);
 }
 
 for (const route of routes) {
