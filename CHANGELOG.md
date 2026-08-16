@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/forkwright/typikon/compare/v0.3.0...v0.4.0) (2026-08-16)
+
+
+### Features
+
+* **schemas:** add a fail-closed consumer schema registry ([#154](https://github.com/forkwright/typikon/issues/154)) ([3d9432a](https://github.com/forkwright/typikon/commit/3d9432a1765ae8d344dbb58e5636117792f87b6d))
+* **templates:** make the favicon path configurable like every sibling brand asset ([#141](https://github.com/forkwright/typikon/issues/141)) ([729ce2e](https://github.com/forkwright/typikon/commit/729ce2e053270a0562e415d6b1063199378ada65))
+
+
+### Bug Fixes
+
+* **ci:** stop exempting the gate's own fixture corpus from full-gate-build ([#151](https://github.com/forkwright/typikon/issues/151)) ([8690c82](https://github.com/forkwright/typikon/commit/8690c82ddc366370797456659e66715ff539bcd7))
+* **templates:** give the home page a genuine top-level heading ([#152](https://github.com/forkwright/typikon/issues/152)) ([880f711](https://github.com/forkwright/typikon/commit/880f7119e733bb8f9b14eafb37e2ce0b5ba78390))
+
 ## [0.3.0](https://github.com/forkwright/typikon/compare/v0.2.0...v0.3.0) (2026-08-15)
 
 
