@@ -1,0 +1,25 @@
+# Typed deployment-artifact manifest (forkwright/typikon#48).
+#
+# SSOT for which files at the Cloudflare Pages deploy root
+# (public/, post "Copy _headers + _redirects + 404 into public/") are
+# load-bearing. ci/validate-deploy-bundle.py is the sole reader and sole
+# enforcement point — the workflow step never re-lists members inline, so
+# a member added here is enforced everywhere without a second edit.
+#
+# `syntax` names the validator in validate-deploy-bundle.py's SYNTAX_CHECKS
+# table; "none" skips syntax validation (presence + hash only).
+
+[[member]]
+name = "_headers"
+required = true
+syntax = "headers"
+
+[[member]]
+name = "_redirects"
+required = true
+syntax = "redirects"
+
+[[member]]
+name = "404.html"
+required = true
+syntax = "html"
