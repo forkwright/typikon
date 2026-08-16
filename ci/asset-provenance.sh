@@ -22,8 +22,10 @@ set -euo pipefail
 # A found manifest on a path the consumer has NOT listed in config.toml's
 # `extra.c2pa_declared_assets` glob list fails the build, naming the
 # offending path, the container, and the manifest's label where the
-# manifest carries one (its cryptographic issuer is not recoverable
-# without a COSE/X.509 parser — see the scanner's module docstring).
+# manifest carries one. That label is a self-declared JUMBF field, not a
+# cryptographically verified issuer — the issuer is not recoverable
+# without a COSE/X.509 parser (see the scanner's module docstring and
+# forkwright/typikon#148).
 #
 # Exit:
 #   0  no undeclared manifests found
@@ -68,6 +70,7 @@ elif [[ $status -eq 1 ]]; then
     echo "asset-provenance: undeclared manifest(s) found:" >&2
     cat "$SCAN_ERR" >&2
     echo "" >&2
+    echo "asset-provenance: reported label(s) above are self-declared JUMBF fields, not verified issuers — see forkwright/typikon#148." >&2
     echo "asset-provenance: $VIOLATIONS asset(s) carry undeclared provenance metadata." >&2
     echo "Fix by stripping the manifest from the asset, or declaring it in config.toml:" >&2
     echo '    [extra]' >&2
