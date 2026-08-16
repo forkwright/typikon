@@ -308,16 +308,24 @@ def scan_file(path: Path) -> tuple[str, str | None] | None:
     blob = extractor(path.read_bytes())
     if blob is None:
         return None
-    try:
-        label = extract_manifest_label(blob)
-    except (IndexError, ValueError):
-        # SAFETY: label extraction is enrichment, never the detection gate
-        # (see module docstring INVARIANT) — a malformed inner box tree
-        # must not suppress an already-established manifest finding.
-        # IndexError/ValueError are the class a corrupt/truncated box tree
-        # can raise (out-of-bounds access, bad int conversion); anything
-        # outside that class is a real bug and should propagate.
-        label = None
+    # INVARIANT: extract_manifest_label (and iter_jumbf_boxes / parse_jumd_label
+    # beneath it) cannot raise for any bytes input — every index and slice
+    # in that call graph is preceded by an explicit length check (see their
+    # docstrings above), so a malformed or truncated box tree degrades to
+    # None by returning cleanly, never by being caught. No try/except is
+    # needed here: label extraction is enrichment, never the detection gate
+    # (see module docstring INVARIANT), and this call graph already fails
+    # closed by construction rather than by exception handling. A future
+    # bug that breaks a guard and makes this call raise is exactly the kind
+    # of defect this file's own precedent (ci/csp-scan.py's per-file loop,
+    # which carries no exception guard either) leaves uncaught on purpose —
+    # a loud crash in CI is what surfaces it, not a swallowed exception
+    # that would ship the bug silently. Verified by the
+    # manifest-malformed-label.png fixture in ci/check-asset-provenance.py
+    # (manifest_store_truncated_jumd), which feeds a truncated jumd payload
+    # through the real stage: it stays a clean violation line with
+    # label=unknown, not a traceback.
+    label = extract_manifest_label(blob)
     return container, label
 
 

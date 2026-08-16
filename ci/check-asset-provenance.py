@@ -71,6 +71,20 @@ def manifest_store(label: str) -> bytes:
     return jumbf_box(b"jumb", jumbf_box(b"jumd", jumd_payload(label)))
 
 
+def manifest_store_truncated_jumd() -> bytes:
+    """A jumb box wrapping a jumd box whose payload is truncated below the
+    16-byte UUID + 1-byte toggle minimum (ISO/IEC 19566-5 5.2) that
+    parse_jumd_label requires before it will index into the payload.
+
+    Regression fixture for forkwright/typikon#150's must-fix: proves a
+    malformed inner box tree still lets channel-level detection fire (the
+    actual gate) and degrades the label to unknown by returning cleanly out
+    of parse_jumd_label's own length guard, never by throwing and catching —
+    scan_file carries no exception handler around this call at all.
+    """
+    return jumbf_box(b"jumb", jumbf_box(b"jumd", b"short"))
+
+
 # --- PNG ---------------------------------------------------------------
 
 
@@ -91,6 +105,20 @@ def build_png(manifest_label: str | None) -> bytes:
         chunks.append(png_chunk(b"caBX", manifest_store(manifest_label)))
     chunks.append(png_chunk(b"IDAT", zlib.compress(b"\x00\x00\x00\x00\x00")))
     chunks.append(png_chunk(b"IEND", b""))
+    return PNG_SIGNATURE + b"".join(chunks)
+
+
+def build_png_with_raw_manifest(manifest_bytes: bytes) -> bytes:
+    """Embed pre-built (possibly malformed) manifest bytes directly, bypassing
+    manifest_store()'s label encoding — for fixtures that need a corrupt box
+    tree rather than a corrupt label string."""
+    ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)  # 1x1 RGBA
+    chunks = [
+        png_chunk(b"IHDR", ihdr),
+        png_chunk(b"caBX", manifest_bytes),
+        png_chunk(b"IDAT", zlib.compress(b"\x00\x00\x00\x00\x00")),
+        png_chunk(b"IEND", b""),
+    ]
     return PNG_SIGNATURE + b"".join(chunks)
 
 
@@ -189,6 +217,7 @@ def main() -> int:
             "clean.png": build_png(None),
             "manifest.png": build_png(LABEL_PNG),
             "manifest-lying-chunk.png": build_png_with_lying_chunk(LABEL_PNG_LYING_LENGTH),
+            "manifest-malformed-label.png": build_png_with_raw_manifest(manifest_store_truncated_jumd()),
             "clean.jpg": build_jpeg(b""),
             "manifest-single.jpg": jpeg_single_segment(LABEL_JPEG_SINGLE),
             "manifest-split.jpg": jpeg_split_segments(LABEL_JPEG_SPLIT),
@@ -221,6 +250,13 @@ def main() -> int:
         if result.returncode != 1:
             failures.append(f"mixed fixture set: expected exit 1 (undeclared manifests present), got {result.returncode}\nstderr:\n{result.stderr}")
 
+        # forkwright/typikon#150's must-fix: a malformed inner box tree
+        # (manifest-malformed-label.png) must degrade to label=unknown, not
+        # crash the whole scan. A crash would surface here as an unhandled
+        # Python traceback in stderr instead of a clean violation line.
+        if "Traceback (most recent call last)" in result.stderr:
+            failures.append(f"scan crashed instead of degrading gracefully on a malformed box tree:\n{result.stderr}")
+
         violation_lines = [line for line in result.stderr.splitlines() if "undeclared C2PA manifest present" in line]
 
         expected_violations = {
@@ -229,6 +265,7 @@ def main() -> int:
             "manifest-single.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SINGLE}",
             "manifest-split.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SPLIT}",
             "manifest.svg": f"SVG: undeclared C2PA manifest present (label={LABEL_SVG}",
+            "manifest-malformed-label.png": "PNG: undeclared C2PA manifest present (label=unknown",
         }
         for name, expected in expected_violations.items():
             if not any(name in line and expected in line for line in violation_lines):
