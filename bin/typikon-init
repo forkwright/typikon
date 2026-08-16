@@ -189,6 +189,7 @@ smart_punctuation = true
 brand_name = "${SITE_NAME}"
 # brand_greek = "Greek motto for footer + nav-logo hover"
 # logo_path = "img/logo.svg"
+# favicon_path = "img/favicon.svg"
 # theme_color = "#F7F3E8"
 # og_locale = "en_US"
 # og_image = "img/og-cover.png"
@@ -303,7 +304,16 @@ if [[ -n "$(git status --porcelain)" ]]; then
         git add -f CLAUDE.md 2>/dev/null || true
     fi
     if [[ -z "$(git log --oneline 2>/dev/null)" ]]; then
-        git commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+        # WHY: a fresh CI/agentic sandbox has no git identity configured, and
+        # this scaffold commit is not an authored change — fall back to a
+        # fixed identity for it alone rather than depending on an ambient
+        # git config the caller may not have.
+        if git config user.email >/dev/null 2>&1 && git config user.name >/dev/null 2>&1; then
+            git commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+        else
+            git -c user.name="typikon-init" -c user.email="typikon-init@localhost" \
+                commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+        fi
         echo "ok     initial commit created" >&2
     else
         echo "ok     scaffold refreshed (commit pending if you want to capture refresh)" >&2
