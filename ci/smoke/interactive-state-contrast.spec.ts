@@ -78,13 +78,16 @@ const BOLD_WEIGHT_THRESHOLD = 700;
 const TEXT_FLOOR_NORMAL = 4.5;
 const TEXT_FLOOR_LARGE = 3.0;
 
-function textContrastFloor(fontPx: number, fontWeight: number): number {
+export function textContrastFloor(fontPx: number, fontWeight: number): number {
   const isLarge = fontPx >= LARGE_TEXT_PX_REGULAR
     || (fontPx >= LARGE_TEXT_PX_BOLD && fontWeight >= BOLD_WEIGHT_THRESHOLD);
   return isLarge ? TEXT_FLOOR_LARGE : TEXT_FLOOR_NORMAL;
 }
 
-function parseRgb(css: string): [number, number, number] {
+// WHY exported: interactive-state-contrast-selftest.spec.ts imports these
+// pure functions directly to prove the threshold/assertion logic itself
+// fails on a known-bad input, independent of a live route or browser.
+export function parseRgb(css: string): [number, number, number] {
   const match = css.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
   if (!match) {
     throw new Error(`could not parse a computed color as rgb()/rgba(): "${css}"`);
@@ -101,7 +104,7 @@ function relativeLuminance([r, g, b]: [number, number, number]): number {
   return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
 }
 
-function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+export function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
   const lighter = Math.max(la, lb);
@@ -109,7 +112,7 @@ function contrastRatio(a: [number, number, number], b: [number, number, number])
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-interface EffectiveStyle {
+export interface EffectiveStyle {
   color: string;
   backgroundColor: string;
   fontSizePx: number;
@@ -144,7 +147,7 @@ async function readEffectiveStyle(locator: Locator): Promise<EffectiveStyle> {
   });
 }
 
-function assertContrast(context: string, style: EffectiveStyle): void {
+export function assertContrast(context: string, style: EffectiveStyle): void {
   const fg = parseRgb(style.color);
   const bg = parseRgb(style.backgroundColor);
   const ratio = contrastRatio(fg, bg);
