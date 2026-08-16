@@ -41,8 +41,9 @@ Output:
         {"checked": 3, "passed": 2, "skipped": 1, "failed": 0}
 
 Exit codes:
-    0 — every declared asset path resolves to a real file under public/
-    1 — at least one declared asset path has no file at its resolved location
+    0 — every declared asset path resolves, WITHIN public/, to a real file
+    1 — at least one declared asset path has no file at its resolved location,
+        or resolves outside public/ entirely (a `..`-escaping value)
     2 — runtime error (missing root, missing/unparseable config.toml, no public/
         dir — i.e. zola build has not run)
 """
@@ -100,6 +101,11 @@ def main() -> int:
 
     extra = load_extra(root)
 
+    # WHY .resolve() here (not just at the join site): the containment check
+    # below compares against this canonicalized form, not the raw `public`
+    # Path, so a symlinked `public/` dir doesn't produce a false escape.
+    public_resolved = public.resolve()
+
     checked = 0
     passed = 0
     skipped = 0
@@ -125,8 +131,28 @@ def main() -> int:
         # `base_url ~ "/" ~ ...`) treats the configured value as root-relative
         # under static/ — a leading slash in the config value itself must not
         # turn into an absolute filesystem path escaping `public/`.
+        #
+        # WARNING: lstrip("/") alone only closes the ABSOLUTE-path escape route.
+        # A value containing ".." (e.g. "../static/img/favicon.svg" — exactly
+        # where the source asset physically lives, so this is the single most
+        # plausible real mistake, not a contrived attack) still walks out of
+        # `public/` once the OS resolves it: `Path.is_file()` performs real
+        # path resolution and honors `..`, so `public / relative` must be
+        # resolved and then explicitly checked for containment under `public/`
+        # — joining is not confining (forkwright/typikon#155 review).
         relative = raw.lstrip("/")
-        resolved = public / relative
+        resolved = (public / relative).resolve()
+        if not resolved.is_relative_to(public_resolved):
+            failed += 1
+            print(
+                json.dumps({
+                    "key": key,
+                    "path": raw,
+                    "error": f"config.extra.{key} = {raw!r} resolves to {resolved}, outside public/ ({public_resolved}) — refusing",
+                }),
+                file=sys.stderr,
+            )
+            continue
         if resolved.is_file():
             passed += 1
         else:

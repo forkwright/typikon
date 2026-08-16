@@ -19,6 +19,13 @@ bin/typikon-check-assets as subprocesses — not a reimplementation of either):
   all three but asserting only an aggregate failure would leave a check that
   fails for the wrong key undetected; these cases rule that out.
 - a fully-valid config (default favicon, real logo/og_image assets) passes clean.
+- a value containing a `..` segment (`test_path_escape`) is rejected even though
+  the file it points at genuinely EXISTS on disk at the site root — a real file
+  `zola build` never copies into `public/` (only `static/` content is copied),
+  so a check that merely joins the path and calls `is_file()` reports it passing
+  (this was the shipped defect: `Path.is_file()` performs real OS resolution and
+  honors `..`, walking straight out of `public/`). Proves containment, not just
+  existence.
 
 NOTE: runs standalone (no examples/ site needed) as part of ci/run-fixtures.sh.
 """
@@ -182,15 +189,73 @@ def main() -> int:
                     f"(stderr: {check.stderr})"
                 )
 
+    # Path escape: a `..`-bearing value that resolves to a file which genuinely
+    # EXISTS on disk (at the site root — the physical location the traversal
+    # reaches) but was never, and can never be, copied into public/ by zola
+    # build (zola copies static/ content into public/; it does not copy
+    # arbitrary root-level files). A join-then-is_file() check reports this
+    # passing because is_file() performs real OS resolution and honors `..`;
+    # a correct check must confine resolution to public/ and reject anything
+    # that resolves outside it, regardless of whether a file happens to sit
+    # at the escaped location.
+    with tempfile.TemporaryDirectory(prefix="typikon-assets-escape-") as tmp:
+        root = Path(tmp)
+        build = build_site(
+            root,
+            extra_lines=(
+                'favicon_path = "../outside-public-secret.svg"\n'
+                'logo_path = "img/logo.svg"\n'
+                'og_image = "img/og.png"\n'
+            ),
+            real_assets=["logo.svg", "og.png"],
+        )
+        # The escape target: a real file, but at the site ROOT, never under
+        # static/, so zola build cannot and does not copy it into public/.
+        (root / "outside-public-secret.svg").write_text("secret", encoding="utf-8")
+        if build.returncode != 0:
+            failures.append(f"path-escape fixture: zola build failed:\n{build.stderr}")
+        else:
+            escaped_path = (root / "outside-public-secret.svg").resolve()
+            in_public = (root / "public" / "outside-public-secret.svg")
+            if in_public.exists():
+                failures.append(
+                    "path-escape fixture: test premise broken — zola build unexpectedly "
+                    f"copied {escaped_path} into public/; fixture no longer proves anything"
+                )
+
+            check = run_check_assets(root)
+            if check.returncode != 1:
+                failures.append(
+                    f"path-escape fixture: typikon-check-assets expected exit 1, got {check.returncode}\n"
+                    f"stdout: {check.stdout}\nstderr: {check.stderr}"
+                )
+            else:
+                records = stderr_records(check)
+                flagged_keys = {r.get("key") for r in records if "key" in r}
+                if flagged_keys != {"favicon_path"}:
+                    failures.append(
+                        f"path-escape fixture: expected exactly {{'favicon_path'}} flagged, "
+                        f"got {flagged_keys} (stderr: {check.stderr})"
+                    )
+                escape_error = next(
+                    (r.get("error", "") for r in records if r.get("key") == "favicon_path"), ""
+                )
+                if "outside public" not in escape_error and "outside" not in escape_error:
+                    failures.append(
+                        "path-escape fixture: favicon_path failure did not name the escape "
+                        f"(expected an 'outside public/' style message, got: {escape_error!r})"
+                    )
+
     if failures:
         for line in failures:
             print(f"FAIL: {line}", file=sys.stderr)
         return 1
 
     print(
-        "OK: typikon-check-assets passes a fully-valid consumer config and, for each of "
-        "favicon_path/logo_path/og_image in isolation, fails naming exactly that key "
-        "while zola build/check themselves stay silent (forkwright/typikon#155)"
+        "OK: typikon-check-assets passes a fully-valid consumer config, fails naming exactly "
+        "the corrupted key for each of favicon_path/logo_path/og_image in isolation, and "
+        "rejects a `..`-escaping value pointing at a real file outside public/ — all while "
+        "zola build/check themselves stay silent (forkwright/typikon#155)"
     )
     return 0
 
