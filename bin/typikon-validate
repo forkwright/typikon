@@ -29,6 +29,12 @@ docs/SCHEMAS.md#consumer-schema-registry — this is what makes a custom
 template's frontmatter get a domain schema instead of inheriting page's
 permissive default by omission.
 
+FAIL-CLOSED: a registry.toml entry (either discriminator) that matches a
+file whose structural kind — section for `_index.md`, page for everything
+else, Zola's own distinction, not the registry's — disagrees with the
+entry's `extends` is ALSO a validation FAILURE, not a silent application of
+the wrong-shaped schema. See docs/SCHEMAS.md#consumer-schema-registry.
+
 Output:
     JSONL on stderr, one line per failure:
         {"file": "...", "pointer": "/extra/price", "error": "..."}
@@ -93,11 +99,12 @@ KNOWN_TEMPLATES = frozenset(TEMPLATE_SCHEMA_MAP) | {
     "index.html",
 }
 
-# Content types whose schema is built from an open `<slug>.core.schema.json`
-# building block (see docs/SCHEMAS.md#consumer-schema-registry) and can
-# therefore be composed by a consumer's registered schema via `extends`.
-# journal-entry/product/faq/sizing-guide have no `.core.schema.json`
-# counterpart yet — no registered consumer has needed to extend them, and
+# WHY: content types whose schema is built from an open
+# `<slug>.core.schema.json` building block (see
+# docs/SCHEMAS.md#consumer-schema-registry) and can therefore be composed
+# by a consumer's registered schema via `extends`. journal-entry/product/
+# faq/sizing-guide have no `.core.schema.json` counterpart yet — no
+# registered consumer has needed to extend them, and
 # `load_consumer_registry` refuses an `extends` naming one of them rather
 # than pretending composition it cannot deliver.
 COMPOSABLE_CORE_SLUGS = frozenset({"page", "section"})
@@ -112,6 +119,32 @@ class UnregisteredTemplateError(Exception):
         super().__init__(template)
 
 
+class MismatchedExtendsError(Exception):
+    """Raised by classify() when a registry entry (`template` or
+    `path_prefix`) matches a file whose structural kind — "section" for
+    `_index.md`, "page" for everything else, fixed by Zola itself, not
+    by the registry — disagrees with the entry's declared `extends`.
+
+    WHY: `path_prefix` matches by string prefix and cannot express "every
+    leaf page under this directory, but not its _index.md" — a prefix like
+    "systems/" matches `systems/_index.md` too. Applying a page-extending
+    entry's schema there would silently validate a section file against a
+    schema missing section-only fields (sort_by, page_template,
+    transparent, extra.triad, ...) — the exact silent-mismatch class this
+    mechanism exists to close, just moved one level up. `template` can hit
+    the same case if a consumer's frontmatter sets a registered template
+    value on a `_index.md` file. Fail closed instead of silently applying
+    the wrong shape: the consumer must scope the entry precisely (a
+    longer path_prefix, or `template` instead of `path_prefix`)."""
+
+    def __init__(self, discriminator_kind: str, discriminator: str, expected: str, registered: str) -> None:
+        self.discriminator_kind = discriminator_kind
+        self.discriminator = discriminator
+        self.expected = expected
+        self.registered = registered
+        super().__init__(f"{discriminator_kind}={discriminator!r} extends={registered!r} expected={expected!r}")
+
+
 @dataclass(frozen=True)
 class RegistryEntry:
     """One `[[entry]]` from a consumer's schemas/registry.toml, resolved
@@ -120,6 +153,7 @@ class RegistryEntry:
     name: str
     discriminator_kind: str  # "template" | "path_prefix"
     discriminator: str
+    extends: str  # "page" | "section" — which core this entry composes
     schema_path: Path
     schema: dict
 
@@ -156,19 +190,19 @@ def classify(rel_path: Path, frontmatter: dict, registry: ConsumerRegistry) -> t
     and any registered custom template) escape the path-based default.
     Raises UnregisteredTemplateError for a `template` this validator cannot
     account for by either route — see the module docstring's FAIL-CLOSED note.
+    Raises MismatchedExtendsError when a registry entry (either
+    discriminator kind) matches a file whose structural kind — fixed by
+    Zola (section for `_index.md`, page for everything else), not by the
+    registry — disagrees with the entry's `extends`. This is checked for
+    BOTH `template` and `path_prefix` matches: a `template` value set on a
+    `_index.md` file is just as capable of this mismatch as a path prefix
+    that happens to also catch a section index.
     """
-    template = frontmatter.get("template")
-    if template in TEMPLATE_SCHEMA_MAP:
-        return TEMPLATE_SCHEMA_MAP[template], None
-
-    registry_hit = registry.match_template(template)
-    if registry_hit is not None:
-        return registry_hit.name, registry_hit.schema
-
     parts = rel_path.parts
     # parts[0] == "content"
     name = parts[-1]
     content_relative = "/".join(parts[1:])
+    structural_kind = "section" if name == "_index.md" else "page"
     if name == "_index.md":
         base = "section"
     elif len(parts) == 2:
@@ -182,8 +216,20 @@ def classify(rel_path: Path, frontmatter: dict, registry: ConsumerRegistry) -> t
         else:
             base = "page"
 
+    template = frontmatter.get("template")
+    if template in TEMPLATE_SCHEMA_MAP:
+        return TEMPLATE_SCHEMA_MAP[template], None
+
+    registry_hit = registry.match_template(template)
+    if registry_hit is not None:
+        if registry_hit.extends != structural_kind:
+            raise MismatchedExtendsError("template", template, structural_kind, registry_hit.extends)
+        return registry_hit.name, registry_hit.schema
+
     path_hit = registry.match_path(content_relative)
     if path_hit is not None:
+        if path_hit.extends != structural_kind:
+            raise MismatchedExtendsError("path_prefix", path_hit.discriminator, structural_kind, path_hit.extends)
         return path_hit.name, path_hit.schema
 
     if template is not None and template not in KNOWN_TEMPLATES:
@@ -253,6 +299,20 @@ def validate_file(
                 f"custom template '{exc.template}' has no schema registration in "
                 "schemas/registry.toml, and is not one of typikon's own templates "
                 f"({', '.join(sorted(KNOWN_TEMPLATES))}). Register a consumer schema "
+                "— see docs/SCHEMAS.md#consumer-schema-registry."
+            ),
+        }]
+    except MismatchedExtendsError as exc:
+        pointer = "/template" if exc.discriminator_kind == "template" else ""
+        return [{
+            "file": file_label,
+            "pointer": pointer,
+            "error": (
+                f"registry.toml entry {exc.discriminator_kind}={exc.discriminator!r} "
+                f"declares extends={exc.registered!r}, but {file_label} is structurally "
+                f"a {exc.expected!r} (Zola's own _index.md-vs-page distinction, not the "
+                f"registry's to override) — this entry cannot apply here. Scope the "
+                f"{exc.discriminator_kind} more precisely, or split it into two entries "
                 "— see docs/SCHEMAS.md#consumer-schema-registry."
             ),
         }]
@@ -432,6 +492,7 @@ def load_consumer_registry(consumer_root: Path, base_registry: Registry) -> Cons
             name=name,
             discriminator_kind=discriminator_kind,
             discriminator=discriminator,
+            extends=extends,
             schema_path=schema_path,
             schema=schema,
         )

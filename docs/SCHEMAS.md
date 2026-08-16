@@ -69,7 +69,9 @@ A typikon-consuming site's own custom templates (a page type typikon does not sh
 
    Exactly one of `template` (matched against frontmatter `template`) or `path_prefix` (matched against the content-relative path, e.g. `"systems/"` catches `content/systems/<anything>.md`) is required per entry. `template` wins when both a template and a path could match the same file — same precedent as `TEMPLATE_SCHEMA_MAP`.
 
-3. Run `typikon-validate <consumer-root>` (or `typikon-check`, which calls it). A malformed registry entry — both discriminators set, neither set, `extends` naming a type with no composable core, a missing schema file, a schema missing `$id`, a duplicate discriminator — fails immediately with the specific problem, at load time, before any content file is checked.
+   **`extends` must match what the matched file structurally is, not just what you intended the entry to cover.** A `_index.md` is always a Zola section; every other file is always a Zola page — that split is Zola's, not the registry's to override. `path_prefix = "systems/"` also textually matches `content/systems/_index.md`, not just its leaf pages: if that entry's `extends = "page"`, the index file fails with a `MismatchedExtendsError` instead of silently validating against the wrong shape (missing section-only fields like `sort_by`/`page_template`/`extra.triad`). Scope the prefix past the index file, or give the section index its own `template`-keyed entry with `extends = "section"`, if you need both covered.
+
+3. Run `typikon-validate <consumer-root>` (or `typikon-check`, which calls it). A malformed registry entry — both discriminators set, neither set, `extends` naming a type with no composable core, a missing schema file, a schema missing `$id`, a duplicate discriminator, or a discriminator matching a file whose structural kind disagrees with `extends` — fails immediately with the specific problem, before that file's content is checked.
 
 A consumer with no custom templates needs no `schemas/registry.toml` at all; its absence is not an error and every existing consumer validates unchanged.
 

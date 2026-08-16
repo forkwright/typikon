@@ -125,7 +125,7 @@ def content_only(files: dict[str, str]) -> dict[str, str]:
     return {**BASE_FILES, **files}
 
 
-# Each case: (label, extra_files, expected_exit, required_stderr_substrings)
+# NOTE: each case is (label, extra_files, expected_exit, required_stderr_substrings)
 CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
     (
         "registered template, valid namespaced field — passes",
@@ -177,6 +177,35 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
         }),
         0,
         [],
+    ),
+    (
+        # WHY: `path_prefix = "systems/"` (extends="page", from REGISTRY_TOML
+        # above) also textually matches `systems/_index.md` — a section file,
+        # not a page. Pre-fix (forkwright/typikon#60 follow-up), classify()
+        # applied the page-extending schema unconditionally: this exact
+        # fixture (title + extra.ardent.repo_url, no page-only fields) was
+        # coincidentally shaped to satisfy it and validated GREEN — a
+        # section file silently checked against the wrong schema, with
+        # nothing surfacing the mismatch. Reproduced against the pre-fix
+        # committed bin/typikon-validate (git show HEAD~0 before this
+        # patch) as `{"checked": 1, "passed": 1, "failed": 0}`, exit 0.
+        # Fail-closed now: the mismatch itself is the rejection reason.
+        "path_prefix registered extends=page silently matching a _index.md (structurally section) — fails closed, not a silent pass",
+        content_only({
+            "content/systems/_index.md": (
+                '+++\ntitle = "Systems"\n\n[extra.ardent]\nrepo_url = "https://github.com/x/y"\n+++\nbody\n'
+            ),
+        }),
+        1,
+        ["path_prefix='systems/'", "extends='page'", "structurally a 'section'"],
+    ),
+    (
+        "registered template applied to a _index.md (structurally section) — mismatched extends fails closed",
+        content_only({
+            "content/_index.md": '+++\ntitle = "Home"\ntemplate = "consulting.html"\n+++\nbody\n',
+        }),
+        1,
+        ["template='consulting.html'", "extends='page'", "structurally a 'section'"],
     ),
     (
         "path_prefix discriminator, missing required namespaced field — rejected",
