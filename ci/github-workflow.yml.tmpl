@@ -151,10 +151,10 @@ jobs:
         # Cloudflare Pages reads _headers and _redirects from the deploy
         # root. wrangler ships public/, so the files at repo root never
         # get applied. Copy them in (idempotent — overwrites if present).
-        # WARNING: _headers/_redirects carry the site's CSP and routing
-        # contract — REQUIRED, not optional. A missing source or a copy
-        # that silently didn't land must fail the gate, not deploy short
-        # of the documented boundary.
+        # WARNING: _headers/_redirects/404 carry the site's CSP, routing,
+        # and error-page contract — ALL THREE REQUIRED, not optional. A
+        # missing source or a copy that silently didn't land must fail the
+        # gate, not deploy short of the documented boundary.
         # CF Pages also serves public/404.html for any 404, but Zola
         # generates content/404.md as public/404/index.html — copy it to
         # the expected name so the consumer's branded 404 page wins over
@@ -168,7 +168,27 @@ jobs:
             cp "$f" "public/$f"
             cmp -s "$f" "public/$f" || { echo "::error::copied public/$f does not match source $f" >&2; exit 1; }
           done
-          [ -f public/404/index.html ] && cp public/404/index.html public/404.html
+          if [ ! -f public/404/index.html ]; then
+            echo "::error::required deploy control file 'content/404.md' produced no public/404/index.html — add a 404 page" >&2
+            exit 1
+          fi
+          cp public/404/index.html public/404.html
+
+      - name: Validate + hash deploy control-file bundle
+        # WHY 1: mirrors ci/kanon-ci.toml.tmpl's validate-deploy-bundle timeout_secs=30.
+        timeout-minutes: 1
+        # The step above proved _headers/_redirects/404.html EXIST and
+        # copied byte-identically; it never inspected CONTENT. A syntax
+        # error (an un-indented _headers assignment, a malformed
+        # _redirects status code) copies clean and Cloudflare Pages then
+        # silently ignores the broken directive at serve time — a green
+        # gate that does not mean the deployed contract is the one the
+        # repo declares (forkwright/typikon#48). ci/deploy-manifest.toml
+        # is the typed required/optional member list this enforces; the
+        # emitted receipt (sha256 + byte count per member) makes the
+        # exact deployed bundle provable after the fact, not just
+        # asserted at build time.
+        run: python3 themes/typikon/ci/validate-deploy-bundle.py public/
 
       - name: csp-enforce (no inline script/style/handlers)
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's csp-enforce timeout_secs=120.
@@ -282,6 +302,14 @@ jobs:
           # Idempotent: if it's already correct, the API call is a no-op.
           # Required so wrangler's deploy below registers as production
           # rather than as a per-branch preview deployment.
+          #
+          # NOTE: no separate read-back GET follows this PATCH. Cloudflare's
+          # Pages "Edit project" endpoint returns the full, authoritative
+          # post-mutation Project resource in `result` (verified against
+          # Cloudflare's own API reference) — not a request echo — so a
+          # follow-up GET would read the same backend state this response
+          # already carries, adding latency and API quota for no additional
+          # assurance the check below doesn't already have.
           BRANCH="${GITHUB_REF##*/}"
           curl -fsS -X PATCH \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/{{ PROJECT_NAME }}" \
@@ -302,7 +330,16 @@ jobs:
             echo "::error::Cloudflare did not confirm production_branch=${BRANCH}: $(jq -c '.errors // .' /tmp/cf-edit.json)" >&2
             exit 1
           fi
-          echo "production_branch confirmed: ${CF_BRANCH}"
+
+          # Redacted machine-readable receipt of the confirmed mutation —
+          # account id and token are never included. Written under
+          # RUNNER_TEMP (GitHub Actions' per-job scratch dir; a bare /tmp
+          # literal here would repeat the shared-path hygiene defect
+          # forkwright/typikon#63 PR #146 found in this step's own fixture
+          # harness) as well as echoed to the step log.
+          CF_RECEIPT="{\"production_branch\":\"${CF_BRANCH}\",\"confirmed\":true}"
+          echo "$CF_RECEIPT" > "${RUNNER_TEMP:-.}/cf-branch-receipt.json"
+          echo "production_branch confirmed: $CF_RECEIPT"
 
           # WHY --ignore-scripts: this install runs in the step whose environment
           # already holds CLOUDFLARE_API_TOKEN, so any lifecycle script in the
