@@ -58,6 +58,19 @@ for (const route of routes) {
 
     expect(consoleErrors, `${route} should load with no console errors: ${consoleErrors.join('; ')}`).toEqual([]);
 
+    // WHY route === '/' only (forkwright/typikon#142): the home route is
+    // index.html, which now always renders a visually-hidden <h1> so the
+    // page has a heading regardless of which optional home_logo/
+    // home_tagline extras a consumer sets. page.html and section.html
+    // derive their <h1> from a leading `# ` line in the page's own
+    // markdown body rather than asserting one, so a route built from
+    // either (e.g. a section index with no markdown body) is not
+    // guaranteed a heading yet — that is forkwright/typikon#149, a
+    // distinct defect with a different remedy, not folded in here.
+    if (route === '/') {
+      await expect(page.locator('h1'), `${route} (home) should expose exactly one <h1>`).toHaveCount(1);
+    }
+
     // WHY read the accessibility tree rather than the DOM (forkwright/typikon#61):
     // an aria-label override on .faq-anchor passed pa11y's WCAG2AA ruleset
     // while collapsing every question's computed accessible name to one
