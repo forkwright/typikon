@@ -31,6 +31,11 @@
     "extra": {
       "type": "object",
       "properties": {
+        "seo_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Override <title> when it should differ from the section title. Read by templates/section.html, templates/index.html, and templates/journal-section.html (section.extra.seo_title | default(value=section.title)) — every section-rendering template, not a page-only concern, so it belongs on the section core alongside page.core's identical field."
+        },
         "greek": {
           "type": "string",
           "description": "Greek heading attribute (data-greek on <h1>) for the design family's hover pattern."
