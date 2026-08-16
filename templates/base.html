@@ -13,7 +13,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="{{ config.extra.theme_color | default(value="#F7F3E8") }}">
-  <link rel="icon" href="{{ get_url(path=config.extra.favicon_path | default(value="img/favicon.svg"), trailing_slash=false) }}" type="image/svg+xml">
+  {%- set favicon_path = config.extra.favicon_path | default(value="img/favicon.svg") -%}
+  {%- set favicon_ext = favicon_path | split(pat=".") | last | lower -%}
+  {%- if favicon_ext == "ico" -%}
+    {%- set favicon_type = "image/x-icon" -%}
+  {%- elif favicon_ext == "png" -%}
+    {%- set favicon_type = "image/png" -%}
+  {%- elif favicon_ext == "gif" -%}
+    {%- set favicon_type = "image/gif" -%}
+  {%- elif favicon_ext == "jpg" or favicon_ext == "jpeg" -%}
+    {%- set favicon_type = "image/jpeg" -%}
+  {%- elif favicon_ext == "webp" -%}
+    {%- set favicon_type = "image/webp" -%}
+  {%- else -%}
+    {%- set favicon_type = "image/svg+xml" -%}
+  {%- endif -%}
+  <link rel="icon" href="{{ get_url(path=favicon_path, trailing_slash=false) }}" type="{{ favicon_type | safe }}">
 
   {%- set site_title = config.title | default(value="") -%}
   {%- set default_description = config.description | default(value="") -%}
