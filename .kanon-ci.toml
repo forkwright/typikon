@@ -9,9 +9,14 @@ stages = ["lint", "fixtures-gate"]
 cmd = "kanon lint . --summary"
 timeout_secs = 60
 
+# WHY 240, not 180: ci/smoke/interactive-state-contrast.spec.ts
+# (forkwright/typikon#64) adds a default/focus/hover/active getComputedStyle
+# sweep across every route this stage's playwright run already builds for
+# both example sites, inside the same budget the previous figure was sized
+# for.
 [stages.fixtures-gate]
 cmd = "ci/run-fixtures.sh"
-timeout_secs = 180
+timeout_secs = 240
 
 [verifier]
 enabled = false

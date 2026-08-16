@@ -19,47 +19,26 @@ color does not clear 3:1 against both --bg and --bg-accent. This is
 generic over the token name and the selector, not a hardcoded pass for
 the two sites the issue named — a future control styled with the wrong
 token fails the same way.
+
+The luminance/contrast math and the :root parser live in ci/contrast.py,
+shared with ci/check-interactive-contrast.py (forkwright/typikon#64) so
+both checks measure against the identical formula.
 """
 
 import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from contrast import NON_TEXT_CONTRAST_FLOOR, contrast_ratio, parse_root_tokens  # noqa: E402
+
 THEME_ROOT = Path(__file__).resolve().parent.parent
 STYLE_CSS = THEME_ROOT / "static" / "css" / "style.css"
 
-NON_TEXT_CONTRAST_FLOOR = 3.0
-
-TOKEN_DECL_RE = re.compile(r"--([\w-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;")
 RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 BORDER_VAR_RE = re.compile(r"border(?:-\w+)?\s*:\s*[^;]*var\(--([\w-]+)\)[^;]*;")
 FORM_CONTROL_SELECTOR_RE = re.compile(r"\b(input|select|textarea|button)\b")
 BG_TOKENS = ("bg", "bg-accent")
-
-
-def srgb_to_linear(channel: int) -> float:
-    c = channel / 255
-    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-
-def relative_luminance(hex_color: str) -> float:
-    hex_color = hex_color.lstrip("#")
-    r, g, b = (int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-    rl, gl, bl = srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b)
-    return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
-
-
-def contrast_ratio(hex_a: str, hex_b: str) -> float:
-    la, lb = relative_luminance(hex_a), relative_luminance(hex_b)
-    lighter, darker = max(la, lb), min(la, lb)
-    return (lighter + 0.05) / (darker + 0.05)
-
-
-def parse_root_tokens(css_text: str) -> dict[str, str]:
-    root_match = re.search(r":root\s*\{([^{}]*)\}", css_text, re.DOTALL)
-    if not root_match:
-        return {}
-    return dict(TOKEN_DECL_RE.findall(root_match.group(1)))
 
 
 def find_form_control_border_vars(css_text: str) -> list[tuple[str, str]]:
