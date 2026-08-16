@@ -12,6 +12,7 @@ python3 "$ROOT/ci/check-asset-provenance.py"
 python3 "$ROOT/ci/check-control-contrast.py"
 "$ROOT/ci/check-workflow-template.sh" "$ROOT/ci/github-workflow.yml.tmpl"
 "$ROOT/ci/check-consumer-check-extension.sh"
+"$ROOT/ci/check-fixture-corpus-exemption.sh"
 
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-blog"
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-shop"

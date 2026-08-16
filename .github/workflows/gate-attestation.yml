@@ -134,7 +134,20 @@ jobs:
       needs_fleet_repo_token: false
       rust_cache_key: "gate-attestation"
       ai_attribution_check: true
-      docs_only_exemption: true
+      # WHY false, not the reusable's true default: the reusable's
+      # docs-only classifier keys on file extension alone (*.md, docs/*,
+      # llms.txt) and cannot tell examples/*/content/**.md -- the fixture
+      # corpus ci/run-fixtures.sh builds and asserts against -- apart from
+      # real documentation. A diff confined to that corpus matched the
+      # pattern and skipped full-gate-build, the one job that would have
+      # caught a broken fixture (#122; PR #120's run 31339059510 is the
+      # empirical case: three green checks, full-gate-build never ran).
+      # ci/check-fixture-corpus-exemption.sh is the regression guard.
+      # The fleet-wide fix -- parameterizing the shared classifier in
+      # forkwright/.github to exclude gate-input globs -- has wider blast
+      # radius than one repo and stays out of scope here; see #122's
+      # "Desired correction".
+      docs_only_exemption: false
     # WHY no secrets block: the reusable's only declared secret is
     # FLEET_REPO_TOKEN, required solely when needs_fleet_repo_token is
     # true (set false above). check_cmd consumes no repository secret
