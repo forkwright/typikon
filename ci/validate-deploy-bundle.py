@@ -49,6 +49,22 @@ _HEADER_NAME_RE = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 _REDIRECT_CODE_RE = re.compile(r"^[0-9]{3}!?$")
 
 
+def _looks_like_orphaned_header(stripped: str) -> bool:
+    """True when an UNINDENTED line has the shape of a header assignment.
+
+    Cloudflare path-pattern lines are URLs: a bare path (`/...`) or an
+    absolute `https://...` target (per Cloudflare's own docs, "absolute
+    URLs must begin with https"). A column-0 line that is instead a valid
+    `Name: value` pair — a real header token before the first `:` — cannot
+    be a path pattern under that rule, so it is a header assignment that
+    lost its leading whitespace, not a legitimate second block.
+    """
+    if stripped.startswith("/") or stripped.startswith("https://"):
+        return False
+    name, sep, _value = stripped.partition(":")
+    return bool(sep) and bool(_HEADER_NAME_RE.match(name))
+
+
 def check_headers_syntax(text: str) -> list[str]:
     """Validate Cloudflare _headers block syntax.
 
@@ -58,6 +74,15 @@ def check_headers_syntax(text: str) -> list[str]:
     pattern is an orphan — Cloudflare has no path to apply it to, so it is
     silently dropped rather than erroring, which is exactly the "copies
     clean, does nothing" failure mode this check exists to catch.
+
+    WARNING: that same silent drop is not limited to the FIRST line of the
+    file. A header line that loses its leading whitespace anywhere after
+    the first path pattern reads, byte-for-byte, exactly like a second
+    valid path pattern — a naive "any unindented line starts a new block"
+    reading treats it as one and reports zero errors, while Cloudflare
+    still drops the orphaned assignment at serve time. `_looks_like_orphaned_header`
+    is what distinguishes the two: a genuine path pattern is a URL, an
+    orphaned header assignment is not.
     """
     errors: list[str] = []
     seen_pattern = False
@@ -65,6 +90,10 @@ def check_headers_syntax(text: str) -> list[str]:
         if not raw.strip():
             continue
         if raw[0] not in (" ", "\t"):
+            stripped = raw.strip()
+            if _looks_like_orphaned_header(stripped):
+                errors.append(f"line {lineno}: header assignment outside any indented block (missing leading whitespace, ignored by Cloudflare): {stripped!r}")
+                continue
             seen_pattern = True
             continue
         # Indented line: must be a Name: value header assignment.

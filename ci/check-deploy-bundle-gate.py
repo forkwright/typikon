@@ -60,6 +60,12 @@ CASES: list[tuple[str, dict[str, str], bool]] = [
     # header assignment with no leading whitespace before any path pattern —
     # a real, common corruption (an editor stripping leading indentation).
     ("_headers orphaned assignment", bundle({"_headers": "  X-Frame-Options: DENY\n/*\n  Content-Security-Policy: default-src 'self'\n"}), False),
+    # the same corruption ONE LINE LATER: indentation lost on a header that
+    # follows an already-valid path pattern. Byte-for-byte this reads like a
+    # second path pattern to a naive "unindented == new block" reading, so
+    # it is the case a position-only check (flag only the file's first line)
+    # cannot catch — Cloudflare still drops it silently at serve time.
+    ("_headers assignment loses indentation after a pattern", bundle({"_headers": "/*\n  X-Frame-Options: DENY\nX-Content-Type-Options: nosniff\n"}), False),
     # indented line that is not a Name: value pair.
     ("_headers missing colon", bundle({"_headers": "/*\n  X-Frame-Options DENY\n"}), False),
     ("_redirects wrong field count", bundle({"_redirects": "/old\n"}), False),
