@@ -1,4 +1,6 @@
 +++
+# NOTE: comment-only touch, verifying forkwright/typikon#122's fix empirically --
+# a diff confined to this file must run full-gate-build. Parsed value unchanged.
 title = "Sizing"
 description = "Sample sizing guide. Exercises required audience, measurement source, product type, and size table metadata."
 template = "sizing-guide.html"
