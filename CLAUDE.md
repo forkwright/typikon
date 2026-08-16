@@ -51,7 +51,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime. OFL families only.
 - **Push authority**: `origin` is GitHub (`forkwright/typikon`); no forge remote is configured. The typed forge/GitHub authority split is unresolved — forkwright/kanon#3045 owns it.
 - **License**: AGPL-3.0-or-later. Matches dioptron, aletheia. AI-training prohibition in NOTICE.
-- **Consumer schema registry**: a consumer site's custom-templated content types register in `schemas/registry.toml` and validate against their own schema, composed from typikon's open `page.core.schema.json`/`section.core.schema.json` building blocks and closed with `unevaluatedProperties: false`. A custom `template` with no registry entry fails validation naming the missing registration rather than falling back to `page`'s shape. See `docs/SCHEMAS.md#consumer-schema-registry`.
+- **Consumer schema registry**: a consumer site's custom-templated content types register in `schemas/registry.toml` and validate against their own schema, composed from typikon's open `page.core.schema.json`/`section.core.schema.json` building blocks and closed with `unevaluatedProperties: false`. A custom `template` with no registry entry fails validation naming the missing registration rather than falling back to `page`'s shape. See `docs/SCHEMAS.md#consumer-schema-registry`. <!-- kanon:ignore STANDARDS/citation-must-be-resolvable -- anchor exists at docs/SCHEMAS.md:26. Resolver drops the docs/ prefix and checks the wrong directory. Filed kanon (forge) issue #10073. -->
 
 ## How an agent operates here
 

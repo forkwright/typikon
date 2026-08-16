@@ -129,7 +129,7 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project follows semantic versioning.
 
-No version has been cut yet — everything below is unreleased work on `main`. Once release-please automation is wired (RELEASES.md § Required configuration files), version cuts populate this file with dated, tagged sections below `## Unreleased`.
+No version has been cut yet — everything below is unreleased work on `main`. Once release-please automation is wired (RELEASES.md § Required configuration files), version cuts populate this file with dated, tagged sections below `## Unreleased`. <!-- kanon:ignore STANDARDS/citation-must-be-resolvable -- cross-repo fleet-canon citation per SSOT-or-derive; heading exists at kanon crates/basanos/standards/RELEASES.md:170. Resolver only ever checks a CWD-relative kanon-repo path. Filed kanon (forge) issue #10073. -->
 
 ## Unreleased
 
