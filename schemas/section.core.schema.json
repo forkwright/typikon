@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/section.core.schema.json",
+  "title": "typikon section core",
+  "description": "Open building block for the section contract: every field section.schema.json declares, with no closure keyword at any level. Referenced by section.schema.json (which closes it once, standalone) and by consumer schemas registered in schemas/registry.toml (which close it once, alongside their own namespaced extension) — see docs/SCHEMAS.md#consumer-schema-registry for why a shared fragment must stay open and closure happens only at the composing schema.",
+  "type": "object",
+  "required": ["title"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "maxLength": 200 },
+    "template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Custom Tera template for the section index itself. Default: section.html. Common: journal-section.html, index.html (for content/_index.md)."
+    },
+    "page_template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Default Tera template for CHILD pages of this section. Zola applies it unless a child overrides `template` in its own frontmatter. Used to cascade journal-entry.html across all journal entries from journal/_index.md."
+    },
+    "sort_by": {
+      "type": "string",
+      "enum": ["date", "weight", "title", "none"],
+      "description": "How Zola sorts this section's child pages."
+    },
+    "weight": { "type": "integer", "minimum": 0 },
+    "transparent": {
+      "type": "boolean",
+      "description": "When true, child pages appear in the parent section's listing as if at the parent level."
+    },
+    "extra": {
+      "type": "object",
+      "properties": {
+        "seo_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Override <title> when it should differ from the section title. Read by templates/section.html, templates/index.html, and templates/journal-section.html (section.extra.seo_title | default(value=section.title)) — every section-rendering template, not a page-only concern, so it belongs on the section core alongside page.core's identical field."
+        },
+        "greek": {
+          "type": "string",
+          "description": "Greek heading attribute (data-greek on <h1>) for the design family's hover pattern."
+        },
+        "body_class": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9 -]*$"
+        },
+        "list_caption": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Small caption rendered after the section's auto-listed pages (e.g., 'Newest at top')."
+        },
+        "home_logo": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "description": "Path under static/ for the index.html template's hero logo."
+        },
+        "home_tagline": { "type": "string" },
+        "home_tagline_alt": { "type": "string" },
+        "triad": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["greek", "english"],
+          "properties": {
+            "greek": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Greek terms cycled by the triad-mark component. Fixed at three: templates/index.html pairs each entry with english[loop.index0] by position, and static/js/triad.js + the .triad-1/.triad-2/.triad-3 CSS rules are hard-coded for a three-term lifecycle."
+            },
+            "english": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "English glosses, positionally paired with greek. Same length as greek by construction (both fixed at exactly three) so templates/index.html's english[loop.index0] lookup can never go out of bounds."
+            },
+            "target": {
+              "type": "string",
+              "pattern": "^/[a-z0-9/_-]*/?$",
+              "description": "Where the triad-mark links to (default: /philosophy/)."
+            }
+          }
+        },
+        "home_nav": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "type": "string" },
+              "label": { "type": "string" },
+              "greek": { "type": "string" }
+            }
+          }
+        },
+        "skip_sitemap": {
+          "type": "boolean",
+          "description": "Exclude this section from sitemap.xml. Rare; usually used for hidden internal sections."
+        }
+      }
+    }
+  }
+}

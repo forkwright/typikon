@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/schemas/page.core.schema.json",
+  "title": "typikon page core",
+  "description": "Open building block for the page contract: every field page.schema.json declares, with no closure keyword at any level. Referenced by page.schema.json (which closes it once, standalone) and by consumer schemas registered in schemas/registry.toml (which close it once, alongside their own namespaced extension) — see docs/SCHEMAS.md#consumer-schema-registry for why a shared fragment must stay open and closure happens only at the composing schema.",
+  "type": "object",
+  "required": ["title"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Page title. Renders as <title> and <h1>. Keep under ~50 chars for SEO."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "SEO meta description and og:description. Aim for 120-180 chars."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date. Required for journal entries; optional otherwise."
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601. When this page was last meaningfully edited."
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^/[a-z0-9/_-]*/?$",
+      "description": "Override Zola's auto-generated path. Lowercase ASCII, slashes, hyphens, underscores."
+    },
+    "template": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+\\.html$",
+      "description": "Custom Tera template (relative to theme/templates/)."
+    },
+    "weight": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sort order within a section."
+    },
+    "draft": {
+      "type": "boolean",
+      "description": "Exclude from production build."
+    },
+    "extra": {
+      "type": "object",
+      "properties": {
+        "seo_title": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Override <title> when it should differ from page title (e.g., longer SEO-optimized form)."
+        },
+        "body_class": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9 -]*$",
+          "description": "CSS class on <body>. Used by the home page to hide nav/footer (body_class = 'home-page')."
+        },
+        "og_image": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "description": "Path under static/ (e.g. 'img/og-cover.png'). get_url() resolves to absolute."
+        },
+        "og_type": {
+          "type": "string",
+          "enum": ["website", "article", "profile"],
+          "description": "Open Graph type. Defaults to 'website'."
+        },
+        "skip_sitemap": {
+          "type": "boolean",
+          "description": "Exclude this page from the generated sitemap.xml. Useful for utility pages (404, thanks) that should not be indexed."
+        },
+        "author": {
+          "type": "string",
+          "description": "Override the brand author for this page. Falls back to config.extra.author.name."
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Intended buyer or reader context. Required alongside price, price_source, and stripe_url when any one of the three is set — see the extra-level dependency below."
+        },
+        "price": {
+          "type": "string",
+          "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
+          "description": "Display price with optional leading $ (e.g. '$150', '85'). Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
+        },
+        "price_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the rendered price claim, e.g. the Stripe price object, SKU ledger, or fixture note. Required alongside audience, price, and stripe_url when any one of the three is set — see the extra-level dependency below."
+        },
+        "stripe_url": {
+          "type": "string",
+          "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
+          "description": "Stripe direct-checkout URL. Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
+        },
+        "video": {
+          "type": "object",
+          "description": "Inline process video (zero-JS native <video>). Drop the .mp4 (and optionally .webm sibling) under static/video/; reference here.",
+          "required": ["src", "alt"],
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.mp4$",
+              "description": "Path under static/ to the .mp4 file. Template auto-tries the .webm sibling at the same path before falling back to mp4."
+            },
+            "poster": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.(jpg|jpeg|png|webp)$",
+              "description": "Path under static/ to a still-frame image shown before play."
+            },
+            "alt": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200,
+              "description": "Accessible label describing what the video shows."
+            },
+            "captions": {
+              "type": "string",
+              "pattern": "^[a-z0-9/_-]+\\.vtt$",
+              "description": "Path under static/ to a WebVTT captions file. Strongly recommended for accessibility."
+            },
+            "caption": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Optional figcaption rendered under the video."
+            }
+          }
+        }
+      },
+      "if": {
+        "anyOf": [
+          { "required": ["price"] },
+          { "required": ["stripe_url"] },
+          { "required": ["price_source"] }
+        ]
+      },
+      "then": {
+        "required": ["audience", "price", "price_source", "stripe_url"]
+      }
+    }
+  }
+}

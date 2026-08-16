@@ -9,13 +9,31 @@ classifies each file by its location, and validates against the appropriate
 JSON Schema in <typikon-repo>/schemas/.
 
 Classification rules (in order — first match wins):
-    frontmatter `template = "faq.html"`     -> faq.schema.json
+    frontmatter `template = "faq.html"`          -> faq.schema.json
     frontmatter `template = "sizing-guide.html"` -> sizing-guide.schema.json
-    content/_index.md                       -> section.schema.json
-    content/<section>/_index.md             -> section.schema.json
-    content/journal/<slug>.md               -> journal-entry.schema.json
-    content/products/<slug>.md              -> product.schema.json
-    content/<everything-else>.md            -> page.schema.json
+    frontmatter `template` matches a `[[entry]]` in
+      <root>/schemas/registry.toml with `template = "..."`
+                                                   -> the entry's consumer schema
+    content/_index.md                            -> section.schema.json
+    content/<section>/_index.md                  -> section.schema.json
+    content/journal/<slug>.md                    -> journal-entry.schema.json
+    content/products/<slug>.md                   -> product.schema.json
+    path matches a `[[entry]]` in registry.toml
+      with `path_prefix = "..."`                 -> the entry's consumer schema
+    content/<everything-else>.md                 -> page.schema.json
+
+FAIL-CLOSED: a `template` value that is not one of typikon's own shipped
+templates (KNOWN_TEMPLATES) and has no matching registry.toml entry is a
+validation FAILURE, not a silent fall-through to page.schema.json. See
+docs/SCHEMAS.md#consumer-schema-registry — this is what makes a custom
+template's frontmatter get a domain schema instead of inheriting page's
+permissive default by omission.
+
+FAIL-CLOSED: a registry.toml entry (either discriminator) that matches a
+file whose structural kind — section for `_index.md`, page for everything
+else, Zola's own distinction, not the registry's — disagrees with the
+entry's `extends` is ALSO a validation FAILURE, not a silent application of
+the wrong-shaped schema. See docs/SCHEMAS.md#consumer-schema-registry.
 
 Output:
     JSONL on stderr, one line per failure:
@@ -26,7 +44,8 @@ Output:
 Exit codes:
     0 — all files valid
     1 — at least one file invalid
-    2 — runtime error (missing schemas, malformed frontmatter, etc.)
+    2 — runtime error (missing schemas, malformed frontmatter, malformed
+        registry.toml, etc.)
 """
 
 from __future__ import annotations
@@ -35,10 +54,13 @@ import datetime as _datetime
 import json
 import sys
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
     from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
 except ImportError:
     print(
         json.dumps({"error": "jsonschema package required (pip install jsonschema)"}),
@@ -63,30 +85,157 @@ TEMPLATE_SCHEMA_MAP = {
     "sizing-guide.html": "sizing-guide",
 }
 
+# WHY: templates typikon itself ships that a consumer may freely set as
+# `template` without triggering the fail-closed unregistered-template
+# error. Each either already routes to its own strict schema
+# (TEMPLATE_SCHEMA_MAP) or renders content already fully described by the
+# page/section/journal-entry contract — no domain schema is missing for
+# these, so they are not the loophole this file exists to close.
+KNOWN_TEMPLATES = frozenset(TEMPLATE_SCHEMA_MAP) | {
+    "page.html",
+    "section.html",
+    "journal-entry.html",
+    "journal-section.html",
+    "index.html",
+}
 
-def classify(rel_path: Path, frontmatter: dict) -> str:
-    """Map a markdown file to its schema name. Frontmatter `template` wins
-    when present in TEMPLATE_SCHEMA_MAP — that's how page-level overrides
-    (FAQ, sizing-guide) escape the path-based default."""
-    template = frontmatter.get("template")
-    if template in TEMPLATE_SCHEMA_MAP:
-        return TEMPLATE_SCHEMA_MAP[template]
+# WHY: content types whose schema is built from an open
+# `<slug>.core.schema.json` building block (see
+# docs/SCHEMAS.md#consumer-schema-registry) and can therefore be composed
+# by a consumer's registered schema via `extends`. journal-entry/product/
+# faq/sizing-guide have no `.core.schema.json` counterpart yet — no
+# registered consumer has needed to extend them, and
+# `load_consumer_registry` refuses an `extends` naming one of them rather
+# than pretending composition it cannot deliver.
+COMPOSABLE_CORE_SLUGS = frozenset({"page", "section"})
 
+
+class UnregisteredTemplateError(Exception):
+    """Raised by classify() when `template` is neither a KNOWN_TEMPLATES
+    value nor registered in the consumer's schemas/registry.toml."""
+
+    def __init__(self, template: str) -> None:
+        self.template = template
+        super().__init__(template)
+
+
+class MismatchedExtendsError(Exception):
+    """Raised by classify() when a registry entry (`template` or
+    `path_prefix`) matches a file whose structural kind — "section" for
+    `_index.md`, "page" for everything else, fixed by Zola itself, not
+    by the registry — disagrees with the entry's declared `extends`.
+
+    WHY: `path_prefix` matches by string prefix and cannot express "every
+    leaf page under this directory, but not its _index.md" — a prefix like
+    "systems/" matches `systems/_index.md` too. Applying a page-extending
+    entry's schema there would silently validate a section file against a
+    schema missing section-only fields (sort_by, page_template,
+    transparent, extra.triad, ...) — the exact silent-mismatch class this
+    mechanism exists to close, just moved one level up. `template` can hit
+    the same case if a consumer's frontmatter sets a registered template
+    value on a `_index.md` file. Fail closed instead of silently applying
+    the wrong shape: the consumer must scope the entry precisely (a
+    longer path_prefix, or `template` instead of `path_prefix`)."""
+
+    def __init__(self, discriminator_kind: str, discriminator: str, expected: str, registered: str) -> None:
+        self.discriminator_kind = discriminator_kind
+        self.discriminator = discriminator
+        self.expected = expected
+        self.registered = registered
+        super().__init__(f"{discriminator_kind}={discriminator!r} extends={registered!r} expected={expected!r}")
+
+
+@dataclass(frozen=True)
+class RegistryEntry:
+    """One `[[entry]]` from a consumer's schemas/registry.toml, resolved
+    to its loaded schema."""
+
+    name: str
+    discriminator_kind: str  # "template" | "path_prefix"
+    discriminator: str
+    extends: str  # "page" | "section" — which core this entry composes
+    schema_path: Path
+    schema: dict
+
+
+@dataclass
+class ConsumerRegistry:
+    """The consumer's full set of registered custom-template/path schemas,
+    plus the combined `referencing.Registry` needed to resolve every
+    `$ref` in every loaded schema (typikon's own + the consumer's)."""
+
+    by_template: dict[str, RegistryEntry]
+    by_path_prefix: list[tuple[str, RegistryEntry]]
+    jsonschema_registry: Registry
+
+    def match_template(self, template: str | None) -> RegistryEntry | None:
+        if template is None:
+            return None
+        return self.by_template.get(template)
+
+    def match_path(self, content_relative: str) -> RegistryEntry | None:
+        for prefix, entry in self.by_path_prefix:
+            if content_relative.startswith(prefix):
+                return entry
+        return None
+
+
+def classify(rel_path: Path, frontmatter: dict, registry: ConsumerRegistry) -> tuple[str, dict | None]:
+    """Map a markdown file to its schema. Returns (schema_name, consumer_schema)
+    — consumer_schema is None for a typikon-owned builtin (look `schema_name`
+    up in the `schemas` dict) and set for a registry-composed consumer schema.
+
+    Frontmatter `template` wins when present in TEMPLATE_SCHEMA_MAP or the
+    consumer registry — that's how page-level overrides (FAQ, sizing-guide,
+    and any registered custom template) escape the path-based default.
+    Raises UnregisteredTemplateError for a `template` this validator cannot
+    account for by either route — see the module docstring's FAIL-CLOSED note.
+    Raises MismatchedExtendsError when a registry entry (either
+    discriminator kind) matches a file whose structural kind — fixed by
+    Zola (section for `_index.md`, page for everything else), not by the
+    registry — disagrees with the entry's `extends`. This is checked for
+    BOTH `template` and `path_prefix` matches: a `template` value set on a
+    `_index.md` file is just as capable of this mismatch as a path prefix
+    that happens to also catch a section index.
+    """
     parts = rel_path.parts
     # parts[0] == "content"
     name = parts[-1]
+    content_relative = "/".join(parts[1:])
+    structural_kind = "section" if name == "_index.md" else "page"
     if name == "_index.md":
-        return "section"
-    # content/<x>.md is a top-level page
-    if len(parts) == 2:
-        return "page"
-    # content/<section>/<file>.md
-    section = parts[1]
-    if section == "journal":
-        return "journal-entry"
-    if section == "products":
-        return "product"
-    return "page"
+        base = "section"
+    elif len(parts) == 2:
+        base = "page"
+    else:
+        section = parts[1]
+        if section == "journal":
+            base = "journal-entry"
+        elif section == "products":
+            base = "product"
+        else:
+            base = "page"
+
+    template = frontmatter.get("template")
+    if template in TEMPLATE_SCHEMA_MAP:
+        return TEMPLATE_SCHEMA_MAP[template], None
+
+    registry_hit = registry.match_template(template)
+    if registry_hit is not None:
+        if registry_hit.extends != structural_kind:
+            raise MismatchedExtendsError("template", template, structural_kind, registry_hit.extends)
+        return registry_hit.name, registry_hit.schema
+
+    path_hit = registry.match_path(content_relative)
+    if path_hit is not None:
+        if path_hit.extends != structural_kind:
+            raise MismatchedExtendsError("path_prefix", path_hit.discriminator, structural_kind, path_hit.extends)
+        return path_hit.name, path_hit.schema
+
+    if template is not None and template not in KNOWN_TEMPLATES:
+        raise UnregisteredTemplateError(template)
+
+    return base, None
 
 
 def _coerce_dates(obj):
@@ -119,7 +268,13 @@ def parse_frontmatter(text: str, file_label: str) -> dict:
     return _coerce_dates(tomllib.loads(block))
 
 
-def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> list[dict]:
+def validate_file(
+    path: Path,
+    content_root: Path,
+    schemas: dict[str, dict],
+    jsonschema_registry: Registry,
+    registry: ConsumerRegistry,
+) -> list[dict]:
     """Return a list of failure records for one file (empty when all good)."""
     rel = path.relative_to(content_root.parent)  # keep "content/..." prefix
     file_label = str(rel)
@@ -134,12 +289,39 @@ def validate_file(path: Path, content_root: Path, schemas: dict[str, dict]) -> l
     except Exception as exc:
         return [{"file": file_label, "pointer": "", "error": str(exc)}]
 
-    schema_name = classify(rel, fm)
-    schema = schemas.get(schema_name)
+    try:
+        schema_name, consumer_schema = classify(rel, fm, registry)
+    except UnregisteredTemplateError as exc:
+        return [{
+            "file": file_label,
+            "pointer": "/template",
+            "error": (
+                f"custom template '{exc.template}' has no schema registration in "
+                "schemas/registry.toml, and is not one of typikon's own templates "
+                f"({', '.join(sorted(KNOWN_TEMPLATES))}). Register a consumer schema "
+                "— see docs/SCHEMAS.md#consumer-schema-registry."
+            ),
+        }]
+    except MismatchedExtendsError as exc:
+        pointer = "/template" if exc.discriminator_kind == "template" else ""
+        return [{
+            "file": file_label,
+            "pointer": pointer,
+            "error": (
+                f"registry.toml entry {exc.discriminator_kind}={exc.discriminator!r} "
+                f"declares extends={exc.registered!r}, but {file_label} is structurally "
+                f"a {exc.expected!r} (Zola's own _index.md-vs-page distinction, not the "
+                f"registry's to override) — this entry cannot apply here. Scope the "
+                f"{exc.discriminator_kind} more precisely, or split it into two entries "
+                "— see docs/SCHEMAS.md#consumer-schema-registry."
+            ),
+        }]
+
+    schema = consumer_schema if consumer_schema is not None else schemas.get(schema_name)
     if schema is None:
         return [{"file": file_label, "pointer": "", "error": f"no schema for class '{schema_name}'"}]
 
-    validator = Draft202012Validator(schema, format_checker=FORMAT_CHECKER)
+    validator = Draft202012Validator(schema, registry=jsonschema_registry, format_checker=FORMAT_CHECKER)
     failures = []
     for err in sorted(validator.iter_errors(fm), key=lambda e: e.path):
         pointer = "/" + "/".join(str(p) for p in err.absolute_path)
@@ -165,37 +347,165 @@ def _declared_formats(node, found: set[str]) -> None:
             _declared_formats(v, found)
 
 
-def load_schemas() -> dict[str, dict]:
+def _refuse_unsupported_formats(schema: dict, label: str) -> None:
+    """WARNING: a format declared in a schema but not registered on
+    FORMAT_CHECKER validates as a no-op annotation, not a check — the
+    exact silent-pass this validator exists to prevent. Refuse to run
+    rather than enforce a schema's formats partially. Applies to every
+    loaded schema, typikon's own and a consumer's alike — a consumer
+    schema declaring `format: "email"` (unsupported) is exactly as
+    dangerous as a shipped one would be."""
+    declared: set[str] = set()
+    _declared_formats(schema, declared)
+    unsupported = declared - set(FORMAT_CHECKER.checkers)
+    if unsupported:
+        print(
+            json.dumps({
+                "error": (
+                    f"schema '{label}' declares unsupported format(s) "
+                    f"{sorted(unsupported)}; FormatChecker has no checker "
+                    "registered for them and would silently skip enforcement"
+                ),
+            }),
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def load_schemas() -> tuple[dict[str, dict], Registry]:
+    """Load typikon's own schemas plus their open `.core.schema.json`
+    building blocks, and return them alongside a `referencing.Registry`
+    that resolves every `$ref` among them by `$id`. The core files are
+    not classification targets themselves (`schemas` never maps a slug
+    to one) — they exist only so `page.schema.json`/`section.schema.json`
+    and a consumer's registered schema can each independently `$ref` and
+    close them (see docs/SCHEMAS.md#consumer-schema-registry)."""
     schemas: dict[str, dict] = {}
+    resources = []
     for slug in ("page", "section", "journal-entry", "product", "faq", "sizing-guide"):
         p = SCHEMA_DIR / f"{slug}.schema.json"
         if not p.exists():
             print(json.dumps({"error": f"missing schema: {p}"}), file=sys.stderr)
             sys.exit(2)
         schema = json.loads(p.read_text(encoding="utf-8"))
+        _refuse_unsupported_formats(schema, slug)
+        schemas[slug] = schema
+        resources.append((schema["$id"], Resource.from_contents(schema, default_specification=DRAFT202012)))
 
-        # WARNING: a format declared in a schema but not registered on
-        # FORMAT_CHECKER validates as a no-op annotation, not a check —
-        # the exact silent-pass this validator exists to prevent. Refuse
-        # to run rather than enforce a schema's formats partially.
-        declared = set()
-        _declared_formats(schema, declared)
-        unsupported = declared - set(FORMAT_CHECKER.checkers)
-        if unsupported:
+    for slug in COMPOSABLE_CORE_SLUGS:
+        p = SCHEMA_DIR / f"{slug}.core.schema.json"
+        if not p.exists():
+            print(json.dumps({"error": f"missing core schema: {p}"}), file=sys.stderr)
+            sys.exit(2)
+        core = json.loads(p.read_text(encoding="utf-8"))
+        _refuse_unsupported_formats(core, f"{slug}.core")
+        resources.append((core["$id"], Resource.from_contents(core, default_specification=DRAFT202012)))
+
+    return schemas, Registry().with_resources(resources)
+
+
+def load_consumer_registry(consumer_root: Path, base_registry: Registry) -> ConsumerRegistry:
+    """Load <consumer_root>/schemas/registry.toml if present. Absence is
+    not an error — a consumer with no custom templates needs no registry.
+    Every entry is validated at load time (exactly one discriminator,
+    `extends` names a composable core, the schema file exists, parses,
+    and declares its own `$id`) so a malformed registry fails loudly here
+    rather than as a confusing per-file validation error later."""
+    registry_path = consumer_root / "schemas" / "registry.toml"
+    if not registry_path.exists():
+        return ConsumerRegistry(by_template={}, by_path_prefix=[], jsonschema_registry=base_registry)
+
+    try:
+        doc = tomllib.loads(registry_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(json.dumps({"error": f"malformed {registry_path}: {exc}"}), file=sys.stderr)
+        sys.exit(2)
+
+    by_template: dict[str, RegistryEntry] = {}
+    by_path_prefix: list[tuple[str, RegistryEntry]] = []
+    resources = []
+    seen_discriminators: set[tuple[str, str]] = set()
+
+    for raw in doc.get("entry", []):
+        has_template = "template" in raw
+        has_path_prefix = "path_prefix" in raw
+        if has_template == has_path_prefix:
             print(
                 json.dumps({
                     "error": (
-                        f"schema '{slug}' declares unsupported format(s) "
-                        f"{sorted(unsupported)}; FormatChecker has no checker "
-                        "registered for them and would silently skip enforcement"
+                        f"{registry_path}: entry {raw!r} must set exactly one of "
+                        "`template` or `path_prefix`"
                     ),
                 }),
                 file=sys.stderr,
             )
             sys.exit(2)
 
-        schemas[slug] = schema
-    return schemas
+        extends = raw.get("extends")
+        if extends not in COMPOSABLE_CORE_SLUGS:
+            print(
+                json.dumps({
+                    "error": (
+                        f"{registry_path}: entry {raw!r} has `extends = {extends!r}`; "
+                        f"must be one of {sorted(COMPOSABLE_CORE_SLUGS)} — those are "
+                        "the only typikon content types with a composable "
+                        "<slug>.core.schema.json building block"
+                    ),
+                }),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        schema_rel = raw.get("schema")
+        if not schema_rel:
+            print(json.dumps({"error": f"{registry_path}: entry {raw!r} missing `schema`"}), file=sys.stderr)
+            sys.exit(2)
+        schema_path = (consumer_root / schema_rel).resolve()
+        if not schema_path.exists():
+            print(json.dumps({"error": f"{registry_path}: schema file not found: {schema_path}"}), file=sys.stderr)
+            sys.exit(2)
+
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(json.dumps({"error": f"malformed schema {schema_path}: {exc}"}), file=sys.stderr)
+            sys.exit(2)
+
+        schema_id = schema.get("$id")
+        if not schema_id:
+            print(json.dumps({"error": f"{schema_path}: registered consumer schema must declare \"$id\""}), file=sys.stderr)
+            sys.exit(2)
+
+        discriminator_kind = "template" if has_template else "path_prefix"
+        discriminator = raw["template"] if has_template else raw["path_prefix"]
+        dedup_key = (discriminator_kind, discriminator)
+        if dedup_key in seen_discriminators:
+            print(
+                json.dumps({"error": f"{registry_path}: duplicate {discriminator_kind} discriminator {discriminator!r}"}),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        seen_discriminators.add(dedup_key)
+
+        name = schema_path.stem.removesuffix(".schema")
+        entry = RegistryEntry(
+            name=name,
+            discriminator_kind=discriminator_kind,
+            discriminator=discriminator,
+            extends=extends,
+            schema_path=schema_path,
+            schema=schema,
+        )
+        _refuse_unsupported_formats(schema, name)
+        resources.append((schema_id, Resource.from_contents(schema, default_specification=DRAFT202012)))
+
+        if discriminator_kind == "template":
+            by_template[discriminator] = entry
+        else:
+            by_path_prefix.append((discriminator, entry))
+
+    combined = base_registry.with_resources(resources) if resources else base_registry
+    return ConsumerRegistry(by_template=by_template, by_path_prefix=by_path_prefix, jsonschema_registry=combined)
 
 
 def main(argv: list[str]) -> int:
@@ -209,11 +519,13 @@ def main(argv: list[str]) -> int:
         print(json.dumps({"error": f"no content/ dir under {root}"}), file=sys.stderr)
         return 2
 
-    schemas = load_schemas()
+    schemas, base_registry = load_schemas()
+    consumer_registry = load_consumer_registry(root, base_registry)
+
     files = sorted(content_root.rglob("*.md"))
     failures: list[dict] = []
     for f in files:
-        failures.extend(validate_file(f, content_root, schemas))
+        failures.extend(validate_file(f, content_root, schemas, consumer_registry.jsonschema_registry, consumer_registry))
 
     for failure in failures:
         print(json.dumps(failure), file=sys.stderr)

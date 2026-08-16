@@ -6,22 +6,84 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 
 `typikon-validate` reads `<root>/content/**/*.md` and classifies in this order; first match wins:
 
-| Rule                                         | Schema             |
-|----------------------------------------------|--------------------|
-| frontmatter `template = "faq.html"`          | faq                |
-| frontmatter `template = "sizing-guide.html"` | sizing-guide       |
-| `_index.md` (root or section)                | section            |
-| `journal/<slug>.md`                          | journal-entry      |
-| `products/<slug>.md`                         | product            |
-| anything else                                | page               |
+| Rule                                                    | Schema                        |
+|----------------------------------------------------------|------------------------------|
+| frontmatter `template = "faq.html"`                     | faq                            |
+| frontmatter `template = "sizing-guide.html"`             | sizing-guide                   |
+| frontmatter `template` matches a `schemas/registry.toml` `template` entry | that entry's consumer schema |
+| `_index.md` (root or section)                           | section                        |
+| `journal/<slug>.md`                                     | journal-entry                  |
+| `products/<slug>.md`                                    | product                         |
+| path matches a `schemas/registry.toml` `path_prefix` entry | that entry's consumer schema |
+| anything else                                            | page                           |
 
 Template-driven dispatch comes first so per-page overrides (FAQ on a non-FAQ section, sizing-guide for a non-product section) escape the path-based default. To add a new template-routed type, extend `TEMPLATE_SCHEMA_MAP` in `bin/typikon-validate`.
 
 Renaming path-routed sections (`journal/` → `notes/`) requires updating the classifier. Out of scope for v1; file an issue when needed.
 
+**Fail-closed:** a `template` value that is neither one of typikon's own shipped templates (`KNOWN_TEMPLATES` in `bin/typikon-validate`) nor a registered `schemas/registry.toml` entry is a validation FAILURE naming the exact missing registration — it does not fall through to `page`. See [Consumer schema registry](#consumer-schema-registry) below.
+
+## Consumer schema registry
+
+A typikon-consuming site's own custom templates (a page type typikon does not ship — an "our approach" page, a case-study template, a domain-specific index) have no built-in schema. Before this mechanism existed, such a file fell through the table above to `page` or `section`, whose `extra` object accepted any additional field without checking its shape — a typo like `kanon_ci = "false"` was schema-valid and became truthy wherever a template did `bool(...)` on it (forkwright/typikon#60). The registry closes that: every custom template or custom-path content type gets its own strict, checked-in schema, and an *unregistered* one is a hard failure, not a silent fallback.
+
+### Registering a custom type
+
+1. Write `<consumer-root>/schemas/<name>.schema.json`. It must declare its own `"$id"` and compose one of typikon's open core building blocks — `page.core.schema.json` or `section.core.schema.json` — via `allOf` + `$ref`, closed with `unevaluatedProperties: false`:
+
+   ```json
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "https://<your-site>/schemas/consulting.schema.json",
+     "allOf": [{ "$ref": "https://github.com/forkwright/typikon/schemas/page.core.schema.json" }],
+     "properties": {
+       "extra": {
+         "allOf": [{ "$ref": "https://github.com/forkwright/typikon/schemas/page.core.schema.json#/properties/extra" }],
+         "unevaluatedProperties": false,
+         "properties": {
+           "ardent": {
+             "type": "object",
+             "additionalProperties": false,
+             "required": ["kanon_ci"],
+             "properties": { "kanon_ci": { "type": "boolean" } }
+           }
+         }
+       }
+     },
+     "unevaluatedProperties": false
+   }
+   ```
+
+   **Namespace your extension.** Put every custom field under one object keyed by your own name (`extra.ardent` above, not bare `extra.kanon_ci`) so a future typikon-owned field can never collide with a consumer one.
+
+   **WARNING:** the `$ref` targets must be the open `*.core.schema.json` files, never `page.schema.json`/`section.schema.json` themselves. Composing a schema that is *already* closed (via `unevaluatedProperties`) from inside another closed schema corrupts jsonschema 4.23's annotation collection for the whole document — verified failure mode, not a style preference: every top-level field, not just the extension, gets spuriously rejected. `page.schema.json` and `section.schema.json` demonstrate the correct pattern (they compose the core exactly this way, once, standalone) — mirror them, don't reference them.
+
+2. Add an entry to `<consumer-root>/schemas/registry.toml`:
+
+   ```toml
+   [[entry]]
+   template = "consulting.html"                    # OR path_prefix = "systems/"
+   schema = "schemas/consulting.schema.json"        # path relative to the consumer root
+   extends = "page"                                 # "page" or "section" — which core it composes
+   ```
+
+   Exactly one of `template` (matched against frontmatter `template`) or `path_prefix` (matched against the content-relative path, e.g. `"systems/"` catches `content/systems/<anything>.md`) is required per entry. `template` wins when both a template and a path could match the same file — same precedent as `TEMPLATE_SCHEMA_MAP`.
+
+   **`extends` must match what the matched file structurally is, not just what you intended the entry to cover.** A `_index.md` is always a Zola section; every other file is always a Zola page — that split is Zola's, not the registry's to override. `path_prefix = "systems/"` also textually matches `content/systems/_index.md`, not just its leaf pages: if that entry's `extends = "page"`, the index file fails with a `MismatchedExtendsError` instead of silently validating against the wrong shape (missing section-only fields like `sort_by`/`page_template`/`extra.triad`). Scope the prefix past the index file, or give the section index its own `template`-keyed entry with `extends = "section"`, if you need both covered.
+
+3. Run `typikon-validate <consumer-root>` (or `typikon-check`, which calls it). A malformed registry entry — both discriminators set, neither set, `extends` naming a type with no composable core, a missing schema file, a schema missing `$id`, a duplicate discriminator, or a discriminator matching a file whose structural kind disagrees with `extends` — fails immediately with the specific problem, before that file's content is checked.
+
+A consumer with no custom templates needs no `schemas/registry.toml` at all; its absence is not an error and every existing consumer validates unchanged.
+
+Only `page` and `section` have a `*.core.schema.json` building block today — those are the two shapes a real consumer has needed to extend. Extending `journal-entry`, `product`, `faq`, or `sizing-guide` the same way means splitting that schema into a `.core.schema.json` + closed wrapper first, following `schemas/page.schema.json`'s pattern exactly, then adding its slug to `COMPOSABLE_CORE_SLUGS` in `bin/typikon-validate`.
+
+### Schema changes are migrations here too
+
+`bin/typikon-migrate-template` operates on frontmatter regardless of which schema validates it, so a registered consumer schema changing incompatibly ships a migration the same way a typikon-owned one does — see [Schema migrations](#schema-migrations) below. No separate mechanism exists for consumer schemas.
+
 ## page (`schemas/page.schema.json`)
 
-Top-level pages and section children that aren't journal entries or products.
+Top-level pages and section children that aren't journal entries or products. Built from the open `page.core.schema.json` building block, closed once here — see [Consumer schema registry](#consumer-schema-registry) if you need to extend this contract for a custom template.
 
 **Required:** `title`.
 
@@ -45,7 +107,7 @@ og_image = "img/og-philosophy.png"
 
 ## section (`schemas/section.schema.json`)
 
-Section index files (`_index.md`). Includes the home page when home uses `template = "index.html"`.
+Section index files (`_index.md`). Includes the home page when home uses `template = "index.html"`. Built from the open `section.core.schema.json` building block, closed once here — see [Consumer schema registry](#consumer-schema-registry) if you need to extend this contract for a custom section template.
 
 **Required:** `title`.
 
@@ -225,6 +287,8 @@ note = "Sized to the middle hole; first hole is 32, last is 36."
 > **TOML order matters.** `decision_tree = [...]` must come *before* the first `[[extra.size_table]]` block. Once an array-of-tables starts, scalar assignments belong to the *last* table, so a trailing `decision_tree` would silently land inside the final size_table row.
 
 ## Adding a new content type
+
+This section is for a type shared by ≥2 consumers, landing in typikon itself (AGENTIC.md's "two consumers wanting the same thing → typikon" rule). A single consumer's own custom template belongs in [Consumer schema registry](#consumer-schema-registry) instead — it needs no typikon PR.
 
 1. Identify the type. If two existing types could absorb it via an optional field, use that instead.
 2. Write `schemas/<type>.schema.json`, extending the page shape where possible.

@@ -35,6 +35,14 @@ decision = "Define every content type in JSON Schema and validate before commit.
 consequences = "Fields are not invented in consumer repos."
 
 [[decision]]
+id = "D-consumer-schema-registry"
+title = "Consumer schema registry composes typikon core contracts"
+status = "accepted"
+context = "A consumer's custom-templated content had no domain schema and fell through to page/section's permissive extra object, so a typo'd field validated and became truthy."
+decision = "Custom templates register in schemas/registry.toml against a consumer-owned schema composed from page.core.schema.json/section.core.schema.json via allOf + $ref, closed with unevaluatedProperties: false. A custom template with no registration fails validation naming the missing entry."
+consequences = "Every content type's frontmatter is fully typed and closed, typikon-owned or consumer-owned alike; an invented field fails at validate time, not at render time."
+
+[[decision]]
 id = "D-strict-csp"
 title = "Enforce strict CSP"
 status = "accepted"
