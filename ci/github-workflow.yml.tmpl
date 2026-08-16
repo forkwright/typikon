@@ -247,6 +247,23 @@ jobs:
         run: |
           kill "$(cat /tmp/server.pid 2>/dev/null)" 2>/dev/null || true
 
+      # ── Consumer-owned check (forkwright/typikon#117) ───────────
+      # The declared extension point: a consumer that ships ci/consumer-check.sh
+      # gets it run here, after every build/browser-gate stage (so it can
+      # inspect built output) and before deploy (so a failure blocks it).
+      # typikon-refresh re-renders this template wholesale on every bump
+      # (bin/typikon-refresh), so a consumer's only other way to add a gate
+      # check is diverging from the rendered file and losing every future
+      # substrate hardening change. hashFiles() makes this a no-op for a
+      # consumer with no such script.
+      - name: Consumer checks
+        if: hashFiles('ci/consumer-check.sh') != ''
+        # WHY 2: mirrors ci/kanon-ci.toml.tmpl's typikon-validate timeout_secs=120 —
+        # no substrate-side signal exists for a consumer script's own cost, so this
+        # borrows the budget of the nearest comparable stage rather than guessing.
+        timeout-minutes: 2
+        run: bash ci/consumer-check.sh
+
       # ── Deploy on green pushes to main only ───────────────────
       # Conditioned on ref being main (or master, for legacy consumer
       # repos that haven't migrated their default branch). Decoupled
