@@ -85,9 +85,15 @@ jobs:
     # and review the diff at forkwright/.github before bumping.
     uses: forkwright/.github/.github/workflows/hybrid-gate.yml@84a39d3344660e4010c32755b33a6a88912ad929 # main
     with:
-      # WHY empty: no rust-toolchain.toml exists (there is no Rust code at
-      # all) -- auto-detect applies. The setup-rust-toolchain step runs
-      # unconditionally regardless of this value; it is inert for this repo.
+      # WHY empty, not a literal channel: rust-toolchain.toml at the repo
+      # root (forkwright/kanon#3489) carries the pin even though this repo
+      # has no Rust code of its own -- empty defers to setup-rust-toolchain's
+      # auto-detect, which reads that file rather than resolving whatever
+      # "stable" means at runtime. The setup-rust-toolchain step still runs
+      # unconditionally regardless of this value and its output is still
+      # unused (fmt_cmd/clippy_cmd/nextest_cmd are all "true" above) -- the
+      # file makes that wasted step deterministic, it does not make it
+      # meaningful.
       rust_toolchain: ""
       fmt_cmd: "true"
       check_cmd: |
