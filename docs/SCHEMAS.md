@@ -4,7 +4,7 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 
 ## How the validator routes a file to a schema
 
-`typikon-validate` reads `<root>/content/**/*.md` and classifies in this order; first match wins:
+`typikon-validate` reads `<root>/content/**/*.md` and classifies in this order. First match wins:
 
 | Rule                                                    | Schema                        |
 |----------------------------------------------------------|------------------------------|
@@ -19,13 +19,13 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 
 Template-driven dispatch comes first so per-page overrides (FAQ on a non-FAQ section, sizing-guide for a non-product section) escape the path-based default. To add a new template-routed type, extend `TEMPLATE_SCHEMA_MAP` in `bin/typikon-validate`.
 
-Renaming path-routed sections (`journal/` → `notes/`) requires updating the classifier. Out of scope for v1; file an issue when needed.
+Renaming path-routed sections (`journal/` → `notes/`) requires updating the classifier. Out of scope for v1. File an issue when needed.
 
 **Fail-closed:** a `template` value that is neither one of typikon's own shipped templates (`KNOWN_TEMPLATES` in `bin/typikon-validate`) nor a registered `schemas/registry.toml` entry is a validation FAILURE naming the exact missing registration — it does not fall through to `page`. See [Consumer schema registry](#consumer-schema-registry) below.
 
 ## Consumer schema registry
 
-A typikon-consuming site's own custom templates (a page type typikon does not ship — an "our approach" page, a case-study template, a domain-specific index) have no built-in schema. Before this mechanism existed, such a file fell through the table above to `page` or `section`, whose `extra` object accepted any additional field without checking its shape — a typo like `kanon_ci = "false"` was schema-valid and became truthy wherever a template did `bool(...)` on it (forkwright/typikon#60). The registry closes that: every custom template or custom-path content type gets its own strict, checked-in schema, and an *unregistered* one is a hard failure, not a silent fallback.
+A typikon-consuming site's own custom templates (a page type typikon does not ship — an "our approach" page, a case-study template, a domain-specific index) have no built-in schema. Before this mechanism existed, such a file fell through the table above to `page` or `section`, whose `extra` object accepted any additional field without checking its shape. A typo like `kanon_ci = "false"` was schema-valid and became truthy wherever a template did `bool(...)` on it (forkwright/typikon#60). The registry closes that: every custom template or custom-path content type gets its own strict, checked-in schema, and an *unregistered* one is a hard failure, not a silent fallback.
 
 ### Registering a custom type
 
@@ -56,7 +56,7 @@ A typikon-consuming site's own custom templates (a page type typikon does not sh
 
    **Namespace your extension.** Put every custom field under one object keyed by your own name (`extra.ardent` above, not bare `extra.kanon_ci`) so a future typikon-owned field can never collide with a consumer one.
 
-   **WARNING:** the `$ref` targets must be the open `*.core.schema.json` files, never `page.schema.json`/`section.schema.json` themselves. Composing a schema that is *already* closed (via `unevaluatedProperties`) from inside another closed schema corrupts jsonschema 4.23's annotation collection for the whole document — verified failure mode, not a style preference: every top-level field, not just the extension, gets spuriously rejected. `page.schema.json` and `section.schema.json` demonstrate the correct pattern (they compose the core exactly this way, once, standalone) — mirror them, don't reference them.
+   **WARNING:** the `$ref` targets must be the open `*.core.schema.json` files, never `page.schema.json`/`section.schema.json` themselves. Composing a schema that is *already* closed (via `unevaluatedProperties`) from inside another closed schema corrupts jsonschema 4.23's annotation collection for the whole document. This is a verified failure mode, not a style preference: every top-level field, not just the extension, gets spuriously rejected. `page.schema.json` and `section.schema.json` demonstrate the correct pattern (they compose the core exactly this way, once, standalone) — mirror them, don't reference them.
 
 2. Add an entry to `<consumer-root>/schemas/registry.toml`:
 
@@ -67,13 +67,13 @@ A typikon-consuming site's own custom templates (a page type typikon does not sh
    extends = "page"                                 # "page" or "section" — which core it composes
    ```
 
-   Exactly one of `template` (matched against frontmatter `template`) or `path_prefix` (matched against the content-relative path, e.g. `"systems/"` catches `content/systems/<anything>.md`) is required per entry. `template` wins when both a template and a path could match the same file — same precedent as `TEMPLATE_SCHEMA_MAP`.
+   The registry entry requires exactly one of `template` (matched against frontmatter `template`) or `path_prefix` (matched against the content-relative path, e.g. `"systems/"` catches `content/systems/<anything>.md`). `template` wins when both a template and a path could match the same file — same precedent as `TEMPLATE_SCHEMA_MAP`.
 
-   **`extends` must match what the matched file structurally is, not just what you intended the entry to cover.** A `_index.md` is always a Zola section; every other file is always a Zola page — that split is Zola's, not the registry's to override. `path_prefix = "systems/"` also textually matches `content/systems/_index.md`, not just its leaf pages: if that entry's `extends = "page"`, the index file fails with a `MismatchedExtendsError` instead of silently validating against the wrong shape (missing section-only fields like `sort_by`/`page_template`/`extra.triad`). Scope the prefix past the index file, or give the section index its own `template`-keyed entry with `extends = "section"`, if you need both covered.
+   **`extends` must match what the matched file structurally is, not just what you intended the entry to cover.** A `_index.md` is always a Zola section. Every other file is always a Zola page — that split is Zola's, not the registry's to override. `path_prefix = "systems/"` also textually matches `content/systems/_index.md`, not just its leaf pages. If that entry's `extends = "page"`, the index file fails with a `MismatchedExtendsError` instead of silently validating against the wrong shape (missing section-only fields like `sort_by`/`page_template`/`extra.triad`). Scope the prefix past the index file, or give the section index its own `template`-keyed entry with `extends = "section"`, if you need both covered.
 
-3. Run `typikon-validate <consumer-root>` (or `typikon-check`, which calls it). A malformed registry entry — both discriminators set, neither set, `extends` naming a type with no composable core, a missing schema file, a schema missing `$id`, a duplicate discriminator, or a discriminator matching a file whose structural kind disagrees with `extends` — fails immediately with the specific problem, before that file's content is checked.
+3. Run `typikon-validate <consumer-root>` (or `typikon-check`, which calls it). A malformed registry entry fails immediately with the specific problem, before typikon-validate checks that file's content. Malformed means: both discriminators set, neither set, `extends` naming a type with no composable core, a missing schema file, a schema missing `$id`, a duplicate discriminator, or a discriminator matching a file whose structural kind disagrees with `extends`.
 
-A consumer with no custom templates needs no `schemas/registry.toml` at all; its absence is not an error and every existing consumer validates unchanged.
+A consumer with no custom templates needs no `schemas/registry.toml` at all. Its absence is not an error, and every existing consumer validates unchanged.
 
 Only `page` and `section` have a `*.core.schema.json` building block today — those are the two shapes a real consumer has needed to extend. Extending `journal-entry`, `product`, `faq`, or `sizing-guide` the same way means splitting that schema into a `.core.schema.json` + closed wrapper first, following `schemas/page.schema.json`'s pattern exactly, then adding its slug to `COMPOSABLE_CORE_SLUGS` in `bin/typikon-validate`.
 
@@ -145,7 +145,7 @@ Pages under `content/journal/` (excluding `_index.md`). Stricter than page: requ
 - extra.audience: 3–120 chars
 - extra.components: 5–120 chars (the conceptual-tags line)
 - extra.words: matches `^~?\d+( words)?$`
-- extra.words_source: 3–200 chars; source for the rendered word-count claim
+- extra.words_source: 3–200 chars. Source for the rendered word-count claim
 
 **Example:**
 
@@ -173,7 +173,7 @@ Pages under `content/products/`. Required for the purchase block to render.
 - description: 30–200 chars
 - audience: 3–120 chars
 - price: matches `^\$?\d{1,5}(\.\d{2})?$` (e.g. `$150`, `85`, `12.50`)
-- price_source: 3–200 chars; source for the rendered price claim
+- price_source: 3–200 chars. Source for the rendered price claim
 - stripe_url: matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`
 - shipping_note (optional): ≤200 chars
 - images (optional): array of `{src, alt, caption?}`; Zola's `resize_image` produces 400/800/1200px WebP variants automatically, and the product-gallery partial renders responsive `<picture>` per item
@@ -212,7 +212,7 @@ Any page with `template = "faq.html"`. Renders a definition-list FAQ with anchor
 **Constraints (per question):**
 - audience: 3–120 chars
 - q: 5–200 chars
-- a: 5–2000 chars; supports `\n\n` for paragraph breaks (template splits on it)
+- a: 5–2000 chars. Supports `\n\n` for paragraph breaks (template splits on it)
 - anchor (optional): `^[a-z0-9-]+$`; slugified from `q` if omitted
 - additionalProperties on each question: false (strict)
 
@@ -246,7 +246,7 @@ Any page with `template = "sizing-guide.html"`. Renders a measurement table, an 
 
 **Constraints:**
 - audience: 3–120 chars
-- measurement_source: 3–200 chars; source for numeric sizing claims
+- measurement_source: 3–200 chars. Source for numeric sizing claims
 - product_type: 2–40 chars
 - measurement_unit (optional): `inches | centimeters | both` (default `inches`)
 - size_table rows: required `size`; optional `waist`, `length`, `width`, `note`; column rendering is conditional on the first row's keys
@@ -292,7 +292,7 @@ This section is for a type shared by ≥2 consumers, landing in typikon itself (
 
 1. Identify the type. If two existing types could absorb it via an optional field, use that instead.
 2. Write `schemas/<type>.schema.json`, extending the page shape where possible.
-3. Add a template `templates/<type>.html` (extend `page.html` when the override is content-only; replace it when the head/body shape needs to change).
+3. Add a template `templates/<type>.html` — extend `page.html` when the override changes content only, replace it when the head/body shape needs to change.
 4. Update `bin/typikon-validate`:
    - if path-routed: extend the path classifier
    - if template-routed: add an entry to `TEMPLATE_SCHEMA_MAP`
@@ -309,7 +309,7 @@ When a schema changes incompatibly:
 2. Replace the `migrate(frontmatter, file_path)` body with the field transformation. Idempotence rule: running it twice on the same input must produce the same output as once.
 3. The script walks a consumer site root, parses frontmatter, runs `migrate()`, and writes back when the result differs.
 4. The typikon PR description lists every consumer affected.
-5. On merge, run the migration against each consumer in a separate consumer-side PR; that captures the rewrite as a reviewable diff.
+5. On merge, run the migration against each consumer in a separate consumer-side PR. That captures the rewrite as a reviewable diff.
 
 The skeleton handles parsing, idempotence checking, basic TOML serialization, and JSONL change reporting. It uses `tomli_w` when installed and falls back to a minimal emitter otherwise. Install `tomli_w` via `uv tool install tomli_w` if your migration needs round-trip fidelity for inline tables or multi-line strings.
 

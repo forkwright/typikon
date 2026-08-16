@@ -2,9 +2,9 @@
 
 > τυπικόν: the rule by which a thing of a given kind is enacted.
 
-A Zola theme + frontmatter schemas + agentic scaffolding + CI gates. The fleet's web-property substrate. Sites consume typikon as a git submodule; typikon governs how those sites are built, validated, and deployed.
+A Zola theme + frontmatter schemas + agentic scaffolding + CI gates. The fleet's web-property substrate. Sites consume typikon as a git submodule. Typikon governs how those sites are built, validated, and deployed.
 
-A typikon does not contain the service. It governs how the service is enacted.
+A typikon does not contain the service. It governs how the site enacts the service.
 
 ## Design
 
@@ -18,7 +18,7 @@ Optimized for agentic operation. Humans should not need to develop here. The sub
 
 ## Visitor runtime
 
-- Self-hosted WOFF2 fonts; zero external CDN dependencies at visitor runtime.
+- Self-hosted WOFF2 fonts. Zero external CDN dependencies at visitor runtime.
 - Strict CSP with no `unsafe-inline` anywhere. Inline scripts and styles are CI failures.
 - All third-party form actions explicitly allowlisted in CSP `form-action`.
 
@@ -55,7 +55,7 @@ See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmat
 
 AGPL-3.0-or-later. See LICENSE and NOTICE.
 
-Self-hosted fonts under `static/fonts/` are OFL-1.1; see NOTICE for attributions.
+Self-hosted fonts under `static/fonts/` are OFL-1.1. See NOTICE for attributions.
 
 <!-- kanon:auto-start -->
 ## Repository Metadata

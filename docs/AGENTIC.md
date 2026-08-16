@@ -1,6 +1,6 @@
 # Agentic operation
 
-Every agent working on typikon itself or on any consumer site follows the contract below. Typikon is operated by AI agents; human edits are exceptions.
+Every agent working on typikon itself or on any consumer site follows the contract below. AI agents operate typikon. Human edits are exceptions.
 
 If you are a human reading this: every constraint here is also good for humans, but the bias is toward machine ergonomics. When in doubt, optimize for the agent.
 
@@ -19,9 +19,9 @@ Every content type has a JSON Schema in `schemas/`:
 | FAQ | `schemas/faq.schema.json` | Any page with `template = "faq.html"` |
 | Sizing guide | `schemas/sizing-guide.schema.json` | Any page with `template = "sizing-guide.html"` |
 
-The schema defines: required fields, optional fields, value types, value patterns, length limits. Do not invent fields. If a frontmatter field is not in the schema, do not write it — every one of the six is closed, so an unrecognized field fails validation, not silently passes.
+The schema defines: required fields, optional fields, value types, value patterns, length limits. Do not invent fields. If a frontmatter field is not in the schema, do not write it — the schema closes every one of the six, so an unrecognized field fails validation instead of silently passing.
 
-A consumer site's own custom template (not one of the six above) needs its own schema, registered in `schemas/registry.toml` — see `docs/SCHEMAS.md#consumer-schema-registry`. An unregistered custom template fails validation naming the missing registration; it does not fall back to `page`'s shape.
+A consumer site's own custom template (not one of the six above) needs its own schema, registered in `schemas/registry.toml` — see `docs/SCHEMAS.md#consumer-schema-registry`. An unregistered custom template fails validation naming the missing registration. It does not fall back to `page`'s shape.
 
 ### 2. Use the scaffolder
 
@@ -39,7 +39,7 @@ If you find yourself wanting to hand-write frontmatter, file an issue requesting
 bin/typikon-validate <consumer-site-root>
 ```
 
-Runs every content file in the consumer site against its appropriate schema. Output is JSONL on stderr; exit 0 = all valid, exit 1 = any failure.
+Runs every content file in the consumer site against its appropriate schema. Output is JSONL on stderr. Exit 0 = all valid, exit 1 = any failure.
 
 JSONL line shape:
 
@@ -55,7 +55,7 @@ Run this in your authoring loop. Do not push without it passing.
 bin/typikon-check <consumer-site-root>
 ```
 
-Runs every stage below, in order; a stage failing does not stop the ones after it (each records its own verdict — see `bin/typikon-check`'s Exit codes for how the run's overall result is decided):
+Runs every stage below, in order. A stage failing does not stop the ones after it (each records its own verdict — see `bin/typikon-check`'s Exit codes for how it decides the run's overall result):
 
 1. `typikon-validate` (frontmatter against JSON Schema)
 2. `zola check` (internal links + assets)
@@ -67,7 +67,7 @@ Runs every stage below, in order; a stage failing does not stop the ones after i
 8. `pa11y-ci --config ci/pa11y.config.js` (WCAG 2.1 AA, against `public-local/`)
 9. `playwright test` (per-route smoke assertions, against `public-local/`)
 
-Output is JSONL summarizing each gate. If anything fails, fix; do not push to bypass.
+Output is JSONL summarizing each gate. If anything fails, fix it. Do not push to bypass.
 
 ### 5. No inline scripts, styles, or event handlers
 
@@ -90,11 +90,11 @@ Do not fork the theme into a consumer to satisfy a one-off need. Forks become pe
 
 ### 7. Schema changes are migrations, where a migration is possible
 
-When a schema field is renamed, removed, or changed incompatibly, the typikon PR also ships a migration script in `bin/typikon-migrate-<from>-<to>`. The script:
+When a typikon PR renames, removes, or changes a schema field incompatibly, it also ships a migration script in `bin/typikon-migrate-<from>-<to>`. The script:
 
 - Runs against a consumer site root
 - Reads every content file, applies the transformation, writes back
-- Is idempotent (re-running is a no-op if already migrated)
+- Is idempotent (re-running is a no-op if already migrated) <!-- kanon:ignore WRITING/passive-voice -- idempotent is a predicate adjective, not a participle, with no actor to name — filed kanon (forge) issue #10074 -->
 - Exits 0 on success with summary of files changed
 
 The PR description must list every consumer affected and link the migration runs.
@@ -107,22 +107,22 @@ script can supply it.
 That matters most for the provenance fields — `words_source`, `price_source`,
 `measurement_source`. Each states where a rendered number came from. A migration that
 filled them with a placeholder would be writing a false provenance claim into content,
-which is the exact failure the fields were added to prevent. A schema that guarantees
-"this price is traceable" is worth less than nothing if the guarantee can be satisfied
-by a generated string.
+which is the exact failure the fields exist to prevent. A schema that guarantees
+"this price is traceable" is worth less than nothing if a generated string can satisfy
+the guarantee.
 
 So typikon ships no migration for added required fields. The consequence is real and
 falls on the consumer: it cannot bump the theme submodule until it has authored the
 new fields for every affected content file. Budget that as content work, not as a
 version bump — `themes/typikon/bin/typikon-validate .` names each file and pointer, so
-the work is enumerable before it is started.
+you can enumerate the work before starting it.
 
 The PR adding a required field must say so in its description, and list the consumers
 it blocks.
 
 ### 8. Check the push authority before pushing
 
-`origin` is GitHub (`forkwright/typikon`). No forge remote is configured and there is no mirror step, so a push to `origin` is a push to GitHub. Check with `git remote -v` instead of assuming either shape.
+`origin` is GitHub (`forkwright/typikon`). This repo configures no forge remote and has no mirror step, so a push to `origin` is a push to GitHub. Check with `git remote -v` instead of assuming either shape.
 
 Whether the fleet returns to a forge-primary split is an open question that forkwright/kanon#3045 owns.
 
@@ -141,7 +141,7 @@ alt = "Close-up of saddle stitch on belt edge"
 caption = "Two needles work the same thread from opposite sides."
 ```
 
-The product-gallery partial (auto-included by page.html) renders a responsive `<picture>` per image — Zola's `resize_image()` generates 400 / 800 / 1200 px WebP variants automatically. First image is the hero (eager-loaded); the rest lazy-load.
+The product-gallery partial (auto-included by page.html) renders a responsive `<picture>` per image — Zola's `resize_image()` generates 400 / 800 / 1200 px WebP variants automatically. First image is the hero (eager-loaded). The rest lazy-load.
 
 When real photos arrive, drop the placeholder `<div class="product-images">…image-placeholder-list…</div>` block from the markdown body — the gallery takes its visual slot.
 
@@ -180,7 +180,7 @@ When a new fleet site enters the family, do not fork or copy. Consume the substr
 typikon-init <site-slug> ~/dev/<site-slug>
 ```
 
-The scaffolder writes `config.toml`, the `themes/typikon` submodule, `_headers`, `_redirects`, the GitHub Actions workflow, a starter `content/_index.md`, and the operator brief at `CLAUDE.md`. The first commit lands automatically; the operator pushes once the forge repo exists (`kanon forge init forkwright/<site-slug>`).
+The scaffolder writes `config.toml`, the `themes/typikon` submodule, `_headers`, `_redirects`, the GitHub Actions workflow, a starter `content/_index.md`, and the operator brief at `CLAUDE.md`. The first commit lands automatically. Once the forge repo exists, the operator pushes (`kanon forge init forkwright/<site-slug>`).
 
 ### 2. Brand identity (consumer-side, not theme-side)
 
@@ -229,4 +229,4 @@ When a typikon schema changes incompatibly, the same PR ships a migration script
 - It does not say what the design language is. That is in `templates/` + `static/` and is read, not derived.
 - It does not say how to make decisions about scope. Use kanon's standard escalation surfaces (issues, plans).
 
-When in doubt, run the gate. If the gate is green, you are not breaking anything. If the gate is red, the gate is the source of truth.
+When in doubt, run the gate. If the gate is green, you are not breaking anything. If the gate is red, the gate is the source of truth. <!-- kanon:ignore WRITING/passive-voice -- green and red are CI-status adjectives, not participles, with no actor to name — filed kanon (forge) issue #10074 -->
