@@ -98,5 +98,46 @@ for (const route of routes) {
         `${route} FAQ link accessible names should be unique within the page: ${JSON.stringify(accessibleNames)}`,
       ).toBe(accessibleNames.length);
     }
+
+    // Sizing-table header/cell association (forkwright/typikon#57):
+    // guarded on the .sizing-table marker so it runs against every route
+    // using the sizing-guide template, but its assertions are driven by
+    // sizing-heterogeneous.md's two rows specifically — "S" (sets only
+    // waist) and "M" (sets only note) — because a table with two rows
+    // whose optional columns are DISJOINT is what the pre-#114 defect
+    // could not survive. That template derived thead's column set from
+    // row 0 alone, then emitted a cell for every field present on each
+    // later row regardless of whether that field had a column: row "M"
+    // would render its `note` value as the row's only optional cell,
+    // positionally landing under the "Waist" header row 0 produced —
+    // same cell COUNT as the fixed table, wrong LABEL. A per-row
+    // cell-count check cannot see that; reading the value out from
+    // under its header by name can, which is why this checks headers by
+    // name and then indexes each row's cells by that header's position,
+    // rather than only counting cells.
+    const sizingTable = page.locator('.sizing-table');
+    if ((await sizingTable.count()) > 0) {
+      const rowHeaderCells = sizingTable.locator('tbody tr th[scope="row"]');
+      const rowLabels = await rowHeaderCells.allTextContents();
+      if (rowLabels.includes('S') && rowLabels.includes('M')) {
+        const headers = await sizingTable.locator('thead th').allTextContents();
+        expect(
+          headers,
+          `${route} sizing-table should expose both a Waist and a Note column when row S sets only waist and row M sets only note: ${JSON.stringify(headers)}`,
+        ).toEqual(expect.arrayContaining(['Waist', 'Note']));
+
+        const waistIdx = headers.indexOf('Waist');
+        const noteIdx = headers.indexOf('Note');
+        const rowS = sizingTable.locator('tbody tr').filter({ has: page.locator('th[scope="row"]', { hasText: /^S$/ }) });
+        const rowM = sizingTable.locator('tbody tr').filter({ has: page.locator('th[scope="row"]', { hasText: /^M$/ }) });
+        const rowSCells = await rowS.locator('th, td').allTextContents();
+        const rowMCells = await rowM.locator('th, td').allTextContents();
+
+        expect(rowSCells[waistIdx], `${route} row S's own waist value should render under the Waist column`).toBe('30');
+        expect(rowSCells[noteIdx], `${route} row S sets no note; the Note column must render blank for it, not row M's value`).toBe('');
+        expect(rowMCells[noteIdx], `${route} row M's own note value should render under the Note column`).toBe('custom');
+        expect(rowMCells[waistIdx], `${route} row M sets no waist; the Waist column must render blank for it, not shift row M's note into it`).toBe('');
+      }
+    }
   });
 }
