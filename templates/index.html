@@ -55,6 +55,16 @@
 
 {% block content %}
 <div class="home">
+  {#- WHY sr-only h1 rather than wrapping the logo (forkwright/typikon#142):
+     home_logo and home_tagline are both optional per this template's own
+     header comment, so a heading tied to either would vanish along with
+     it. section.title is already required (asserted in the title/og_title
+     blocks above) and is the exact string the <title> tag carries, so
+     reusing it here keeps the page's accessible name and its document
+     title in agreement instead of introducing a second, unvalidated
+     source (config.title) for the same fact. -#}
+  <h1 class="sr-only">{{ section.title }}</h1>
+
   {%- if section.extra.home_logo %}
   <img src="/{{ section.extra.home_logo | safe }}" alt="{{ config.extra.brand_name | default(value=config.title) }} logo" class="home-logo">
   {%- endif %}
@@ -83,6 +93,13 @@
   {%- endif %}
 </div>
 
+{#- WHY the guard below, immediately preceding this render (forkwright/typikon#152):
+   section.content is unconditional, unlike every block above it in this
+   template. A consumer whose home content/_index.md body starts with a
+   markdown `# ` line gets a second <h1> from Zola's own leading-heading
+   convention, colliding with the sr-only one above -- this fails the
+   build loudly instead of shipping a silently-broken heading structure. -#}
+{{ assert::no_h1(content=section.content, template="index.html") }}
 {{ section.content | safe }}
 {% endblock content %}
 
