@@ -93,6 +93,13 @@
   {%- endif %}
 </div>
 
+{#- WHY the guard below, immediately preceding this render (forkwright/typikon#152):
+   section.content is unconditional, unlike every block above it in this
+   template. A consumer whose home content/_index.md body starts with a
+   markdown `# ` line gets a second <h1> from Zola's own leading-heading
+   convention, colliding with the sr-only one above -- this fails the
+   build loudly instead of shipping a silently-broken heading structure. -#}
+{{ assert::no_h1(content=section.content, template="index.html") }}
 {{ section.content | safe }}
 {% endblock content %}
 

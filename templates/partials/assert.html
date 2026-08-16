@@ -6,3 +6,18 @@
 {{ throw(message=template ~ ": missing required metadata `" ~ field ~ "`") }}
 {%- endif -%}
 {%- endmacro required %}
+
+{# WHY (forkwright/typikon#152): a template that renders both a required
+   heading element AND a consumer's markdown content unconditionally can be
+   handed a content body whose own first line is `# ...` -- Zola converts a
+   leading ATX-1 line to <h1> regardless of where in the document it sits,
+   so that body now contributes a SECOND <h1> alongside the template's own.
+   Nothing in the schema can catch this (it is a markdown-body convention,
+   not frontmatter), so the only fail-closed point is here, at render time.
+   Same posture as `required` above: a loud build failure that names the
+   collision, never a silently-shipped duplicate heading. #}
+{% macro no_h1(content, template) -%}
+{%- if content is matching("(?i)<h1[ >]") -%}
+{{ throw(message=template ~ ": content contains its own <h1> element (a markdown body starting with a single `# ` line), which collides with this page's required heading. Demote it to `##` or lower.") }}
+{%- endif -%}
+{%- endmacro no_h1 %}
