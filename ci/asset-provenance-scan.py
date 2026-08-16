@@ -23,9 +23,11 @@ this stdlib-only parser cannot fully walk (INVARIANT below).
 INVARIANT: a manifest's true issuer lives inside an X.509 certificate
 embedded in a COSE-signed claim several JUMBF box levels deeper, CBOR/
 ASN.1-encoded — outside stdlib reach without a new dependency (forbidden
-by forkwright/typikon#137). The JUMBF description box's optional `label`
-field is the deepest identifying string this parser can reach; it is
-reported as-is and never fabricated when absent.
+by forkwright/typikon#137; issuer extraction tracked separately at
+forkwright/typikon#148, where accepting that dependency is in scope). The
+JUMBF description box's optional `label` field is the deepest identifying
+string this parser can reach; it is reported AS A LABEL — never renamed
+to "issuer" — and never fabricated when absent.
 
 Usage:
     ci/asset-provenance-scan.py --public-root <dir> --config <config.toml> <file> [<file> ...]
@@ -308,10 +310,13 @@ def scan_file(path: Path) -> tuple[str, str | None] | None:
         return None
     try:
         label = extract_manifest_label(blob)
-    except Exception:
+    except (IndexError, ValueError):
         # SAFETY: label extraction is enrichment, never the detection gate
         # (see module docstring INVARIANT) — a malformed inner box tree
         # must not suppress an already-established manifest finding.
+        # IndexError/ValueError are the class a corrupt/truncated box tree
+        # can raise (out-of-bounds access, bad int conversion); anything
+        # outside that class is a real bug and should propagate.
         label = None
     return container, label
 
@@ -375,7 +380,8 @@ def main(argv: list[str]) -> int:
         violations += 1
         print(
             f"{file}: {CONTAINER_DISPLAY[container]}: undeclared C2PA manifest present "
-            f"(label={label or 'unknown'})",
+            f"(label={label or 'unknown'}; label is a self-declared JUMBF field, not a "
+            "verified issuer — see forkwright/typikon#148)",
             file=sys.stderr,
         )
 

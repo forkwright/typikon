@@ -6,7 +6,10 @@ Constructs synthetic PNG, JPEG, and SVG fixtures byte-for-byte in Python
 end to end (not just the inner scanner module) that:
 
 - a manifest embedded via each container's real C2PA channel fails the
-  gate and the failure names the path, the container, and the label;
+  gate and the failure names the path, the container, and the label —
+  explicitly disambiguated from a verified issuer inline, not only in a
+  docstring (forkwright/typikon#137's reopening; issuer extraction is
+  forkwright/typikon#148);
 - an asset with no manifest passes;
 - an asset whose manifest the consumer declared in config.toml passes;
 - a JPEG manifest split across two APP11 segments is reassembled and
@@ -221,11 +224,11 @@ def main() -> int:
         violation_lines = [line for line in result.stderr.splitlines() if "undeclared C2PA manifest present" in line]
 
         expected_violations = {
-            "manifest.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG})",
-            "manifest-lying-chunk.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG_LYING_LENGTH})",
-            "manifest-single.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SINGLE})",
-            "manifest-split.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SPLIT})",
-            "manifest.svg": f"SVG: undeclared C2PA manifest present (label={LABEL_SVG})",
+            "manifest.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG}",
+            "manifest-lying-chunk.png": f"PNG: undeclared C2PA manifest present (label={LABEL_PNG_LYING_LENGTH}",
+            "manifest-single.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SINGLE}",
+            "manifest-split.jpg": f"JPEG: undeclared C2PA manifest present (label={LABEL_JPEG_SPLIT}",
+            "manifest.svg": f"SVG: undeclared C2PA manifest present (label={LABEL_SVG}",
         }
         for name, expected in expected_violations.items():
             if not any(name in line and expected in line for line in violation_lines):
@@ -238,8 +241,19 @@ def main() -> int:
         if len(violation_lines) != len(expected_violations):
             failures.append(f"expected exactly {len(expected_violations)} violation line(s), got {len(violation_lines)}:\n" + "\n".join(violation_lines))
 
+        # forkwright/typikon#137's reopening: a `label` must never read as a
+        # verified issuer. Every violation line disambiguates inline (not
+        # merely in a docstring a gate-failure reader would never open), and
+        # points at forkwright/typikon#148 where issuer extraction is scoped.
+        for line in violation_lines:
+            if "not a verified issuer" not in line or "typikon#148" not in line:
+                failures.append(f"violation line does not disambiguate label from issuer: {line!r}")
+
         if not any("note:" in line and "declared C2PA manifest" in line for line in result.stderr.splitlines()):
             failures.append(f"expected a declared-manifest note for declared.jpg; not found in stderr:\n{result.stderr}")
+
+        if not any("self-declared JUMBF fields, not verified issuers" in line for line in result.stderr.splitlines()):
+            failures.append(f"expected the stage-level label/issuer disambiguation line; not found in stderr:\n{result.stderr}")
 
     # Second run: only clean + declared assets present — proves a fully
     # clean site (nothing to complain about) exits 0, not merely "exit 1
