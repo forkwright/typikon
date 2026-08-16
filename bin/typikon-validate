@@ -8,7 +8,20 @@ Walks <root>/content/**/*.md, parses TOML frontmatter (between +++ lines),
 classifies each file by its location, and validates against the appropriate
 JSON Schema in <typikon-repo>/schemas/.
 
-Classification rules (in order — first match wins):
+A leaf page (never a section's own _index.md — Zola's page_template governs
+a section's DESCENDANTS, not the section itself) that sets no `template` of
+its own first resolves one from the nearest ancestor section's
+`page_template` — Zola's own cascade ("the given template is applied to ALL
+pages below the section, recursively... if you have several nested
+sections, each with a page_template set, the page will always use the
+closest to itself... a page's own `template` variable will always have
+priority"). The resolved value is then classified by the SAME rules below
+as if the page's own frontmatter had set it — see
+`build_page_template_cascade` / `classify`.
+
+Classification rules (in order — first match wins; `template` here means
+the page's own frontmatter value, or its cascade-resolved effective value
+when it set none):
     frontmatter `template = "faq.html"`          -> faq.schema.json
     frontmatter `template = "sizing-guide.html"` -> sizing-guide.schema.json
     frontmatter `template` matches a `[[entry]]` in
@@ -180,16 +193,95 @@ class ConsumerRegistry:
         return None
 
 
-def classify(rel_path: Path, frontmatter: dict, registry: ConsumerRegistry) -> tuple[str, dict | None]:
+def build_page_template_cascade(content_root: Path) -> dict[Path, str]:
+    """Pre-scan every content/**/_index.md for a declared `page_template`,
+    keyed by the section's own directory (content-parent-relative, matching
+    the `rel_path.parent` classify() sees — e.g. `Path("content")` for the
+    root section, `Path("content/writing")` for a child section). classify()
+    walks this map outward from a leaf page's own directory to resolve
+    Zola's page_template cascade — see the module docstring.
+
+    A separate pre-pass over the whole tree, not built incrementally during
+    main()'s per-file walk: `Path.rglob`'s traversal order is lexicographic
+    per path segment, and "_index.md" (leading `_`, 0x5F) sorts BELOW any
+    letter but ABOVE any digit (0x30-0x39) — a sibling directory named e.g.
+    "2026-review" would sort, and so be visited, before its own section's
+    "_index.md" in the very same walk. Building the cascade incrementally
+    while walking would make resolution depend on directory-naming
+    coincidence instead of the tree's actual ancestry. This pass reads the
+    whole content/**/_index.md set first, independent of any single file's
+    position in main()'s later walk, so resolution is order-independent by
+    construction.
+
+    An _index.md with malformed frontmatter contributes nothing here (same
+    as one with no page_template) rather than raising — that file's own
+    malformed-frontmatter failure is reported exactly once, by
+    validate_file() when the main loop reaches that file in its own right.
+    Silently double-failing it here (or aborting the whole run on one bad
+    section) would not add information the per-file pass doesn't already
+    surface.
+    """
+    cascade: dict[Path, str] = {}
+    for index_path in content_root.rglob("_index.md"):
+        rel_dir = index_path.parent.relative_to(content_root.parent)
+        try:
+            fm = parse_frontmatter(index_path.read_text(encoding="utf-8"), str(index_path))
+        except Exception:
+            continue
+        page_template = fm.get("page_template")
+        if isinstance(page_template, str):
+            cascade[rel_dir] = page_template
+    return cascade
+
+
+def _cascade_lookup(start_dir: Path, cascade: dict[Path, str]) -> str | None:
+    """Walk from a leaf page's own parent directory up through each
+    ancestor section (content/<a>/<b>/, content/<a>/, content/), returning
+    the NEAREST one's `page_template`. Zola: "if you have several nested
+    sections, each with a page_template set, the page will always use the
+    closest to itself" — a section that sets no page_template of its own
+    does not break the chain, it is simply skipped in favor of the next
+    ancestor up. Stops after checking `content` itself (one path segment);
+    `build_page_template_cascade` never keys anything outside content/, so
+    continuing past it can only ever miss.
+    """
+    directory = start_dir
+    while True:
+        hit = cascade.get(directory)
+        if hit is not None:
+            return hit
+        if len(directory.parts) <= 1:
+            return None
+        directory = directory.parent
+
+
+def classify(
+    rel_path: Path,
+    frontmatter: dict,
+    registry: ConsumerRegistry,
+    page_template_cascade: dict[Path, str],
+) -> tuple[str, dict | None]:
     """Map a markdown file to its schema. Returns (schema_name, consumer_schema)
     — consumer_schema is None for a typikon-owned builtin (look `schema_name`
     up in the `schemas` dict) and set for a registry-composed consumer schema.
 
-    Frontmatter `template` wins when present in TEMPLATE_SCHEMA_MAP or the
-    consumer registry — that's how page-level overrides (FAQ, sizing-guide,
-    and any registered custom template) escape the path-based default.
-    Raises UnregisteredTemplateError for a `template` this validator cannot
-    account for by either route — see the module docstring's FAIL-CLOSED note.
+    A page (never a section's own `_index.md` — see `_cascade_lookup`) that
+    sets no `template` of its own first resolves one from
+    `page_template_cascade`: the nearest ancestor section's `page_template`,
+    mirroring Zola's own cascade precedence (nearest-set-ancestor wins; a
+    page's own `template` always wins over any ancestor's page_template —
+    enforced simply by only consulting the cascade when the page's own
+    `template` is absent). From there on, a cascade-resolved value is
+    indistinguishable from an explicitly-set one: it flows through the exact
+    same TEMPLATE_SCHEMA_MAP / registry / KNOWN_TEMPLATES-fail-closed checks
+    below.
+
+    Frontmatter `template` (explicit or cascade-resolved) wins when present
+    in TEMPLATE_SCHEMA_MAP or the consumer registry — that's how page-level
+    overrides (FAQ, sizing-guide, and any registered custom template) escape
+    the path-based default. Raises UnregisteredTemplateError for a
+    `template` this validator cannot account for by either route — see the
+    module docstring's FAIL-CLOSED note.
     Raises MismatchedExtendsError when a registry entry (either
     discriminator kind) matches a file whose structural kind — fixed by
     Zola (section for `_index.md`, page for everything else), not by the
@@ -217,6 +309,9 @@ def classify(rel_path: Path, frontmatter: dict, registry: ConsumerRegistry) -> t
             base = "page"
 
     template = frontmatter.get("template")
+    if template is None and structural_kind == "page":
+        template = _cascade_lookup(rel_path.parent, page_template_cascade)
+
     if template in TEMPLATE_SCHEMA_MAP:
         return TEMPLATE_SCHEMA_MAP[template], None
 
@@ -274,6 +369,7 @@ def validate_file(
     schemas: dict[str, dict],
     jsonschema_registry: Registry,
     registry: ConsumerRegistry,
+    page_template_cascade: dict[Path, str],
 ) -> list[dict]:
     """Return a list of failure records for one file (empty when all good)."""
     rel = path.relative_to(content_root.parent)  # keep "content/..." prefix
@@ -290,7 +386,7 @@ def validate_file(
         return [{"file": file_label, "pointer": "", "error": str(exc)}]
 
     try:
-        schema_name, consumer_schema = classify(rel, fm, registry)
+        schema_name, consumer_schema = classify(rel, fm, registry, page_template_cascade)
     except UnregisteredTemplateError as exc:
         return [{
             "file": file_label,
@@ -521,11 +617,16 @@ def main(argv: list[str]) -> int:
 
     schemas, base_registry = load_schemas()
     consumer_registry = load_consumer_registry(root, base_registry)
+    # WHY: built in its own full-tree pass, BEFORE the per-file walk below —
+    # see build_page_template_cascade for why this must not be incremental.
+    page_template_cascade = build_page_template_cascade(content_root)
 
     files = sorted(content_root.rglob("*.md"))
     failures: list[dict] = []
     for f in files:
-        failures.extend(validate_file(f, content_root, schemas, consumer_registry.jsonschema_registry, consumer_registry))
+        failures.extend(validate_file(
+            f, content_root, schemas, consumer_registry.jsonschema_registry, consumer_registry, page_template_cascade,
+        ))
 
     for failure in failures:
         print(json.dumps(failure), file=sys.stderr)
