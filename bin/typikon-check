@@ -14,15 +14,21 @@
 #     1. typikon-validate        frontmatter against JSON Schema
 #     2. zola check              internal links + asset references
 #     3. zola build              clean build with no warnings, output public/
-#     4. zola build (local base) rebuild to public-local/ with a loopback
+#     4. typikon-check-assets    config.extra.favicon_path/logo_path/og_image each
+#                                 resolve to a real file in the built public/ tree
+#                                 (forkwright/typikon#155 — get_url() and raw
+#                                 concatenation both ship a broken reference
+#                                 silently otherwise; zola build/check do not
+#                                 catch this class)
+#     5. zola build (local base) rebuild to public-local/ with a loopback
 #                                 base_url — the copy browser gates serve
-#     5. csp-enforce             parse public/ HTML for inline script/style/on*= handlers
-#     6. asset-provenance        parse public/ image containers (PNG/JPEG/SVG) for
+#     6. csp-enforce             parse public/ HTML for inline script/style/on*= handlers
+#     7. asset-provenance        parse public/ image containers (PNG/JPEG/SVG) for
 #                                 an embedded C2PA manifest undeclared in config.toml
-#     7. lychee                  external link integrity (requires lychee binary)
-#     8. pa11y                   WCAG 2.1 AA accessibility across every route in
+#     8. lychee                  external link integrity (requires lychee binary)
+#     9. pa11y                   WCAG 2.1 AA accessibility across every route in
 #                                 the build's own sitemap.xml (requires pa11y-ci)
-#     9. playwright              per-route smoke assertions: this repo's mandatory
+#    10. playwright              per-route smoke assertions: this repo's mandatory
 #                                 ci/smoke/ specs, plus the consumer's tests/smoke/
 #                                 if it has any (requires npx)
 #
@@ -272,8 +278,19 @@ else
     require_or_skip "zola-build" "zola binary not found on PATH"
 fi
 
-# Stage 4 — rebuild to public-local/ with a loopback base_url. This is
-# the copy pa11y/playwright serve (stages 7-8); public/ is left untouched
+# Stage 4 — every config.extra.{favicon_path,logo_path,og_image} the consumer
+# declares resolves to a real file in the public/ tree just built (stage 3).
+# Neither zola build nor zola check catches this (forkwright/typikon#155):
+# get_url() performs no existence check, and zola check's link graph is built
+# from Markdown content links, not template-rendered asset references.
+if [[ -d public ]]; then
+    run_stage "typikon-check-assets" "$TYPIKON_ROOT/bin/typikon-check-assets" "$ROOT" || FAIL=1
+else
+    require_or_skip "typikon-check-assets" "no public/ dir (zola-build did not run)"
+fi
+
+# Stage 5 — rebuild to public-local/ with a loopback base_url. This is
+# the copy pa11y/playwright serve (stages 9-10); public/ is left untouched
 # for csp-enforce/lychee and deploy. Unconditional (not gated on
 # pa11y-ci/npx presence) so the fixture always exists to verify against.
 if command -v zola >/dev/null 2>&1; then
@@ -294,14 +311,14 @@ else
     require_or_skip "zola-build-local" "zola binary not found on PATH"
 fi
 
-# Stage 5 — CSP enforcement against built public/.
+# Stage 6 — CSP enforcement against built public/.
 if [[ -d public ]]; then
     run_stage "csp-enforce" "$TYPIKON_ROOT/ci/csp-enforce.sh" "$ROOT/public" || FAIL=1
 else
     require_or_skip "csp-enforce" "no public/ dir (zola-build did not run)"
 fi
 
-# Stage 6 — asset provenance against built public/. No prerequisite tool
+# Stage 7 — asset provenance against built public/. No prerequisite tool
 # (stdlib-only container parsing), so this stage is never eligible for
 # require_or_skip — a missing dependency can't excuse it in either mode.
 if [[ -d public ]]; then
@@ -310,7 +327,7 @@ else
     require_or_skip "asset-provenance" "no public/ dir (zola-build did not run)"
 fi
 
-# Stage 7 — external links via lychee. Skip if binary absent.
+# Stage 8 — external links via lychee. Skip if binary absent.
 if command -v lychee >/dev/null 2>&1; then
     if [[ -d public ]]; then
         BASE_HOST="$(base_host)"
@@ -331,8 +348,8 @@ else
     require_or_skip "lychee" "lychee binary not on PATH (install: cargo install lychee or curl release)"
 fi
 
-# Stage 8 — pa11y a11y. Requires public-local/ (built with a loopback
-# base_url — see stage 4) to be served; we spin up a quick http.server in
+# Stage 9 — pa11y a11y. Requires public-local/ (built with a loopback
+# base_url — see stage 5) to be served; we spin up a quick http.server in
 # the background. Route corpus is derived from the build's own generated
 # sitemap.xml, not a hand-maintained list — an empty or missing sitemap
 # fails closed rather than silently checking only "/" (forkwright/typikon#52).
@@ -367,12 +384,12 @@ else
     require_or_skip "pa11y" "pa11y-ci not on PATH (install: npm i -g pa11y-ci)"
 fi
 
-# Stage 9 — Playwright smoke tests. ci/smoke/ ships mandatory shared
+# Stage 10 — Playwright smoke tests. ci/smoke/ ships mandatory shared
 # semantic assertions that always run (forkwright/typikon#52): this stage
 # must never report skip merely because a consumer ships no tests/smoke/,
 # or the gate could go green having exercised zero routes. The consumer's
 # own tests/smoke/ runs alongside as an addition, never a substitute.
-# Serves public-local/ (see stage 4) for the same reason as pa11y above.
+# Serves public-local/ (see stage 5) for the same reason as pa11y above.
 if command -v npx >/dev/null 2>&1; then
     if [[ -d public-local ]]; then
         # WARNING: never write to $ROOT/playwright.config.ts — a consumer may

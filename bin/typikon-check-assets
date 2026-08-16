@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""typikon-check-assets — existence check for consumer-declared asset paths.
+
+Usage:
+    typikon-check-assets <consumer-site-root>
+
+WHY (forkwright/typikon#155): `config.extra.favicon_path`, `config.extra.logo_path`,
+and `config.extra.og_image` are each rendered into `public/` either through Zola's
+`get_url()` (templates/base.html:16,44) or raw string concatenation
+(templates/partials/nav.html:8, templates/partials/ld-organization.html:14). Neither
+`get_url()` nor `zola check`'s link graph (built from Markdown content links, not
+template-rendered asset references) verifies the referenced file actually exists
+under `static/`. A mistyped or stale value in any of the three keys builds and
+`zola check`s clean and ships a broken `<link>`/`<img>`/JSON-LD reference.
+
+This checks the one place all three keys converge regardless of which template
+mechanism rendered them: the built `public/` tree. It intentionally does NOT
+reimplement Zola's site-static-over-theme-static merge — it runs against the real
+merged output of a real `zola build`, so a passing run proves the shipped asset is
+actually there, not that a hand-rolled path-resolution copy agrees with Zola's.
+
+Scope: `config.extra.*` only (favicon_path, logo_path, og_image) — the three
+keys docs/AGENTIC.md's brand-identity table documents as consumer-declared,
+site-wide asset paths. Per-page/per-section `extra.og_image` overrides are
+page content, not consumer brand configuration, and out of scope for this check.
+
+`favicon_path` defaults to `img/favicon.svg` when unset (templates/base.html:16)
+— that default is checked too, since a theme regression that dropped its own
+shipped default would be exactly the kind of silent breakage this exists to catch.
+`logo_path` and `og_image` have no default and are only checked when the consumer
+sets them (templates/base.html:44, partials/nav.html:8, partials/ld-organization.html:14
+all gate on the key being present).
+
+NOTE: must run AFTER a `zola build` into `<root>/public` — see bin/typikon-check,
+which runs this as a stage immediately after its own zola-build stage.
+
+Output:
+    JSONL on stderr, one line per failure:
+        {"key": "favicon_path", "path": "img/x.svg", "error": "..."}
+    Summary on stdout (exit-zero only when zero failures):
+        {"checked": 3, "passed": 2, "skipped": 1, "failed": 0}
+
+Exit codes:
+    0 — every declared asset path resolves to a real file under public/
+    1 — at least one declared asset path has no file at its resolved location
+    2 — runtime error (missing root, missing/unparseable config.toml, no public/
+        dir — i.e. zola build has not run)
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+import tomllib
+from pathlib import Path
+
+# WHY: matches templates/base.html:16's `| default(value="img/favicon.svg")`
+# exactly — the one key of the three that Zola resolves even when unset.
+ASSET_DEFAULTS: dict[str, str | None] = {
+    "favicon_path": "img/favicon.svg",
+    "logo_path": None,
+    "og_image": None,
+}
+
+
+def load_extra(root: Path) -> dict:
+    config_path = root / "config.toml"
+    if not config_path.is_file():
+        print(json.dumps({"error": f"no config.toml at {config_path}"}), file=sys.stderr)
+        sys.exit(2)
+    try:
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(json.dumps({"error": f"failed to parse {config_path}: {exc}"}), file=sys.stderr)
+        sys.exit(2)
+    extra = data.get("extra", {})
+    if not isinstance(extra, dict):
+        print(json.dumps({"error": f"{config_path} [extra] is not a table"}), file=sys.stderr)
+        sys.exit(2)
+    return extra
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("usage: typikon-check-assets <consumer-site-root>", file=sys.stderr)
+        return 2
+
+    root = Path(sys.argv[1]).resolve()
+    if not root.is_dir():
+        print(json.dumps({"error": f"no such directory: {root}"}), file=sys.stderr)
+        return 2
+
+    public = root / "public"
+    if not public.is_dir():
+        print(
+            json.dumps({"error": f"no {public} dir — run `zola build` before typikon-check-assets"}),
+            file=sys.stderr,
+        )
+        return 2
+
+    extra = load_extra(root)
+
+    checked = 0
+    passed = 0
+    skipped = 0
+    failed = 0
+
+    for key, default in ASSET_DEFAULTS.items():
+        raw = extra.get(key, default)
+        if raw is None:
+            skipped += 1
+            continue
+        if not isinstance(raw, str) or not raw:
+            checked += 1
+            failed += 1
+            print(
+                json.dumps({"key": key, "path": raw, "error": f"config.extra.{key} is not a non-empty string"}),
+                file=sys.stderr,
+            )
+            continue
+
+        checked += 1
+        # WHY lstrip("/"): every documented value and every existing consumer
+        # usage (templates/partials/nav.html:8's `/{{ ... }}`, ld-organization.html:14's
+        # `base_url ~ "/" ~ ...`) treats the configured value as root-relative
+        # under static/ — a leading slash in the config value itself must not
+        # turn into an absolute filesystem path escaping `public/`.
+        relative = raw.lstrip("/")
+        resolved = public / relative
+        if resolved.is_file():
+            passed += 1
+        else:
+            failed += 1
+            print(
+                json.dumps({
+                    "key": key,
+                    "path": raw,
+                    "error": f"no file at {resolved} — config.extra.{key} = {raw!r} does not resolve to a built asset",
+                }),
+                file=sys.stderr,
+            )
+
+    print(json.dumps({"checked": checked, "passed": passed, "skipped": skipped, "failed": failed}))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
