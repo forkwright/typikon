@@ -26,7 +26,7 @@ set -euo pipefail
 # repo wants deliberate review, not a drive-by edit from a single-repo fix
 # (#122's own "Desired correction" section says so explicitly).
 #
-# WHAT this proves, as a negative case:
+# NOTE: this script proves two things, as a negative case:
 #   1. [control] the corpus-only diff below DOES match the shared
 #      classifier's bare path pattern -- i.e. this really is the shape #120
 #      hit, not a pattern this script invented.
@@ -47,8 +47,7 @@ set -euo pipefail
 # assertion 1 pass vacuously instead of failing loudly, so re-verify this
 # pattern by hand against forkwright/.github on any SHA bump.
 #
-# Usage:
-#     ci/check-fixture-corpus-exemption.sh
+# NOTE: takes no arguments -- run as ci/check-fixture-corpus-exemption.sh.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKFLOW="$ROOT/.github/workflows/gate-attestation.yml"
