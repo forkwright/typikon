@@ -126,9 +126,16 @@ def strip_h1_line(theme_dir: Path) -> None:
 
 
 def main() -> int:
+    # WHY a hard failure, not a skip (forkwright/typikon#49's precedent, cited
+    # in bin/typikon-check's own docstring): ci/run-fixtures.sh has no "dev
+    # mode" — every invocation is the gate. zola is installed unconditionally
+    # before this script runs (.github/workflows/gate-attestation.yml, before
+    # the `ci/run-fixtures.sh` line), so its absence here means the install
+    # step broke, not that this check is optional. A green run must mean the
+    # instrument ran, never that it was quietly unavailable.
     if ZOLA is None:
-        print("check-home-heading: SKIP — zola not on PATH", file=sys.stderr)
-        return 0
+        print("check-home-heading: FAIL — zola not on PATH (see gate-attestation.yml's install step)", file=sys.stderr)
+        return 1
 
     failures: list[str] = []
 
