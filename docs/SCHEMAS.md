@@ -91,7 +91,14 @@ Top-level pages and section children that aren't journal entries or products. Bu
 
 **Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`.
 
-**Constraints:** title ≤80 chars; description ≤200; path matches `^/[a-z0-9/_-]*/?$`; template matches `^[a-z0-9_-]+\.html$`; og_image ends in `.svg|.png|.jpg|.webp`. Setting any one of `price`, `stripe_url`, or `price_source` triggers `ld-product` JSON-LD in `page.html`, which then requires all four of `audience`, `price`, `price_source`, and `stripe_url` together (enforced by the schema's `if`/`then` on `extra`, matching the template's assertions exactly). A dedicated product page under `content/products/` should use the `product` schema instead — these fields exist here for the rare non-product-section page that still needs a buy block.
+**Constraints:**
+- title: ≤80 chars
+- description: ≤200 chars
+- path: matches `^/[a-z0-9/_-]*/?$`
+- template: matches `^[a-z0-9_-]+\.html$`
+- og_image: ends in `.svg|.png|.jpg|.webp`
+
+Setting any one of `price`, `stripe_url`, or `price_source` triggers `ld-product` JSON-LD in `page.html`, which then requires all four of `audience`, `price`, `price_source`, and `stripe_url` together (enforced by the schema's `if`/`then` on `extra`, matching the template's assertions exactly). A dedicated product page under `content/products/` should use the `product` schema instead — these fields exist here for the rare non-product-section page that still needs a buy block.
 
 **Example:**
 
@@ -176,7 +183,7 @@ Pages under `content/products/`. Required for the purchase block to render.
 - price_source: 3–200 chars. Source for the rendered price claim
 - stripe_url: matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`
 - shipping_note (optional): ≤200 chars
-- images (optional): array of `{src, alt, caption?}`; Zola's `resize_image` produces 400/800/1200px WebP variants automatically, and the product-gallery partial renders responsive `<picture>` per item
+- images (optional): array of `{src, alt, caption?}`. Zola's `resize_image` produces 400/800/1200px WebP variants automatically, and the product-gallery partial renders responsive `<picture>` per item
 
 **Example:**
 
@@ -213,7 +220,7 @@ Any page with `template = "faq.html"`. Renders a definition-list FAQ with anchor
 - audience: 3–120 chars
 - q: 5–200 chars
 - a: 5–2000 chars. Supports `\n\n` for paragraph breaks (template splits on it)
-- anchor (optional): `^[a-z0-9-]+$`; slugified from `q` if omitted
+- anchor (optional): `^[a-z0-9-]+$`. Slugified from `q` if omitted
 - additionalProperties on each question: false (strict)
 
 **Example:**
@@ -249,10 +256,10 @@ Any page with `template = "sizing-guide.html"`. Renders a measurement table, an 
 - measurement_source: 3–200 chars. Source for numeric sizing claims
 - product_type: 2–40 chars
 - measurement_unit (optional): `inches | centimeters | both` (default `inches`)
-- size_table rows: required `size`; optional `waist`, `length`, `width`, `note`; column rendering is conditional on the first row's keys
-- diagram (optional): path under static/ to an `.svg` file; loaded inline via `load_data`
+- size_table rows: required `size`. Optional `waist`, `length`, `width`, `note`. Column rendering is conditional on the first row's keys
+- diagram (optional): path under static/ to an `.svg` file. Loaded inline via `load_data`
 - decision_tree (optional): array of strings, rendered as ordered list
-- duration (optional): ISO 8601 duration, hours/minutes/seconds only (e.g. `PT2M`); requires duration_source; emitted as HowTo `totalTime` only when both are set — never guessed
+- duration (optional): ISO 8601 duration, hours/minutes/seconds only (e.g. `PT2M`). Requires duration_source. Emitted as HowTo `totalTime` only when both are set — never guessed
 
 **Example:**
 
