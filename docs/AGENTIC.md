@@ -16,8 +16,12 @@ Every content type has a JSON Schema in `schemas/`:
 | Section | `schemas/section.schema.json` | Section index files (`_index.md`) |
 | Journal entry | `schemas/journal-entry.schema.json` | Pages under a journal section |
 | Product | `schemas/product.schema.json` | Pages under a products section |
+| FAQ | `schemas/faq.schema.json` | Any page with `template = "faq.html"` |
+| Sizing guide | `schemas/sizing-guide.schema.json` | Any page with `template = "sizing-guide.html"` |
 
-The schema defines: required fields, optional fields, value types, value patterns, length limits. Do not invent fields. If a frontmatter field is not in the schema, do not write it.
+The schema defines: required fields, optional fields, value types, value patterns, length limits. Do not invent fields. If a frontmatter field is not in the schema, do not write it — every one of the six is closed, so an unrecognized field fails validation, not silently passes.
+
+A consumer site's own custom template (not one of the six above) needs its own schema, registered in `schemas/registry.toml` — see `docs/SCHEMAS.md#consumer-schema-registry`. An unregistered custom template fails validation naming the missing registration; it does not fall back to `page`'s shape.
 
 ### 2. Use the scaffolder
 
@@ -202,8 +206,8 @@ If a brand needs a *visual* override beyond these (different scale ratio, differ
 | Change one site's color palette / type / scale             | Consumer-side CSS overriding `:root` tokens                              |
 | Add a one-off CSS class used in one site's content         | Consumer-side CSS                                                        |
 | Add a content type (FAQ, sizing-guide, recipe, gallery)    | typikon — schema + template + AGENTIC + fixture coverage                 |
-| Add an optional frontmatter field shared by ≥2 sites       | typikon — extend the relevant schema with `additionalProperties` discipline |
-| Override one page's HTML structure                         | Consumer-side template under `<consumer>/templates/<name>.html` (Zola overrides typikon) |
+| Add an optional frontmatter field shared by ≥2 sites       | typikon — extend the relevant schema; every content type's `extra` is closed (`unevaluatedProperties: false` or, for journal-entry/product/faq/sizing-guide, plain `additionalProperties: false`), so a new field is a schema edit, never an ambient allowance |
+| Override one page's HTML structure with a custom template  | Consumer-side template under `<consumer>/templates/<name>.html` (Zola overrides typikon) **and** a `schemas/registry.toml` entry — see `docs/SCHEMAS.md#consumer-schema-registry`. A custom `template` with no registry entry fails validation; it does not fall back to `page`'s shape |
 | Add a global behavior (CSP token, JSON-LD type, atom field)| typikon — and update `examples/` so the fixture exercises the change      |
 
 The rule of thumb: **two consumers wanting the same thing → typikon. One consumer wanting an exception → consumer-side override.**

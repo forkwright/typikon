@@ -22,7 +22,7 @@
     "extra": {
       "type": "object",
       "required": ["audience", "components", "words", "words_source"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "audience": {
           "type": "string",

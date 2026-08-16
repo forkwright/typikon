@@ -21,6 +21,16 @@ definition = "A site that pins typikon as a submodule and supplies content/brand
 canonical = true
 
 [[terms]]
+term = "consumer schema registry"
+definition = "schemas/registry.toml — maps a consumer's custom template or content path to its own JSON Schema, checked in at the consumer site."
+canonical = true
+
+[[terms]]
+term = "core schema"
+definition = "An open (no additionalProperties/unevaluatedProperties) building-block schema (page.core.schema.json, section.core.schema.json) that both typikon's own closed schema and a consumer's registered schema compose via $ref."
+canonical = true
+
+[[terms]]
 term = "schema"
 definition = "JSON Schema contract for a content type's frontmatter."
 canonical = true

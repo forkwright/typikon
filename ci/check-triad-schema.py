@@ -13,6 +13,8 @@
 #
 # NOTE: runs standalone (no consumer site needed) as part of ci/run-fixtures.sh.
 
+import importlib.machinery
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -20,7 +22,22 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 THEME_ROOT = Path(__file__).resolve().parent.parent
-SCHEMA = json.loads((THEME_ROOT / "schemas" / "section.schema.json").read_text(encoding="utf-8"))
+
+# WHY importlib, not a normal import: bin/typikon-validate has no .py suffix
+# (it's a CLI entry point, not a package module). Its load_schemas() is the
+# SSOT for turning schemas/section.schema.json's internal $ref into
+# something jsonschema can actually resolve — section.schema.json composes
+# section.core.schema.json via $ref (forkwright/typikon#60), so constructing
+# a bare Draft202012Validator(json.load(...)) here would raise Unresolvable
+# the moment a triad case reached that $ref, independent of the case data.
+_loader = importlib.machinery.SourceFileLoader("typikon_validate", str(THEME_ROOT / "bin" / "typikon-validate"))
+_spec = importlib.util.spec_from_loader("typikon_validate", _loader)
+_typikon_validate = importlib.util.module_from_spec(_spec)
+sys.modules["typikon_validate"] = _typikon_validate  # dataclass() resolves types via sys.modules[__module__]
+_spec.loader.exec_module(_typikon_validate)
+
+_SCHEMAS, _REGISTRY = _typikon_validate.load_schemas()
+SCHEMA = _SCHEMAS["section"]
 
 
 def section_with_triad(triad: dict) -> dict:
@@ -52,7 +69,7 @@ CASES = [
 
 
 def main() -> int:
-    validator = Draft202012Validator(SCHEMA)
+    validator = Draft202012Validator(SCHEMA, registry=_REGISTRY)
     failed = []
     for label, doc, should_be_valid in CASES:
         errors = list(validator.iter_errors(doc))
