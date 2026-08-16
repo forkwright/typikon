@@ -91,16 +91,40 @@ else
     (cd themes/typikon && git pull --ff-only origin main 2>/dev/null) || true
 fi
 
-# Idempotent file writes — only create if absent. Consumer-edited content stays.
+# INVARIANT: OWN_OUTPUTS accumulates only the paths THIS invocation
+# itself created — never a blanket sweep. It is the sole input to the
+# staging step below, so a path never written by this run cannot end
+# up staged by it (forkwright/typikon#54).
+declare -a OWN_OUTPUTS=()
+
+# WHY: an absent path is ambiguous between "never scaffolded" (create it)
+# and "scaffolded, committed, then the operator deliberately removed it"
+# (leave it removed — forkwright/typikon#54's "preserve pre-existing
+# worktree state" covers deletions, not only unrelated files elsewhere in
+# the repo). `git cat-file -e HEAD:<path>` distinguishes them: it succeeds
+# only when the path was present in the last scaffold commit. No HEAD yet
+# (the very first invocation) means nothing has ever been committed, so
+# every path is unambiguously the first case.
+tracked_in_head() {
+    local path="$1"
+    git rev-parse --verify -q HEAD >/dev/null 2>&1 || return 1
+    git cat-file -e "HEAD:$path" 2>/dev/null
+}
+
+# Idempotent file writes — only create if absent AND never previously
+# scaffolded-then-deleted. Consumer-edited content stays either way.
 write_if_absent() {
     local path="$1"
     local content="$2"
     if [[ -e "$path" ]]; then
         echo "skip   $path (exists)" >&2
+    elif tracked_in_head "$path"; then
+        echo "skip   $path (removed since the last scaffold commit; not recreated)" >&2
     else
         mkdir -p "$(dirname "$path")"
         printf '%s' "$content" > "$path"
         echo "create $path" >&2
+        OWN_OUTPUTS+=("$path")
     fi
 }
 
@@ -113,9 +137,12 @@ copy_template() {
     local dest="$2"
     if [[ -e "$dest" ]]; then
         echo "skip   $dest (exists; remove to refresh)" >&2
+    elif tracked_in_head "$dest"; then
+        echo "skip   $dest (removed since the last scaffold commit; not recreated)" >&2
     else
         cp "$src" "$dest"
         echo "create $dest (from $src)" >&2
+        OWN_OUTPUTS+=("$dest")
     fi
 }
 
@@ -131,26 +158,32 @@ ZOLA_VERSION="${TYPIKON_ZOLA_VERSION:-}"
 WRANGLER_VERSION="${TYPIKON_WRANGLER_VERSION:-}"
 . "$TYPIKON_ROOT/bin/typikon-defaults.sh"
 mkdir -p .github/workflows
-if [[ ! -e .github/workflows/deploy.yml ]]; then
+if [[ -e .github/workflows/deploy.yml ]]; then
+    echo "skip   .github/workflows/deploy.yml (exists)" >&2
+elif tracked_in_head ".github/workflows/deploy.yml"; then
+    echo "skip   .github/workflows/deploy.yml (removed since the last scaffold commit; not recreated)" >&2
+else
     sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
         -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
         -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
         "$TYPIKON_ROOT/ci/github-workflow.yml.tmpl" \
         > .github/workflows/deploy.yml
     echo "create .github/workflows/deploy.yml (from ci/github-workflow.yml.tmpl)" >&2
-else
-    echo "skip   .github/workflows/deploy.yml (exists)" >&2
+    OWN_OUTPUTS+=(".github/workflows/deploy.yml")
 fi
 
-if [[ ! -e .kanon-ci.toml ]]; then
+if [[ -e .kanon-ci.toml ]]; then
+    echo "skip   .kanon-ci.toml (exists)" >&2
+elif tracked_in_head ".kanon-ci.toml"; then
+    echo "skip   .kanon-ci.toml (removed since the last scaffold commit; not recreated)" >&2
+else
     sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
         -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
         -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
         "$TYPIKON_ROOT/ci/kanon-ci.toml.tmpl" \
         > .kanon-ci.toml
     echo "create .kanon-ci.toml (from ci/kanon-ci.toml.tmpl)" >&2
-else
-    echo "skip   .kanon-ci.toml (exists)" >&2
+    OWN_OUTPUTS+=(".kanon-ci.toml")
 fi
 
 write_if_absent ".gitignore" "$(cat <<'GITIGNORE'
@@ -251,8 +284,12 @@ EOF
 )
 "
 
-mkdir -p static/img tests/smoke
-touch static/img/.gitkeep tests/smoke/.gitkeep
+# Routed through write_if_absent (empty content) rather than a bare
+# `mkdir -p && touch`: a `.gitkeep` an operator deleted on purpose — the
+# normal move once a directory holds real content — must stay deleted,
+# the same guard content/contact.md etc. get above.
+write_if_absent "static/img/.gitkeep" ""
+write_if_absent "tests/smoke/.gitkeep" ""
 
 # CLAUDE.md (operator brief). Force-add at commit time per
 # global-gitignore rules (~/.config/git/ignore excludes CLAUDE.md by default).
@@ -297,22 +334,50 @@ EOF
 )
 "
 
-# Stage if anything new is unstaged.
-if [[ -n "$(git status --porcelain)" ]]; then
-    git add -A
-    if [[ -f CLAUDE.md ]]; then
-        git add -f CLAUDE.md 2>/dev/null || true
-    fi
+# Stage only what THIS invocation created (forkwright/typikon#54).
+#
+# WHY named adds, never `git add -A`: re-running typikon-init over an
+# existing destination must not sweep in pre-existing operator-side
+# repo state — modified, deleted, staged, or untracked files this
+# invocation did not touch. `git add -A` is repository-wide; it does
+# not distinguish typikon's own scaffold outputs from unrelated work
+# already sitting in the tree. `bin/typikon-refresh` (Step 4) already
+# stages this way for its narrower surface (submodule bump + rendered
+# templates); this mirrors it for typikon-init's fuller output set.
+#
+# The submodule gitlink is scoped with its own pathspec'd status check
+# rather than folded into OWN_OUTPUTS: `git submodule add` above
+# already stages a freshly-added submodule (+ .gitmodules) itself, and
+# a `git pull --ff-only` refresh only sometimes moves the checked-out
+# commit — `-f` here would be a no-op either way, but the pathspec
+# keeps the check (and what gets staged) scoped to exactly that path.
+if [[ -n "$(git status --porcelain -- themes/typikon 2>/dev/null)" ]]; then
+    git add -f -- themes/typikon
+fi
+for path in "${OWN_OUTPUTS[@]}"; do
+    git add -f -- "$path"
+done
+
+# The commit itself is also pathspec-scoped to exactly these outputs
+# (`.gitmodules` included: `git submodule add` above stages it, and
+# it must ride with the gitlink or the scaffolded submodule is
+# broken). `git commit -- <pathspec>` performs a PARTIAL commit — it
+# commits only the listed paths' staged content and leaves anything
+# else already sitting in the index (e.g. an operator's own pre-staged
+# change in a not-yet-committed destination) staged and untouched,
+# rather than sweeping it into this commit.
+COMMIT_PATHS=(.gitmodules themes/typikon "${OWN_OUTPUTS[@]}")
+if [[ -n "$(git diff --cached --name-only -- "${COMMIT_PATHS[@]}" 2>/dev/null)" ]]; then
     if [[ -z "$(git log --oneline 2>/dev/null)" ]]; then
         # WHY: a fresh CI/agentic sandbox has no git identity configured, and
         # this scaffold commit is not an authored change — fall back to a
         # fixed identity for it alone rather than depending on an ambient
         # git config the caller may not have.
         if git config user.email >/dev/null 2>&1 && git config user.name >/dev/null 2>&1; then
-            git commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+            git commit -q -m "chore(${SITE_NAME}): scaffold from typikon" -- "${COMMIT_PATHS[@]}"
         else
             git -c user.name="typikon-init" -c user.email="typikon-init@localhost" \
-                commit -q -m "chore(${SITE_NAME}): scaffold from typikon"
+                commit -q -m "chore(${SITE_NAME}): scaffold from typikon" -- "${COMMIT_PATHS[@]}"
         fi
         echo "ok     initial commit created" >&2
     else
