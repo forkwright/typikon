@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/forkwright/typikon/compare/v0.2.0...v0.3.0) (2026-08-15)
+
+
+### Features
+
+* **ci:** give consumers a gate-check extension point on BOTH pipelines, not just the fallback ([#145](https://github.com/forkwright/typikon/issues/145)) ([9f13e74](https://github.com/forkwright/typikon/commit/9f13e7428920448e4fc80c2305c8740d60443e73))
+
+
+### Bug Fixes
+
+* **ci:** run consumer Playwright specs from the consumer's own context ([#143](https://github.com/forkwright/typikon/issues/143)) ([3a851b8](https://github.com/forkwright/typikon/commit/3a851b818495df52bdcaa1aa6c8c583920d245b2))
+* **css:** give form controls a border token that meets 3:1 non-text contrast ([#140](https://github.com/forkwright/typikon/issues/140)) ([707ad28](https://github.com/forkwright/typikon/commit/707ad284ededad2eb6826367067a4cbce4857e9c))
+* **notice:** point at OFL.txt instead of restating which fonts ship ([#144](https://github.com/forkwright/typikon/issues/144)) ([bbdb48a](https://github.com/forkwright/typikon/commit/bbdb48abe9c2281a0c7f823bfc614145a3680341))
+
 ## [0.2.0](https://github.com/forkwright/typikon/compare/v0.1.2...v0.2.0) (2026-08-13)
 
 
