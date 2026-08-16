@@ -25,6 +25,14 @@
     {%- endif %}
   </header>
 
+  {#- WHY the guard below, immediately preceding this render
+     (forkwright/typikon#157): page.content is unconditional inside the
+     `if page.content` gate, and a consumer whose FAQ intro starts with a
+     markdown `# ` line gets a second <h1> from Zola's own leading-heading
+     convention, colliding with the one in page-header above -- same
+     posture as index.html (forkwright/typikon#152), the fail-closed
+     precedent this mirrors. -#}
+  {{ assert::no_h1(content=page.content, template="faq.html") }}
   {%- if page.content %}
   <div class="faq-intro">
     {{ page.content | safe }}

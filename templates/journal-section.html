@@ -40,6 +40,13 @@
 <h1>{{ section.title }}</h1>
 {%- endif %}
 
+{#- WHY (forkwright/typikon#157 class): section.content is unconditional,
+   and a consumer whose journal-section body starts with a markdown `# `
+   line gets a second <h1> from Zola's own leading-heading convention,
+   colliding with the one rendered above -- the same fail-closed guard
+   journal-entry.html and faq.html carry, applied here so the class does
+   not survive in the one content template #157 did not name. -#}
+{{ assert::no_h1(content=section.content, template="journal-section.html") }}
 {{ section.content | safe }}
 
 <ul class="journal-list">

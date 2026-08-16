@@ -31,6 +31,14 @@
     {%- endif %}
   </header>
 
+  {#- WHY (forkwright/typikon#157 class): page.content is unconditional
+     inside the `if page.content` gate, and a consumer whose sizing-guide
+     intro starts with a markdown `# ` line gets a second <h1> from Zola's
+     own leading-heading convention, colliding with the one in page-header
+     above -- the same fail-closed guard journal-entry.html and faq.html
+     carry, applied here so the class does not survive in the one content
+     template #157 did not name. -#}
+  {{ assert::no_h1(content=page.content, template="sizing-guide.html") }}
   {%- if page.content %}
   <div class="sizing-intro">
     {{ page.content | safe }}

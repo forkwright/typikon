@@ -36,6 +36,15 @@
 {% endblock ld_json %}
 
 {% block content %}
+{#- WHY an explicit <h1> here (forkwright/typikon#149): this template
+   previously rendered no heading of its own and depended on the
+   consumer's markdown body opening with a `# Title` line -- a
+   frontmatter-only page (or one whose author simply started with prose)
+   built with zero headings at any level. page.title is already required
+   (asserted in the title/og_title blocks above), so sourcing the heading
+   from it is a guarantee, not a convention. -#}
+{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}
+<h1>{{ page.title }}</h1>
 {# Product gallery renders before page content when extra.images is set —
    the operator drops the placeholder <div class="product-images"> from
    markdown when photos arrive and the gallery takes its visual slot. #}
@@ -45,6 +54,13 @@
 {%- if page.extra.price and page.extra.stripe_url -%}
 {%- include "partials/product-purchase.html" -%}
 {%- endif -%}
+{#- WHY this guard (forkwright/typikon#157 class): now that this template
+   renders its own <h1> above, page.content is unconditional immediately
+   below it -- a body starting with a markdown `# ` line would collide
+   with it exactly as #157 found in journal-entry.html/faq.html. Adding
+   the heading above without this guard would have reproduced the very
+   defect class #149 exists to close, in a template #157 never named. -#}
+{{ assert::no_h1(content=page.content, template="page.html") }}
 {{ page.content | safe }}
 {# Process video renders after page content when extra.video is set. #}
 {%- include "partials/video.html" -%}
