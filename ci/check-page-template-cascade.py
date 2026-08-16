@@ -84,7 +84,7 @@ VALIDATE = THEME_ROOT / "bin" / "typikon-validate"
 _loader = importlib.machinery.SourceFileLoader("typikon_validate_cascade", str(VALIDATE))
 _spec = importlib.util.spec_from_loader("typikon_validate_cascade", _loader)
 _tv = importlib.util.module_from_spec(_spec)
-sys.modules["typikon_validate_cascade"] = _tv  # dataclass() resolves types via sys.modules[__module__]
+sys.modules["typikon_validate_cascade"] = _tv  # WHY: dataclass() resolves types via sys.modules[__module__]
 _spec.loader.exec_module(_tv)
 
 
@@ -102,12 +102,12 @@ def run_validate(root: Path) -> subprocess.CompletedProcess:
     )
 
 
-# ── Section A: subprocess, full pipeline ───────────────────────────────
+# NOTE: ── Section A: subprocess, full pipeline ──────────────────────────
 
 # NOTE: each case is (label, files, expected_exit, required_stderr_substrings)
 CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
     (
-        # REQUIRED NEGATIVE FIXTURE for #159. Pre-fix command + failure,
+        # WHY: REQUIRED NEGATIVE FIXTURE for #159. Pre-fix command + failure,
         # captured verbatim (git stash of the pre-fix bin/typikon-validate
         # run against this exact fixture):
         #   $ python3 bin/typikon-validate <this fixture>
@@ -156,7 +156,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
             "content/guides/_index.md": (
                 '+++\ntitle = "Guides"\npage_template = "faq.html"\n+++\nbody\n'
             ),
-            # A nested section index: structurally a section (name ==
+            # WHY: A nested section index: structurally a section (name ==
             # "_index.md"), so it must classify via section.schema.json
             # regardless of the ancestor's page_template. If the cascade
             # wrongly applied here, this would be validated against
@@ -178,7 +178,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
             "content/guides/sizing/_index.md": (
                 '+++\ntitle = "Sizing"\npage_template = "sizing-guide.html"\n+++\nbody\n'
             ),
-            # No template of its own; nearest ancestor (guides/sizing) sets
+            # WHY: No template of its own; nearest ancestor (guides/sizing) sets
             # page_template = sizing-guide.html — must NOT pick up the
             # farther content/guides/ ancestor's faq.html instead. A sizing
             # fixture validated as faq (extra.questions required) would
@@ -199,7 +199,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
             "content/guides/_index.md": (
                 '+++\ntitle = "Guides"\npage_template = "faq.html"\n+++\nbody\n'
             ),
-            # sizing/_index.md sets no page_template at all — the walk
+            # WHY: sizing/_index.md sets no page_template at all — the walk
             # must skip past it (not stop / not treat "unset" as a match)
             # and keep going up to content/guides/, inheriting faq.html.
             "content/guides/sizing/_index.md": '+++\ntitle = "Sizing"\n+++\nbody\n',
@@ -214,7 +214,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
     (
         "a malformed ancestor _index.md does not crash the run: its own error is reported once, and it contributes nothing to the cascade (sibling section unaffected)",
         {
-            "content/guides/_index.md": '+++\ntitle = "Guides"\npage_template = "faq.html\n+++\nbody\n',  # unterminated string — malformed TOML
+            "content/guides/_index.md": '+++\ntitle = "Guides"\npage_template = "faq.html\n+++\nbody\n',  # NOTE: unterminated string — malformed TOML
             "content/other/_index.md": '+++\ntitle = "Other"\n+++\nbody\n',
             "content/other/plain.md": '+++\ntitle = "Plain"\n+++\nbody\n',
         },
@@ -222,7 +222,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
         ["content/guides/_index.md"],
     ),
     (
-        # WHY this case exists: Path.rglob's walk order is lexicographic
+        # WHY: Path.rglob's walk order is lexicographic
         # per path segment. "_index.md" (leading "_", 0x5F) sorts BELOW
         # any letter but ABOVE any ASCII digit (0x30-0x39), so a sibling
         # directory named "2026-faq" sorts, and so is visited, BEFORE its
@@ -248,7 +248,7 @@ CASES: list[tuple[str, dict[str, str], int, list[str]]] = [
         [],
     ),
     (
-        # A page_template value reaching the #60 CONSUMER REGISTRY, not
+        # WHY: A page_template value reaching the #60 CONSUMER REGISTRY, not
         # just the built-in TEMPLATE_SCHEMA_MAP — proves the cascade only
         # resolves an effective `template`; everything downstream
         # (registry_hit / fail-closed / MismatchedExtendsError) is the
@@ -305,13 +305,13 @@ def run_section_a() -> list[str]:
     return failed
 
 
-# ── Section B: `_cascade_lookup` in isolation ──────────────────────────
+# NOTE: ── Section B: `_cascade_lookup` in isolation ─────────────────────
 
 def run_section_b() -> list[str]:
     failed = []
     lookup = _tv._cascade_lookup
 
-    # nearest ancestor wins over a farther one that also sets page_template
+    # WHY: nearest ancestor wins over a farther one that also sets page_template
     cascade = {
         Path("content"): "page.html",
         Path("content/a"): "faq.html",
@@ -321,23 +321,23 @@ def run_section_b() -> list[str]:
     if got != "sizing-guide.html":
         failed.append(f"nearest-wins: expected 'sizing-guide.html', got {got!r}")
 
-    # a directory with no cascade entry of its own is skipped, not treated as a stop
-    got = lookup(Path("content/a/b/c"), cascade)  # b/c has no entry; nearest SET ancestor is content/a/b
+    # WHY: a directory with no cascade entry of its own is skipped, not treated as a stop
+    got = lookup(Path("content/a/b/c"), cascade)  # NOTE: b/c has no entry; nearest SET ancestor is content/a/b
     if got != "sizing-guide.html":
         failed.append(f"skip-unset-directory-still-finds-nearest-SET-ancestor: expected 'sizing-guide.html', got {got!r}")
 
-    # only content/a set (b sets nothing): inherits from content/a
+    # WHY: only content/a set (b sets nothing): inherits from content/a
     cascade2 = {Path("content"): "page.html", Path("content/a"): "faq.html"}
     got = lookup(Path("content/a/b"), cascade2)
     if got != "faq.html":
         failed.append(f"inherit-past-non-setting-section: expected 'faq.html', got {got!r}")
 
-    # nothing set anywhere in the chain -> None, no exception walking past content/
+    # WHY: nothing set anywhere in the chain -> None, no exception walking past content/
     got = lookup(Path("content/a/b"), {})
     if got is not None:
         failed.append(f"no-ancestor-sets-page_template: expected None, got {got!r}")
 
-    # root section itself (content/) is checked, not skipped
+    # WHY: root section itself (content/) is checked, not skipped
     cascade3 = {Path("content"): "index.html"}
     got = lookup(Path("content"), cascade3)
     if got != "index.html":
