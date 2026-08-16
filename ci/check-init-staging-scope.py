@@ -9,7 +9,10 @@ typikon's own scaffold outputs from an operator's pre-existing, unrelated
 work. The fix stages ONLY the paths this invocation itself created
 (bin/typikon-init's OWN_OUTPUTS array), plus the submodule gitlink when it
 actually moved, via NAMED `git add -f -- <path>` calls — the same mechanism
-bin/typikon-refresh (Step 4) already used for its narrower surface.
+bin/typikon-refresh (Step 4) already used for its narrower surface. The
+scaffold commit itself is likewise pathspec-scoped (`git commit -- <paths>`),
+a second, independent gap the re-run scenario below cannot exercise (see
+`check_first_commit_excludes_pre_staged_file`).
 
 Harness pattern shared with ci/check-init-favicon-path.py: runs the REAL
 bin/typikon-init against a throwaway destination, theme submodule pointed at
@@ -18,12 +21,17 @@ blocks that transport for submodules by default, CVE-2022-39253), fully
 isolated HOME/env so this needs neither network nor a running local forge nor
 the caller's ambient git config.
 
+Two independent scenarios, each guarding a different code path:
+
+`check_rerun_preserves_unrelated_state` — the re-run scope guard.
 Fixture matrix (forkwright/typikon#54's Desired correction, verbatim: "Add
 dirty-repository fixtures covering modified, deleted, staged, and untracked
 unrelated files and assert their states remain exact"):
     - modified:   an already-tracked file edited in the working tree, left unstaged
     - deleted:    an already-tracked file removed from the working tree, left unstaged
-    - staged:     a brand-new file `git add`ed before the re-run (staged, uncommitted)
+    - staged:     a file with staged content PLUS a further, unstaged edit on top
+                  (git-status "AM") — see the WHY beside `staged_path` below for
+                  why a fully-staged-and-untouched file cannot discriminate this bug
     - untracked:  a brand-new file left untouched (no `git add` at all)
 
 Sequence: bin/typikon-init runs ONCE (creates the scaffold + initial commit),
@@ -34,13 +42,27 @@ issue names — and the snapshot is retaken.
 
 Each fixture's status LINE must be byte-identical before/after, not merely
 "the file still looks dirty in some form": the defect is a STATUS-CODE
-change (an unstaged " M"/" D"/"??" flipping to a staged "M "/"D "/"A "),
-which `git add -A` produces without touching file content at all — a
-content-only or existence-only check would pass against the pre-fix script
-just as easily as the post-fix one. HEAD is also asserted unmoved: even the
-pre-fix script does not commit on a refresh (git log already non-empty), so
-an unmoved HEAD alone would not have caught this defect — it is checked here
-only to guard the commit path specifically, not as the fixture's proof.
+change (an unstaged " M"/" D"/"??" flipping to a staged "M "/"D "/"A ", or an
+"AM" collapsing to "A "), which `git add -A` produces without necessarily
+touching file content at all — a content-only or existence-only check would
+pass against the pre-fix script just as easily as the post-fix one. HEAD is
+also asserted unmoved: even the pre-fix script does not commit on a refresh
+(git log already non-empty), so an unmoved HEAD alone would not have caught
+this defect — it is checked here only to guard the commit path specifically,
+not as the fixture's proof.
+
+`check_first_commit_excludes_pre_staged_file` — the FIRST-commit pathspec
+guard. The re-run scenario above can never reach bin/typikon-init's
+`git log --oneline` empty branch (the harness's own first `_run_init` call
+already created a commit before any fixture exists), so it cannot exercise
+whether the scaffold commit itself is pathspec-scoped. This scenario
+constructs the one situation where that matters: a destination with an
+already-initialized `.git` but ZERO commits, where the operator has already
+`git add`ed a file of their own before typikon-init ever runs. A plain
+`git commit` (no pathspec) commits the WHOLE index, sweeping that file into
+typikon-init's own scaffold commit; `git commit -- "${COMMIT_PATHS[@]}"`
+commits only the scaffold's own paths and leaves the operator's file staged,
+untouched, and absent from HEAD.
 
 NOTE: runs standalone (no examples/ site needed) as part of ci/run-fixtures.sh.
 """
@@ -120,7 +142,7 @@ def _porcelain(dest: Path, env: dict[str, str]) -> dict[str, str]:
     return codes
 
 
-def main() -> int:
+def check_rerun_preserves_unrelated_state() -> int:
     failures: list[str] = []
 
     with tempfile.TemporaryDirectory(prefix="typikon-init-staging-home-") as home_tmp, \
@@ -149,6 +171,21 @@ def main() -> int:
         subprocess.run(
             ["git", "-C", str(dest), "add", "operator-staged.txt"], env=env, check=True,
         )
+        # WHY a SECOND, unstaged edit on top of the staged content, not just
+        # staged-and-left-alone: a file that is fully staged with nothing
+        # further changed in the working tree has git-status code 'A ' both
+        # BEFORE and AFTER a `git add -A` re-run, because `git add` is a
+        # no-op on a path whose index content already matches the worktree.
+        # That shape cannot discriminate the bug from the fix — repo-wide
+        # `git add -A` and the fixed scoped add produce the identical
+        # 'A ' -> 'A ' transition (verified: this was the shipped fixture,
+        # and it was silent against a reverted, unscoped `git add -A`).
+        # Layering a further unstaged edit yields 'AM': the scoped add never
+        # touches this path (untouched -> stays 'AM'), while a repo-wide
+        # `git add -A` stages the further edit too, collapsing it to 'A ' —
+        # a status-code change the comparison below can actually catch.
+        staged_dirty = "staged before re-run\nunstaged edit on top of the staged content\n"
+        staged_path.write_text(staged_dirty, encoding="utf-8")
 
         scratch_path = dest / "operator-scratch.txt"
         scratch_path.write_text("untracked before re-run\n", encoding="utf-8")
@@ -191,6 +228,11 @@ def main() -> int:
             failures.append("content/about.md's working-tree content changed across the re-run")
         if contact_path.exists():
             failures.append("content/contact.md was recreated by the re-run (it was deleted beforehand)")
+        if staged_path.read_text(encoding="utf-8") != staged_dirty:
+            failures.append(
+                "operator-staged.txt's working-tree content changed across the re-run — its "
+                "unstaged top edit must survive untouched, not just its status code"
+            )
 
     if failures:
         for line in failures:
@@ -203,6 +245,108 @@ def main() -> int:
         "(forkwright/typikon#54)"
     )
     return 0
+
+
+def check_first_commit_excludes_pre_staged_file() -> int:
+    """Guard bin/typikon-init's pathspec-scoped FIRST commit specifically.
+
+    Constructs the one scenario where `git commit -- "${COMMIT_PATHS[@]}"`
+    (versus a plain `git commit`) actually matters: a destination whose
+    `.git` already exists but carries zero commits, with a file the
+    operator already `git add`ed before typikon-init ever ran. Neither
+    `check_rerun_preserves_unrelated_state`'s first nor second
+    `_run_init` call can reach this — its first call starts from no
+    `.git` at all (so its own commit is the repo's first and nothing
+    else is staged yet to sweep), and its second call runs against a
+    repo whose `git log` is already non-empty, which takes
+    bin/typikon-init's echo-only refresh branch and never calls
+    `git commit` at all, scoped or not.
+    """
+    failures: list[str] = []
+
+    with tempfile.TemporaryDirectory(prefix="typikon-init-firstcommit-home-") as home_tmp, \
+         tempfile.TemporaryDirectory(prefix="typikon-init-firstcommit-dest-") as dest_tmp:
+        env = _isolated_env(Path(home_tmp))
+        dest = Path(dest_tmp) / "probe-site"
+        dest.mkdir(parents=True)
+
+        # An operator-initialized, commit-less repo — NOT typikon-init's own
+        # `git init` branch (that only fires when `.git` is absent).
+        subprocess.run(["git", "init", "-q", "-b", "main", str(dest)], env=env, check=True)
+        pre_staged_path = dest / "operator-pre-staged.txt"
+        pre_staged_path.write_text("operator content, staged before typikon-init ever ran\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(dest), "add", "--", "operator-pre-staged.txt"], env=env, check=True,
+        )
+        status_before = _porcelain(dest, env)
+        if status_before.get("operator-pre-staged.txt") != "A ":
+            print(
+                f"FAIL: fixture setup did not stage operator-pre-staged.txt as expected: {status_before}",
+                file=sys.stderr,
+            )
+            return 1
+
+        result = _run_init(env, dest)
+        if result.returncode != 0:
+            print(f"FAIL: bin/typikon-init exited {result.returncode}:\n{result.stderr}", file=sys.stderr)
+            return 1
+
+        head = _rev_parse_head(dest, env)
+        in_head = subprocess.run(
+            ["git", "-C", str(dest), "cat-file", "-e", f"{head}:operator-pre-staged.txt"],
+            capture_output=True,
+            env=env,
+            check=False,
+        )
+        if in_head.returncode == 0:
+            failures.append(
+                "operator-pre-staged.txt was committed into typikon-init's own scaffold commit — "
+                "the scaffold commit must be pathspec-scoped to its own outputs "
+                "(forkwright/typikon#54's second-order gap: a not-yet-committed destination with "
+                "the operator's own pre-staged file must not have that file swept into typikon-init's commit)"
+            )
+
+        status_after = _porcelain(dest, env)
+        after_code = status_after.get("operator-pre-staged.txt")
+        if after_code != "A ":
+            failures.append(
+                f"operator-pre-staged.txt's status changed from 'A ' to {after_code!r} across "
+                "typikon-init's first run — it must remain staged and untouched, only excluded "
+                "from the scaffold commit itself"
+            )
+
+        own_output_probe = "content/about.md"
+        own_in_head = subprocess.run(
+            ["git", "-C", str(dest), "cat-file", "-e", f"{head}:{own_output_probe}"],
+            capture_output=True,
+            env=env,
+            check=False,
+        )
+        if own_in_head.returncode != 0:
+            failures.append(
+                f"{own_output_probe} (typikon-init's own scaffold output) is absent from the "
+                "scaffold commit — the pathspec scoping must include typikon-init's own "
+                "OWN_OUTPUTS, not exclude everything"
+            )
+
+    if failures:
+        for line in failures:
+            print(f"FAIL: {line}", file=sys.stderr)
+        return 1
+
+    print(
+        "OK: bin/typikon-init's first scaffold commit is pathspec-scoped — an operator's own "
+        "pre-staged file survives staged-but-uncommitted rather than being swept into the "
+        "commit (forkwright/typikon#54)"
+    )
+    return 0
+
+
+def main() -> int:
+    return max(
+        check_rerun_preserves_unrelated_state(),
+        check_first_commit_excludes_pre_staged_file(),
+    )
 
 
 if __name__ == "__main__":
