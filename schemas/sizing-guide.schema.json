@@ -3,6 +3,13 @@
   "$id": "https://github.com/forkwright/typikon/schemas/sizing-guide.schema.json",
   "title": "typikon sizing guide",
   "description": "Frontmatter contract for a sizing-guide page (template = 'sizing-guide.html'). Renders a measurement table + measurement instructions; supports a decision-tree block.",
+  "$defs": {
+    "sizeTableSize": { "type": "string", "description": "Size label (e.g. '32', 'Medium', '34-36')." },
+    "sizeTableWaist": { "type": "string", "description": "Waist measurement (numeric or range) in measurement_unit." },
+    "sizeTableLength": { "type": "string", "description": "Length measurement in measurement_unit." },
+    "sizeTableWidth": { "type": "string", "description": "Width measurement in measurement_unit." },
+    "sizeTableNote": { "type": "string", "maxLength": 200, "description": "Per-row note (e.g. 'Sized to last hole; first hole is +2 inches')." }
+  },
   "type": "object",
   "required": ["title", "extra"],
   "additionalProperties": false,
@@ -47,20 +54,17 @@
         "size_table": {
           "type": "array",
           "minItems": 1,
-          "description": "One row per size. Columns are flexible per product; common shape: { size, waist, length }.",
+          "description": "One row per size. Columns are flexible per product; common shape: { size, waist, length }. Every column's shape is declared exactly once, under $defs, and referenced here by $ref — a column's type/constraints never need editing in two places, and templates/sizing-guide.html's header + row-cell logic is the single consumer of this same property set.",
           "items": {
             "type": "object",
             "required": ["size"],
             "additionalProperties": false,
             "properties": {
-              "size": {
-                "type": "string",
-                "description": "Size label (e.g. '32', 'Medium', '34-36')."
-              },
-              "waist": { "type": "string", "description": "Waist measurement (numeric or range) in measurement_unit." },
-              "length": { "type": "string", "description": "Length measurement in measurement_unit." },
-              "width": { "type": "string", "description": "Width measurement in measurement_unit." },
-              "note": { "type": "string", "maxLength": 200, "description": "Per-row note (e.g. 'Sized to last hole; first hole is +2 inches')." }
+              "size": { "$ref": "#/$defs/sizeTableSize" },
+              "waist": { "$ref": "#/$defs/sizeTableWaist" },
+              "length": { "$ref": "#/$defs/sizeTableLength" },
+              "width": { "$ref": "#/$defs/sizeTableWidth" },
+              "note": { "$ref": "#/$defs/sizeTableNote" }
             }
           }
         },

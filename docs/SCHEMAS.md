@@ -256,7 +256,7 @@ Any page with `template = "sizing-guide.html"`. Renders a measurement table, an 
 - measurement_source: 3–200 chars. Source for numeric sizing claims
 - product_type: 2–40 chars
 - measurement_unit (optional): `inches | centimeters | both` (default `inches`)
-- size_table rows: required `size`. Optional `waist`, `length`, `width`, `note`. Column rendering is conditional on the first row's keys
+- size_table rows: required `size`. Optional `waist`, `length`, `width`, `note` (each column's shape declared once, under `$defs`, in the schema). A column renders if ANY row in the table sets it, and every row gets a cell in that column — blank where the row itself omits the field — so header/cell association never depends on row order
 - diagram (optional): path under static/ to an `.svg` file. Loaded inline via `load_data`
 - decision_tree (optional): array of strings, rendered as ordered list
 - duration (optional): ISO 8601 duration, hours/minutes/seconds only (e.g. `PT2M`). Requires duration_source. Emitted as HowTo `totalTime` only when both are set — never guessed
