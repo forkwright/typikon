@@ -13,8 +13,9 @@
      - date (ISO 8601)
      - title
      - extra.components (string, e.g. "ardere · presence · the question")
-     - extra.words      (string, e.g. "~480 words")
-   See schemas/journal-entry.schema.json.
+   The `.entry-words` figure renders Zola's own entry.word_count by
+   default (see templates/journal-entry.html for what it counts and why);
+   entry.extra.words overrides it. See schemas/journal-entry.schema.json.
 #}
 {% extends "base.html" %}
 {% import "partials/assert.html" as assert %}
@@ -60,9 +61,7 @@
       {%- if entry.extra.components %}
       <span class="entry-components">{{ entry.extra.components }}</span>
       {%- endif %}
-      {%- if entry.extra.words %}
-      <span class="entry-words">{{ entry.extra.words }}</span>
-      {%- endif %}
+      <span class="entry-words">{{ entry.extra.words | default(value=entry.word_count ~ " words") }}</span>
     </a>
   </li>
 {%- endfor %}
