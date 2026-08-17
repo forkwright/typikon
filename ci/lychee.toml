@@ -8,8 +8,12 @@
 # triggers rate-limit responses that look like link rot but aren't.
 max_concurrency = 4
 
-# Cache successful checks between CI runs to avoid hammering targets.
-# CI workflows persist .lychee_cache/ across runs.
+# NOTE: neither ci/github-workflow.yml.tmpl nor ci/kanon-ci.toml.tmpl
+# persists .lychee_cache/ across runs (no actions/cache step, no forge
+# equivalent) — every CI run starts from an empty cache, so max_cache_age
+# governs nothing outside a single invocation today. cache=true still
+# dedupes repeat hits to the SAME url within one run (multiple pages
+# linking the same external target), which is why it stays on.
 cache = true
 max_cache_age = "7d"
 

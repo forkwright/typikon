@@ -88,7 +88,13 @@ if [[ ! -d themes/typikon/.git && ! -f themes/typikon/theme.toml ]]; then
     git config submodule.themes/typikon.url "$THEME_REPO"
     git -C themes/typikon remote set-url origin "$THEME_REPO"
 else
-    (cd themes/typikon && git pull --ff-only origin main 2>/dev/null) || true
+    # WARNING: must not be `set -e`-fatal — an offline/unreachable forge on
+    # a re-run must not abort the whole scaffold over an already-checked-out
+    # submodule — but the prior `2>/dev/null || true` converted EVERY
+    # failure into silent success with no trace anywhere (forkwright/typikon#92).
+    if ! PULL_OUTPUT="$(cd themes/typikon && git pull --ff-only origin main 2>&1)"; then
+        echo "warn   themes/typikon: refresh failed, continuing with existing checkout: ${PULL_OUTPUT//$'\n'/ }" >&2
+    fi
 fi
 
 # INVARIANT: OWN_OUTPUTS accumulates only the paths THIS invocation
@@ -128,10 +134,13 @@ write_if_absent() {
     fi
 }
 
-# Copy templates from typikon (always refresh the .tmpl-derived instances —
-# consumers should treat _headers and _redirects as derived files, not
-# hand-edited; per-site deltas go in a sibling _headers.local file or in
-# direct edits the operator commits manually).
+# Copy templates from typikon (create-if-absent — same model as
+# write_if_absent above, not a refresh). _headers/_redirects are
+# scaffolded here ONCE; typikon-refresh deliberately does not re-render
+# them on a later bump (see its own header), so they are the operator's
+# to hand-edit from this point on. That is the opposite of
+# .kanon-ci.toml / the GitHub workflow, which typikon-refresh DOES treat
+# as fully derived and re-renders every bump.
 copy_template() {
     local src="$1"
     local dest="$2"

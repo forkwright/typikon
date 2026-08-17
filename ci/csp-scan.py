@@ -9,10 +9,17 @@ are never flagged — only inline bodies and inline attribute values are.
 
 Usage:
     ci/csp-scan.py <file> [<file> ...]
+    ci/csp-scan.py < <(printf '%s\n' <file> ...)   # newline-delimited paths on stdin
+
+WHY stdin too: a caller with a large discovered file list (csp-enforce.sh
+scanning an entire built site) risks E2BIG passing that list as argv to an
+execve() — a limit stdin has no equivalent of. argv still works for direct/
+small invocations; it takes precedence when non-empty.
 
 Exit:
     0  no violations
     1  violations found (each printed to stderr as "<path>:<line>: <detail>")
+    2  invocation error (no paths given on argv or stdin)
 """
 
 from __future__ import annotations
@@ -104,12 +111,21 @@ def scan(path: str) -> list[tuple[int, str]]:
 
 
 def main(argv: list[str]) -> int:
-    if not argv:
-        print("usage: ci/csp-scan.py <file> [<file> ...]", file=sys.stderr)
+    if argv:
+        paths = argv
+    else:
+        # WHY not sys.stdin.isatty()-gated: an empty/closed stdin (a
+        # direct interactive invocation with no argv) falls through to
+        # an empty paths list either way, hitting the same "no paths"
+        # error below rather than blocking on a read.
+        paths = [line.rstrip("\n") for line in sys.stdin if line.strip()]
+
+    if not paths:
+        print("usage: ci/csp-scan.py <file> [<file> ...] (or newline-delimited paths on stdin)", file=sys.stderr)
         return 2
 
     total = 0
-    for path in argv:
+    for path in paths:
         for line, detail in scan(path):
             print(f"{path}:{line}: {detail}", file=sys.stderr)
             total += 1

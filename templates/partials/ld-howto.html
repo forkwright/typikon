@@ -17,6 +17,7 @@
    Schema reference: https://schema.org/HowTo
 #}
 {% import "partials/assert.html" as assert %}
+{% import "partials/ld-json.html" as ldjson %}
 {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-howto.html") }}
 {{ assert::required(ok=page.extra.product_type is defined and page.extra.product_type, field="page.extra.product_type", template="partials/ld-howto.html") }}
 {{ assert::required(ok=page.extra.measurement_source is defined and page.extra.measurement_source, field="page.extra.measurement_source", template="partials/ld-howto.html") }}
@@ -26,17 +27,17 @@
 {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": {{ howto_name | json_encode | safe }},
-  "description": {{ page.description | json_encode | safe }},
+  "name": {{ ldjson::str(value=howto_name) }},
+  "description": {{ ldjson::str(value=page.description) }},
   {%- if page.extra.duration is defined and page.extra.duration %}
-  "totalTime": {{ page.extra.duration | json_encode | safe }},
+  "totalTime": {{ ldjson::str(value=page.extra.duration) }},
   {%- endif %}
   "step": [
     {%- for line in page.extra.decision_tree -%}
     {
       "@type": "HowToStep",
       "position": {{ loop.index }},
-      "text": {{ line | json_encode | safe }}
+      "text": {{ ldjson::str(value=line) }}
     }{%- if not loop.last -%},{%- endif -%}
     {%- endfor %}
   ]

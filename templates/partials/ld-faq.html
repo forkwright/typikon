@@ -6,6 +6,7 @@
      page.extra.questions — array of {q, a, anchor?} per faq schema
 #}
 {% import "partials/assert.html" as assert %}
+{% import "partials/ld-json.html" as ldjson %}
 {{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-faq.html") }}
 {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-faq.html") }}
 {{ assert::required(ok=page.extra.questions is defined and page.extra.questions | length > 0, field="page.extra.questions", template="partials/ld-faq.html") }}
@@ -17,10 +18,10 @@
     {%- for item in page.extra.questions -%}
     {
       "@type": "Question",
-      "name": {{ item.q | json_encode | safe }},
+      "name": {{ ldjson::str(value=item.q) }},
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": {{ item.a | json_encode | safe }}
+        "text": {{ ldjson::str(value=item.a) }}
       }
     }{%- if not loop.last -%},{%- endif -%}
     {%- endfor %}

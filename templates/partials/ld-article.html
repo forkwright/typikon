@@ -11,6 +11,7 @@
      config.title       — publisher name
 #}
 {% import "partials/assert.html" as assert %}
+{% import "partials/ld-json.html" as ldjson %}
 {{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-article.html") }}
 {{ assert::required(ok=page.description is defined and page.description, field="page.description", template="partials/ld-article.html") }}
 {{ assert::required(ok=page.date is defined and page.date, field="page.date", template="partials/ld-article.html") }}
@@ -18,29 +19,35 @@
 {%- set author_name = page.extra.author | default(value=config.extra.author.name) | default(value=config.title) -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}
-  {%- set image_url = config.base_url ~ "/" ~ page.extra.og_image -%}
+  {#- get_url(), not hand string-concatenation (forkwright/typikon#92):
+     matches the visible <meta property="og:image"> resolution in
+     base.html/page.html for the identical field, and normalizes
+     base_url/path joining the way a hand `~ "/" ~` join does not (a
+     trailing-slash base_url — a real consumer misconfiguration — joins
+     into a broken double-slash URL under raw concatenation). -#}
+  {%- set image_url = get_url(path=page.extra.og_image, trailing_slash=false) -%}
 {%- endif -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": {{ page.title | json_encode | safe }},
-  "description": {{ page.description | json_encode | safe }},
-  "url": {{ page.permalink | json_encode | safe }},
-  "datePublished": {{ page.date | json_encode | safe }},
+  "headline": {{ ldjson::str(value=page.title) }},
+  "description": {{ ldjson::str(value=page.description) }},
+  "url": {{ ldjson::str(value=page.permalink) }},
+  "datePublished": {{ ldjson::str(value=page.date) }},
   "author": {
     "@type": "Person",
-    "name": {{ author_name | json_encode | safe }}
+    "name": {{ ldjson::str(value=author_name) }}
   },
   "publisher": {
     "@type": "Organization",
-    "name": {{ config.title | json_encode | safe }}
+    "name": {{ ldjson::str(value=config.title) }}
   }
   {%- if page.updated -%},
-  "dateModified": {{ page.updated | json_encode | safe }}
+  "dateModified": {{ ldjson::str(value=page.updated) }}
   {%- endif -%}
   {%- if image_url -%},
-  "image": {{ image_url | json_encode | safe }}
+  "image": {{ ldjson::str(value=image_url) }}
   {%- endif %}
 }
 </script>

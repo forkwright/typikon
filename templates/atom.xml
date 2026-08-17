@@ -22,8 +22,27 @@
     <link href="{{ config.base_url | safe }}"/>
     <generator uri="https://www.getzola.org/">Zola</generator>
     {%- if pages | length > 0 -%}
-    {%- set newest = pages | sort(attribute="date") | last -%}
-    {%- set feed_updated = newest.updated | default(value=newest.date) -%}
+    {# WHY a full scan instead of `sort(attribute="date") | last`: the
+       feed's <updated> must be the most recent EDIT across every entry,
+       and one entry's most recent edit is `updated` when set, `date`
+       otherwise (forkwright/typikon#92). Sorting by `date` alone and then
+       reading THAT entry's `updated` misses an older-dated entry whose
+       own `updated` is more recent than the newest-dated entry's own —
+       exactly the case <updated> exists to surface. set_global (not
+       set) is required so an assignment inside the for loop survives
+       past that iteration; date(format="%s") | int turns each value
+       into an epoch integer because Tera's `>` only compares numbers,
+       never date/string values directly. #}
+    {%- set_global feed_updated_ts = 0 -%}
+    {%- set_global feed_updated = "" -%}
+    {%- for p in pages -%}
+    {%- set p_updated = p.updated | default(value=p.date) -%}
+    {%- set p_ts = p_updated | date(format="%s") | int -%}
+    {%- if p_ts > feed_updated_ts -%}
+    {%- set_global feed_updated_ts = p_ts -%}
+    {%- set_global feed_updated = p_updated -%}
+    {%- endif -%}
+    {%- endfor -%}
     {%- else -%}
     {# No dated entries to derive updated from (e.g. a shop with no
        journal) — fall back to Zola's last_updated, then now(), to keep

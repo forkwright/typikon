@@ -7,6 +7,7 @@
 
    Skips emitting any JSON-LD when ancestors is empty (e.g. home page).
 #}
+{% import "partials/ld-json.html" as ldjson %}
 {% macro breadcrumb(title, permalink, ancestors) %}
 {%- if ancestors and ancestors | length > 0 %}
 {#- WHY: trailing-slash spelling varies (config.base_url is user-entered,
@@ -23,8 +24,8 @@
     {
       "@type": "ListItem",
       "position": 1,
-      "name": {{ config.title | json_encode | safe }},
-      "item": {{ config.base_url | json_encode | safe }}
+      "name": {{ ldjson::str(value=config.title) }},
+      "item": {{ ldjson::str(value=config.base_url) }}
     }
     {%- set position = 2 -%}
     {%- set_global seen = [base_key] -%}
@@ -36,8 +37,8 @@
     {
       "@type": "ListItem",
       "position": {{ position }},
-      "name": {{ ancestor.title | json_encode | safe }},
-      "item": {{ ancestor.permalink | json_encode | safe }}
+      "name": {{ ldjson::str(value=ancestor.title) }},
+      "item": {{ ldjson::str(value=ancestor.permalink) }}
     }
         {%- set_global position = position + 1 -%}
         {%- set_global seen = seen | concat(with=ancestor_key) -%}
@@ -47,8 +48,8 @@
     {
       "@type": "ListItem",
       "position": {{ position }},
-      "name": {{ title | json_encode | safe }},
-      "item": {{ permalink | json_encode | safe }}
+      "name": {{ ldjson::str(value=title) }},
+      "item": {{ ldjson::str(value=permalink) }}
     }
   ]
 }

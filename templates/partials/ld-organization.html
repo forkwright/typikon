@@ -6,25 +6,45 @@
      config.description       — brand tagline
      config.base_url          — canonical site root
      config.extra.logo_path   — relative to /; resolves to absolute via base_url
-     config.extra.author.name — primary maker / founder
      config.extra.brand_greek — optional motto (used in alternateName)
      config.extra.founding_date — optional ISO 8601 year (e.g. "2024")
      config.extra.footer_links — list of {url, rel}; entries with rel="me" emit as sameAs
 #}
-{%- set logo_url = config.base_url ~ "/" ~ config.extra.logo_path -%}
+{% import "partials/assert.html" as assert %}
+{% import "partials/ld-json.html" as ldjson %}
+{#- WHY this guard (forkwright/typikon#92): every sibling partials/ld-*.html
+   imports partials/assert.html and asserts its own documented required
+   inputs; this file did neither. config.extra.logo_path feeds logo_url
+   below UNCONDITIONALLY — there is no `{% if %}` around it the way
+   brand_greek/founding_date/footer_links each get — so an absent value
+   still failed the build (Tera's `~` concatenation errors on an undefined
+   variable), but with a bare "Variable `config.extra.logo_path` not found
+   in context" engine error naming neither the missing field's role nor
+   which template needs it — verified against a zola build. Every sibling
+   partial instead names both, via the same assert::required this file now
+   also uses. -#}
+{{ assert::required(ok=config.extra.logo_path is defined and config.extra.logo_path, field="config.extra.logo_path", template="partials/ld-organization.html") }}
+{#- get_url(), not hand string-concatenation (forkwright/typikon#92): the
+   visible <link rel="icon"> in base.html resolves config.extra.favicon_path
+   the same way, and get_url() normalizes base_url/path joining (a
+   trailing-slash base_url — a real, easy consumer misconfiguration —
+   hand-concatenates into a broken double-slash URL; get_url() does not).
+   Keeps this JSON-LD "logo" value byte-identical in construction to
+   every other resolved-asset URL this theme emits. -#}
+{%- set logo_url = get_url(path=config.extra.logo_path, trailing_slash=false) -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": {{ config.title | json_encode | safe }},
-  "description": {{ config.description | json_encode | safe }},
-  "url": {{ config.base_url | json_encode | safe }},
-  "logo": {{ logo_url | json_encode | safe }}
+  "name": {{ ldjson::str(value=config.title) }},
+  "description": {{ ldjson::str(value=config.description) }},
+  "url": {{ ldjson::str(value=config.base_url) }},
+  "logo": {{ ldjson::str(value=logo_url) }}
   {%- if config.extra.brand_greek -%},
-  "alternateName": {{ config.extra.brand_greek | json_encode | safe }}
+  "alternateName": {{ ldjson::str(value=config.extra.brand_greek) }}
   {%- endif -%}
   {%- if config.extra.founding_date -%},
-  "foundingDate": {{ config.extra.founding_date | json_encode | safe }}
+  "foundingDate": {{ ldjson::str(value=config.extra.founding_date) }}
   {%- endif -%}
   {%- if config.extra.footer_links -%}
     {%- set sameas = [] -%}
@@ -35,7 +55,7 @@
       {%- endif -%}
     {%- endfor -%}
     {%- if sameas | length > 0 -%},
-  "sameAs": {{ sameas | json_encode | safe }}
+  "sameAs": {{ ldjson::str(value=sameas) }}
     {%- endif -%}
   {%- endif %}
 }
