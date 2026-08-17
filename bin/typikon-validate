@@ -24,6 +24,7 @@ the page's own frontmatter value, or its cascade-resolved effective value
 when it set none):
     frontmatter `template = "faq.html"`          -> faq.schema.json
     frontmatter `template = "sizing-guide.html"` -> sizing-guide.schema.json
+    frontmatter `template = "journal-entry.html"` -> journal-entry.schema.json
     frontmatter `template` matches a `[[entry]]` in
       <root>/schemas/registry.toml with `template = "..."`
                                                    -> the entry's consumer schema
@@ -99,6 +100,7 @@ SCHEMA_DIR = THEME_ROOT / "schemas"
 TEMPLATE_SCHEMA_MAP = {
     "faq.html": "faq",
     "sizing-guide.html": "sizing-guide",
+    "journal-entry.html": "journal-entry",
 }
 
 # WHY: templates typikon itself ships that a consumer may freely set as

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/forkwright/typikon/schemas/journal-entry.schema.json",
   "title": "typikon journal entry",
-  "description": "Frontmatter contract for a journal entry (content/journal/<slug>.md). Stricter than the page schema: date and the entry-level extras are required so the auto-generated journal-section listing renders cleanly.",
+  "description": "Frontmatter contract for a journal entry: content/journal/<slug>.md, or any page whose effective template (explicit or page_template-cascaded) is journal-entry.html. Stricter than the page schema: date and the entry-level extras are required so the auto-generated journal-section listing renders cleanly.",
   "type": "object",
   "required": ["title", "description", "date", "extra"],
   "additionalProperties": false,
@@ -52,7 +52,26 @@
         "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$" },
         "og_type": { "type": "string", "enum": ["website", "article", "profile"] },
         "author": { "type": "string", "description": "Per-entry author override; falls back to config.extra.author.name." },
-        "skip_sitemap": { "type": "boolean", "description": "Exclude this entry from sitemap.xml." }
+        "skip_sitemap": { "type": "boolean", "description": "Exclude this entry from sitemap.xml." },
+        "figure": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "description": "Optional orienting image rendered as furniture above the entry body, never inside page.content (so the Atom feed carries no asset dependency). Not consumed by typikon's own stock journal-entry.html; a consumer shadow template renders it (see forkwright/typikon#163)."
+        },
+        "figure_alt": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500,
+          "description": "Accessible description of extra.figure. A diagram description runs long by nature, so the ceiling sits well above a typical alt-text bound rather than at the shorter bound used elsewhere in this schema family (e.g. product.schema.json's images[].alt)."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["notes", "research"],
+          "description": "Weight class for a consumer that groups its journal listing by tier instead of one flat date-sorted list. Not consumed by typikon's own stock journal-section.html, which lists chronologically regardless of tier."
+        }
+      },
+      "dependentRequired": {
+        "figure": ["figure_alt"]
       }
     }
   }

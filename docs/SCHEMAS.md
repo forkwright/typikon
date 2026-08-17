@@ -10,6 +10,7 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 |----------------------------------------------------------|------------------------------|
 | frontmatter `template = "faq.html"`                     | faq                            |
 | frontmatter `template = "sizing-guide.html"`             | sizing-guide                   |
+| frontmatter `template = "journal-entry.html"`            | journal-entry                  |
 | frontmatter `template` matches a `schemas/registry.toml` `template` entry | that entry's consumer schema |
 | `_index.md` (root or section)                           | section                        |
 | `journal/<slug>.md`                                     | journal-entry                  |
@@ -142,9 +143,11 @@ list_caption = "Newest at top."
 
 ## journal-entry (`schemas/journal-entry.schema.json`)
 
-Pages under `content/journal/` (excluding `_index.md`). Stricter than page: requires `description`, `date`, and the entry-level extras so the auto-generated journal listing renders cleanly.
+Pages under `content/journal/` (excluding `_index.md`), OR any page whose effective `template` — explicit or resolved through the `page_template` cascade (see the routing table above) — is `journal-entry.html`, regardless of its path. Stricter than page: requires `description`, `date`, and the entry-level extras so the auto-generated journal listing renders cleanly.
 
 **Required:** `title`, `description`, `date`, `extra.audience`, `extra.components`, `extra.words`, `extra.words_source`.
+
+**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `author`, `skip_sitemap`, `figure`, `figure_alt`, `tier`.
 
 **Constraints:**
 - description: 20–200 chars
@@ -153,6 +156,10 @@ Pages under `content/journal/` (excluding `_index.md`). Stricter than page: requ
 - extra.components: 5–120 chars (the conceptual-tags line)
 - extra.words: matches `^~?\d+( words)?$`
 - extra.words_source: 3–200 chars. Source for the rendered word-count claim
+- extra.og_image: ends in `.svg|.png|.jpg|.webp`
+- extra.figure: ends in `.svg|.png|.jpg|.webp`. Not consumed by typikon's own stock `journal-entry.html` — a consumer shadow template renders it as furniture above the entry body (forkwright/typikon#163)
+- extra.figure_alt: 5–500 chars. **Required whenever `extra.figure` is set** (enforced via `dependentRequired`, not just documented)
+- extra.tier: one of `notes | research`. Not consumed by typikon's own stock `journal-section.html` — a consumer shadow template that groups its listing by tier reads it (forkwright/typikon#163)
 
 **Example:**
 
