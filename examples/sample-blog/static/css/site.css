@@ -1,0 +1,17 @@
+/*
+ * Sample Blog — consumer-side stylesheet (forkwright/typikon#55 fixture).
+ *
+ * Loaded after core's static/css/style.css via this site's
+ * config.toml [extra] consumer_css hook. Redeclares ONLY the four
+ * semantic accent tokens core defines with a neutral default — a
+ * deliberately different, non-Leather palette, proving a consumer can
+ * establish its own visual identity without touching core CSS, without
+ * a skin, and without shadowing any template.
+ */
+
+:root {
+  --accent-1: #14495E; /* marine teal */
+  --accent-2: #4A3B7A; /* violet */
+  --accent-3: #0F6B52; /* pine */
+  --accent-4: #2E6B8A; /* sky teal */
+}

@@ -63,12 +63,13 @@ Out of scope, with reasons, so nobody re-litigates them as omissions:
     domain, not this one. It resolves to var(--text) against var(--bg) =
     15.77:1, so there is no live defect either way.
   - `.home-page:has(.mark-*:hover)` / `:has(.triad-mark.settled .triad-N:hover)`
-    (style.css:394-404, 1230-1249) shift the home page's background
-    through a decorative gradient. This is pre-adjudicated, not skipped
-    out of convenience: ci/pa11y.config.js's own `ignore`-list comment
-    states the underlying text stays "on archival-paper bg,
-    contrast-AA-clean" by design and marks the class ratio-aware. This
-    script does not re-litigate that documented call.
+    (static/css/skins/leather.css as of forkwright/typikon#55; originally
+    in style.css itself) shift the home page's background through a
+    decorative gradient. This is pre-adjudicated, not skipped out of
+    convenience: ci/pa11y.config.js's own `ignore`-list comment states the
+    underlying text stays "on archival-paper bg, contrast-AA-clean" by
+    design and marks the class ratio-aware. This script does not
+    re-litigate that documented call.
   - `:active`, `:visited`, `:disabled` currently have ZERO rules anywhere
     in style.css (confirmed by the scan in part 3 finding none) — so
     every element's active/visited/disabled state renders with the same
@@ -104,6 +105,23 @@ from contrast import (  # noqa: E402
 
 THEME_ROOT = Path(__file__).resolve().parent.parent
 STYLE_CSS = THEME_ROOT / "static" / "css" / "style.css"
+
+# First-party skins this theme ships (forkwright/typikon#55): their :root
+# token overrides are cascade-loaded AFTER style.css by a consumer that
+# opts in (config.extra.consumer_css), so the SAME theme-owned selectors
+# this script protects (.nav-links a:nth-child(3):hover, .triad-3, ...)
+# render through whatever hue a skin maps its --accent-N tokens to.
+# Scanning core alone would leave that mapping — including the exact
+# color pair (--aporia / --aporia-interactive) #64 was filed over —
+# unchecked the moment it moved out of style.css. This does NOT extend to
+# arbitrary consumer-authored CSS: MATRIX is hand-curated over this
+# theme's OWN selectors, so an unknown consumer skin with its own novel
+# selectors is out of scope here exactly as it always was.
+FIRST_PARTY_SKINS = [THEME_ROOT / "static" / "css" / "skins" / "leather.css"]
+
+
+def load_theme_css() -> str:
+    return "\n".join(p.read_text(encoding="utf-8") for p in [STYLE_CSS, *FIRST_PARTY_SKINS])
 
 RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 STATE_PSEUDO_RE = re.compile(r":(hover|focus-visible|focus|active|visited|disabled)\b")
@@ -206,7 +224,8 @@ MATRIX = [
     (".nav-links a:nth-child(2):hover", "hover", [".nav-links a:nth-child(2):hover"], ("literal", "bg"), 11.1, 400,
      "dye-color hover override"),
     (".nav-links a:nth-child(3):hover", "hover", [".nav-links a:nth-child(3):hover"], ("literal", "bg"), 11.1, 400,
-     "the original #64 fix — must resolve to --aporia-interactive, not raw --aporia"),
+     "core resolves to --accent-3 (neutral by default); the leather skin's --accent-3 must stay "
+     "mapped to --aporia-interactive, not raw --aporia — the original #64 fix, now one hop deeper"),
     (".nav-links a:nth-child(4):hover", "hover", [".nav-links a:nth-child(4):hover"], ("literal", "bg"), 11.1, 400,
      "dye-color hover override"),
     (".nav-links a:nth-child(5):hover", "hover", [".nav-links a:nth-child(5):hover"], ("literal", "bg"), 11.1, 400,
@@ -267,7 +286,7 @@ MATRIX = [
      "color:var(--bg) text on background:var(--text) — both declared directly"),
     (".buy-btn:hover", "hover", [".buy-btn:hover", ".buy-btn"], ("chain", [".buy-btn:hover"]), 11.1, 400,
      "hover declares no `color`; chain falls back to .buy-btn (still --bg). "
-     "background is declared directly on the hover rule (--aima)"),
+     "background is declared directly on the hover rule (--accent-1)"),
 
     # --- 404 back link ---
     (".back-link", "default", [".back-link"], ("literal", "bg"), 11.1, 400,
@@ -357,7 +376,7 @@ NOT_TEXT_CONTRAST = {
     ".home-page:has(.mark-aima:hover)": "decorative bg gradient — pre-adjudicated, see module docstring",
     ".home-page:has(.mark-thanatochromia:hover)": "decorative bg gradient — pre-adjudicated, see module docstring",
     ".home-page:has(.mark-aporia:hover)": "decorative bg gradient — pre-adjudicated, see module docstring",
-    "a:hover": "text-decoration-color only, not the glyph color; --aima is 12.25:1 vs --bg regardless",
+    "a:hover": "text-decoration-color only, not the glyph color, which is what 1.4.3 measures",
     ".home .home-tagline:hover span": "opacity toggle only, no color",
     ".triad-mark.settled .triad-word:hover .english": "opacity toggle only, no color",
     ".triad-mark.settled .triad-word:hover .greek": "opacity toggle only, no color",
@@ -414,7 +433,7 @@ def find_state_affecting_selectors(css_text: str) -> dict[str, list[str]]:
 
 
 def main() -> int:
-    css_text = STYLE_CSS.read_text(encoding="utf-8")
+    css_text = load_theme_css()
     css_text_nocomments = CSS_COMMENT_RE.sub(" ", css_text)
     tokens = parse_root_tokens(css_text)
 
