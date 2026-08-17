@@ -28,7 +28,8 @@ LARGE_TEXT_PX_REGULAR = 24.0
 LARGE_TEXT_PX_BOLD = 18.66
 BOLD_WEIGHT_THRESHOLD = 700
 
-TOKEN_DECL_RE = re.compile(r"--([\w-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;")
+TOKEN_HEX_RE = re.compile(r"--([\w-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;")
+TOKEN_ALIAS_RE = re.compile(r"--([\w-]+)\s*:\s*var\(--([\w-]+)\)\s*;")
 
 
 def srgb_to_linear(channel: int) -> float:
@@ -73,10 +74,42 @@ def blend_over(fg_hex: str, backdrop_hex: str, alpha: float) -> str:
 
 
 def parse_root_tokens(css_text: str) -> dict[str, str]:
-    root_match = re.search(r":root\s*\{([^{}]*)\}", css_text, re.DOTALL)
-    if not root_match:
-        return {}
-    return dict(TOKEN_DECL_RE.findall(root_match.group(1)))
+    """Merge every top-level `:root{}` block's custom-property declarations,
+    in source order — a later block redeclaring a name wins, mirroring the
+    real cascade a consumer's skin CSS gets when it loads after core's
+    style.css (forkwright/typikon#55: `css_text` may be a concatenation of
+    core plus one or more first-party skin files, each with their own
+    `:root{}`).
+
+    A declaration whose value is itself `var(--other-token)` — not a literal
+    hex — is resolved against this same merged set (chased through further
+    aliases if needed) rather than being dropped. This lets a skin write
+    `--accent-3: var(--aporia-interactive);` instead of duplicating the hex
+    literal: one fact (the hex), one place (the token it's declared on),
+    everything else an alias of it."""
+    hex_decls: dict[str, str] = {}
+    alias_decls: dict[str, str] = {}
+    for root_body in re.findall(r":root\s*\{([^{}]*)\}", css_text, re.DOTALL):
+        for name, hex_value in TOKEN_HEX_RE.findall(root_body):
+            hex_decls[name] = hex_value
+            alias_decls.pop(name, None)
+        for name, target in TOKEN_ALIAS_RE.findall(root_body):
+            alias_decls[name] = target
+            hex_decls.pop(name, None)
+
+    def resolve(name: str, seen: frozenset[str]) -> str | None:
+        if name in hex_decls:
+            return hex_decls[name]
+        if name in alias_decls and name not in seen:
+            return resolve(alias_decls[name], seen | {name})
+        return None
+
+    resolved: dict[str, str] = {}
+    for name in {**hex_decls, **alias_decls}:
+        value = resolve(name, frozenset())
+        if value is not None:
+            resolved[name] = value
+    return resolved
 
 
 def text_contrast_floor(font_px: float, font_weight: int) -> float:

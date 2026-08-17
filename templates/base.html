@@ -6,6 +6,21 @@
      base.html does not access `page.*` or `section.*` directly so it works
      in every rendering context.
 
+   Consumer design/extension surface (forkwright/typikon#55) — a consumer
+   never needs to shadow (copy) this file to add its own identity:
+   - styles:      config.extra.consumer_css (list, config-driven) plus the
+                   {% block styles %}{% endblock %} slot (template-driven)
+   - head:        {% block head_extra %}{% endblock %}
+   - nav:         {% block nav %}{% endblock %} (default: partials/nav.html)
+   - footer:      {% block footer %}{% endblock %} (default: partials/footer.html)
+   - structured data: {% block ld_json %}{% endblock %} (default: Organization)
+   - scripts:     {% block scripts %}{% endblock %}
+   - composition: {% block content %}{% endblock %}, plus title/description/
+                   og_title/og_description/og_type/og_image/body_class
+   A child template overrides only the block(s) it needs; every other block
+   keeps rendering the default. See index.html for an example that overrides
+   several at once.
+
    WHY the assert import below (forkwright/typikon#92): Tera resolves a
    macro namespace by which TEMPLATE an include tag is textually written
    in, not by the included partial's own imports, once that block is
@@ -83,6 +98,20 @@
   {%- endif %}
   <link rel="stylesheet" href="/css/fonts.css">
   <link rel="stylesheet" href="/css/style.css">
+
+  {# Consumer stylesheet hook (forkwright/typikon#55): config.extra.consumer_css
+     is a list of paths (e.g. ["css/skins/leather.css", "css/site.css"]),
+     each rendered as a <link> here, in order, after core's own style.css —
+     so a consumer's :root token overrides and any skin classes win the
+     cascade without forking this file. bin/typikon-check-assets verifies
+     every declared path resolves to a real file in the built site.
+     {% block styles %}{% endblock styles %} is the template-level
+     counterpart: a specific page/section template can add a stylesheet of
+     its own the same way, without touching base.html either. #}
+  {%- for href in config.extra.consumer_css | default(value=[]) %}
+  <link rel="stylesheet" href="{{ get_url(path=href, trailing_slash=false) }}">
+  {%- endfor %}
+  {% block styles %}{% endblock styles %}
 
   {# Default JSON-LD: Organization on every page. Consumer page templates
      override this block to layer on Product/Article/BreadcrumbList. #}

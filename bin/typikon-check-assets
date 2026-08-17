@@ -19,8 +19,8 @@ reimplement Zola's site-static-over-theme-static merge — it runs against the r
 merged output of a real `zola build`, so a passing run proves the shipped asset is
 actually there, not that a hand-rolled path-resolution copy agrees with Zola's.
 
-Scope: `config.extra.*` only (favicon_path, logo_path, og_image) — the three
-keys docs/AGENTIC.md's brand-identity table documents as consumer-declared,
+Scope: `config.extra.*` only (favicon_path, logo_path, og_image, consumer_css) —
+the keys docs/AGENTIC.md's brand-identity table documents as consumer-declared,
 site-wide asset paths. Per-page/per-section `extra.og_image` overrides are
 page content, not consumer brand configuration, and out of scope for this check.
 
@@ -29,7 +29,9 @@ page content, not consumer brand configuration, and out of scope for this check.
 shipped default would be exactly the kind of silent breakage this exists to catch.
 `logo_path` and `og_image` have no default and are only checked when the consumer
 sets them (templates/base.html:44, partials/nav.html:8, partials/ld-organization.html:14
-all gate on the key being present).
+all gate on the key being present). `consumer_css` (forkwright/typikon#55) has no
+default (an unset or empty list renders zero extra `<link>` tags) and, unlike the
+three scalar keys, is a LIST — every entry is checked the same way, individually.
 
 NOTE: must run AFTER a `zola build` into `<root>/public` — see bin/typikon-check,
 which runs this as a stage immediately after its own zola-build stage.
@@ -111,21 +113,18 @@ def main() -> int:
     skipped = 0
     failed = 0
 
-    for key, default in ASSET_DEFAULTS.items():
-        raw = extra.get(key, default)
-        if raw is None:
-            skipped += 1
-            continue
+    def check_one(key: str, raw: object) -> bool:
+        """Resolve `raw` (a single declared path) against `public/` and
+        report pass/fail. Shared by the scalar ASSET_DEFAULTS loop and the
+        consumer_css list loop below — one resolution rule for every
+        consumer-declared asset path, not two copies that could drift."""
         if not isinstance(raw, str) or not raw:
-            checked += 1
-            failed += 1
             print(
                 json.dumps({"key": key, "path": raw, "error": f"config.extra.{key} is not a non-empty string"}),
                 file=sys.stderr,
             )
-            continue
+            return False
 
-        checked += 1
         # WHY lstrip("/"): every documented value and every existing consumer
         # usage (templates/partials/nav.html:8's `/{{ ... }}`, ld-organization.html:14's
         # `base_url ~ "/" ~ ...`) treats the configured value as root-relative
@@ -143,7 +142,6 @@ def main() -> int:
         relative = raw.lstrip("/")
         resolved = (public / relative).resolve()
         if not resolved.is_relative_to(public_resolved):
-            failed += 1
             print(
                 json.dumps({
                     "key": key,
@@ -152,19 +150,51 @@ def main() -> int:
                 }),
                 file=sys.stderr,
             )
-            continue
+            return False
         if resolved.is_file():
+            return True
+        print(
+            json.dumps({
+                "key": key,
+                "path": raw,
+                "error": f"no file at {resolved} — config.extra.{key} = {raw!r} does not resolve to a built asset",
+            }),
+            file=sys.stderr,
+        )
+        return False
+
+    for key, default in ASSET_DEFAULTS.items():
+        raw = extra.get(key, default)
+        if raw is None:
+            skipped += 1
+            continue
+        checked += 1
+        if check_one(key, raw):
             passed += 1
         else:
             failed += 1
-            print(
-                json.dumps({
-                    "key": key,
-                    "path": raw,
-                    "error": f"no file at {resolved} — config.extra.{key} = {raw!r} does not resolve to a built asset",
-                }),
-                file=sys.stderr,
-            )
+
+    # consumer_css (forkwright/typikon#55): a LIST, unlike the three scalar
+    # keys above — unset or empty is a valid "no extra stylesheet" state
+    # (templates/base.html's hook renders zero <link> tags), not an error,
+    # so an absent/empty list is a single skip rather than a failure.
+    consumer_css = extra.get("consumer_css")
+    if consumer_css is None or consumer_css == []:
+        skipped += 1
+    elif not isinstance(consumer_css, list):
+        checked += 1
+        failed += 1
+        print(
+            json.dumps({"key": "consumer_css", "path": consumer_css, "error": "config.extra.consumer_css is not a list"}),
+            file=sys.stderr,
+        )
+    else:
+        for i, raw in enumerate(consumer_css):
+            checked += 1
+            if check_one(f"consumer_css[{i}]", raw):
+                passed += 1
+            else:
+                failed += 1
 
     print(json.dumps({"checked": checked, "passed": passed, "skipped": skipped, "failed": failed}))
     return 1 if failed else 0

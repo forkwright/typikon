@@ -197,15 +197,19 @@ The substrate is design-family neutral. Brand-specific values go in `config.toml
 | `font_preload`              | which `.woff2` files preload at first paint |
 | `nav_items`, `footer_links` | navigation structure                        |
 | `[extra.author]`            | atom feed `<author>` + JSON-LD Article author |
+| `consumer_css`              | list of stylesheet paths, each `<link>`ed after core's own `style.css`, in order (`templates/base.html`'s Consumer stylesheet hook) |
 
-If a brand needs a *visual* override beyond these (different scale ratio, different color palette, different type pairing), redeclare the relevant `:root` custom properties in a consumer-side CSS file loaded after `style.css`. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
+If a brand needs a *visual* override beyond the table above (different scale ratio, different color palette, different type pairing), declare it via `consumer_css` and redeclare the relevant `:root` custom properties in that file. Core's own interactive-state CSS (nav hover, buttons, the home triad mark, FAQ anchors, ...) never hard-codes a hue — it resolves through four semantic tokens, `--accent-1` through `--accent-4`, which default to a neutral `--text-mid` and exist solely for a skin to redeclare. `static/css/skins/leather.css` is the first-party example: it maps those four tokens to Ardent Leatherworks' dye palette and carries that brand's own content-authoring classes (`.dye-entry-*`, `.swatch-*`, `.dye-marks`) — copy its shape, not its colors, for a new skin. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
+
+Beyond styles, `templates/base.html`'s own header comment documents the full design/extension surface (forkwright/typikon#55): a `{% block %}` for head metadata, nav, footer, structured data (JSON-LD), scripts, and page composition, each with a sane default a consumer only overrides when it needs to. A consumer template extends `base.html` and overrides just the block(s) it needs — it does not need to copy the whole file to add a stylesheet, a nav item, or a JSON-LD field.
 
 ### 3. When to extend typikon vs. override locally
 
 | You need to                                                | Where it goes                                                            |
 |------------------------------------------------------------|--------------------------------------------------------------------------|
-| Change one site's color palette / type / scale             | Consumer-side CSS overriding `:root` tokens                              |
-| Add a one-off CSS class used in one site's content         | Consumer-side CSS                                                        |
+| Change one site's color palette / type / scale             | `consumer_css` entry redeclaring `:root` tokens (incl. `--accent-1..4`)  |
+| Add a one-off CSS class used in one site's content          | `consumer_css` entry                                                     |
+| Add a stylesheet, head element, or footer content of your own | Override the relevant `{% block %}` in a template that `{% extends "base.html" %}` — see that file's header comment. Not a reason to shadow `base.html` itself |
 | Add a content type (FAQ, sizing-guide, recipe, gallery)    | typikon — schema + template + AGENTIC + fixture coverage                 |
 | Add an optional frontmatter field shared by ≥2 sites       | typikon — extend the relevant schema; every content type's `extra` is closed (`unevaluatedProperties: false` or, for journal-entry/product/faq/sizing-guide, plain `additionalProperties: false`), so a new field is a schema edit, never an ambient allowance |
 | Override one page's HTML structure with a custom template  | Consumer-side template under `<consumer>/templates/<name>.html` (Zola overrides typikon) **and** a `schemas/registry.toml` entry — see `docs/SCHEMAS.md#consumer-schema-registry`. A custom `template` with no registry entry fails validation; it does not fall back to `page`'s shape |

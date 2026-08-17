@@ -23,13 +23,16 @@ fail the moment the anchor regresses even though no real style.css rule
 happens to exercise the bug today (the review found it by luck-of-source-
 order, not by any live failure).
 
-PART B (end-to-end, real file, restore-guaranteed): mutates the ACTUAL
-static/css/style.css the same way a future regression would, runs
-check-interactive-contrast.py as a real subprocess against it, asserts the
-expected failure, then restores the original bytes in a `finally` and
-re-verifies the restore is byte-identical before declaring success. This
-is the #64 regression and the coverage-scan gap from the PR body's own
-five-mutation list, now committed instead of hand-typed.
+PART B (end-to-end, real files, restore-guaranteed): mutates the ACTUAL
+static/css/style.css and/or static/css/skins/leather.css the same way a
+future regression would, runs check-interactive-contrast.py as a real
+subprocess against them, asserts the expected failure, then restores the
+original bytes of both in a `finally` and re-verifies the restore is
+byte-identical before declaring success. This is the #64 regression and
+the coverage-scan gap from the PR body's own five-mutation list, now
+committed instead of hand-typed. The #64 mutation targets the skin file
+specifically (forkwright/typikon#55 moved the dye-token mapping there;
+see check-interactive-contrast.py's FIRST_PARTY_SKINS).
 
 NOTE: runs standalone (no consumer site or zola build needed) as part of
 ci/run-fixtures.sh. Order relative to check-interactive-contrast.py in that
@@ -52,6 +55,10 @@ CI_DIR = Path(__file__).resolve().parent
 THEME_ROOT = CI_DIR.parent
 CHECK_SCRIPT = CI_DIR / "check-interactive-contrast.py"
 STYLE_CSS = THEME_ROOT / "static" / "css" / "style.css"
+# The #64 regression's actual token mapping lives here since
+# forkwright/typikon#55 split the dye palette out of core — see that
+# skin's own :root block.
+LEATHER_SKIN_CSS = THEME_ROOT / "static" / "css" / "skins" / "leather.css"
 
 
 def _load_check_module() -> ModuleType:
@@ -140,22 +147,28 @@ def _part_a(mod: ModuleType, failures: list[str]) -> None:
 def _part_b(failures: list[str]) -> None:
     original = STYLE_CSS.read_bytes()
     original_text = original.decode("utf-8")
+    skin_original = LEATHER_SKIN_CSS.read_bytes()
+    skin_original_text = skin_original.decode("utf-8")
 
     try:
-        # B1 — the #64 regression itself: revert the fixed nav-hover token
-        # back to the pre-fix dye color.
-        regressed_needle = ".nav-links a:nth-child(3):hover { color: var(--aporia-interactive); }"
-        regressed_replacement = ".nav-links a:nth-child(3):hover { color: var(--aporia); }"
-        if original_text.count(regressed_needle) != 1:
+        # B1 — the #64 regression itself, one hop deeper since
+        # forkwright/typikon#55: core's .nav-links a:nth-child(3):hover
+        # resolves through --accent-3, and the leather skin's OWN :root is
+        # what maps --accent-3 to --aporia-interactive (not raw --aporia).
+        # Reverting that mapping in the skin is the exact regression #64
+        # was filed over, now expressed one level of indirection down.
+        regressed_needle = "--accent-3: var(--aporia-interactive);"
+        regressed_replacement = "--accent-3: var(--aporia);"
+        if skin_original_text.count(regressed_needle) != 1:
             failures.append(
                 "B1 setup: expected exactly one occurrence of the pre-fix "
-                f"#64 rule shape in {STYLE_CSS} to mutate; found "
-                f"{original_text.count(regressed_needle)} — this fixture is "
+                f"#64 mapping in {LEATHER_SKIN_CSS} to mutate; found "
+                f"{skin_original_text.count(regressed_needle)} — this fixture is "
                 "stale against the current source and needs updating"
             )
         else:
-            STYLE_CSS.write_text(
-                original_text.replace(regressed_needle, regressed_replacement, 1),
+            LEATHER_SKIN_CSS.write_text(
+                skin_original_text.replace(regressed_needle, regressed_replacement, 1),
                 encoding="utf-8",
             )
             result = _run_check()
@@ -169,7 +182,7 @@ def _part_b(failures: list[str]) -> None:
                     "B1: reverting the #64 fix failed, but not with the "
                     f"expected WCAG floor message; stderr:\n{result.stderr}"
                 )
-            STYLE_CSS.write_text(original_text, encoding="utf-8")
+            LEATHER_SKIN_CSS.write_text(skin_original_text, encoding="utf-8")
 
         # B2 — coverage-scan negative case: a brand-new, unreviewed
         # interactive-state color rule must fail closed, not pass silently.
@@ -189,26 +202,29 @@ def _part_b(failures: list[str]) -> None:
         STYLE_CSS.write_text(original_text, encoding="utf-8")
 
     finally:
-        # SAFETY: never leave the real stylesheet mutated, even if an
+        # SAFETY: never leave the real stylesheets mutated, even if an
         # assertion above raised instead of appending to `failures`.
         STYLE_CSS.write_bytes(original)
+        LEATHER_SKIN_CSS.write_bytes(skin_original)
 
     restored = STYLE_CSS.read_bytes()
-    if restored != original:
+    skin_restored = LEATHER_SKIN_CSS.read_bytes()
+    if restored != original or skin_restored != skin_original:
         failures.append(
-            f"B: {STYLE_CSS} did not restore byte-identical after the "
-            "mutation fixtures — the gate has corrupted the real stylesheet"
+            f"B: {STYLE_CSS} and/or {LEATHER_SKIN_CSS} did not restore "
+            "byte-identical after the mutation fixtures — the gate has "
+            "corrupted the real stylesheet(s)"
         )
         return
 
-    # B3 — with the file genuinely restored, the checker must pass again.
+    # B3 — with both files genuinely restored, the checker must pass again.
     # Proves B1/B2's failures were caused by the mutations, not by some
     # other break this fixture introduced.
     result = _run_check()
     if result.returncode != 0:
         failures.append(
             "B3: check-interactive-contrast.py did not pass against the "
-            f"restored, unmodified style.css (exit {result.returncode}); "
+            f"restored, unmodified stylesheets (exit {result.returncode}); "
             f"stderr:\n{result.stderr}"
         )
 

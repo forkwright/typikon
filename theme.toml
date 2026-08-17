@@ -15,7 +15,9 @@ author = "Cody Kickertz"
 homepage = "https://github.com/forkwright/typikon"
 repo = "https://github.com/forkwright/typikon"
 
-# typikon does not provide a config.toml override surface yet.
-# Consumers configure brand-specific values in their own config.toml [extra] block.
+# Consumers configure brand-specific values in their own config.toml [extra] block,
+# including [extra] consumer_css = ["css/site.css"] (docs/AGENTIC.md's design
+# extension surface, forkwright/typikon#55) — a list of stylesheet paths loaded
+# after core's own static/css/style.css.
 # When primitives need parameterization, schema goes in schemas/, default goes here.
 [extra]

@@ -1,0 +1,249 @@
+/*
+ * Leather — first-party skin for typikon (forkwright/typikon#55)
+ * Ardent Leatherworks' iron-mordanted botanical dye identity: dark
+ * academia x Japanese workwear, dye-named accent colors, and the
+ * interactive dye vocabulary (.dye-entry-*, .swatch-*, .dye-marks) a
+ * consumer's markdown content can opt into. None of these classes are
+ * emitted by any core template — they exist purely for content authored
+ * against this brand.
+ *
+ * Loaded after static/css/style.css via config.toml's [extra]
+ * consumer_css list (base.html renders each path in order, see that
+ * file's Consumer stylesheet hook comment). Every core structural
+ * selector that used to hard-code a dye color now resolves through the
+ * neutral --accent-1..4 tokens style.css's :root defines — this file's
+ * only job is to redeclare those four to this brand's actual hues, so
+ * a consumer wanting a DIFFERENT identity never has to touch, fork, or
+ * even read this file.
+ */
+
+:root {
+  --aima: #581523;
+  --aima-aged: #4A1A1A;
+  --thanatochromia: #2C1B3A;
+  --thanatochromia-aged: #382838;
+  --aporia: #5C8E63;
+  --aporia-aged: #4A7A5A;
+  /* WHY: --aporia is the true dye hue (used for swatches/backgrounds) and
+     only reaches 3.44:1 on --bg, below WCAG 2.2 AA's 4.5:1 for small text.
+     Interactive text uses this darker same-hue token instead; the dye
+     tokens above stay unmutated so swatches keep their accurate color. */
+  --aporia-interactive: #4A7350;
+  --natural: #8B5A2B;
+  --natural-aged: #5C3A1F;
+
+  /* The brand mapping: every core hover/accent rule (.nav-links, .buy-btn,
+     .triad-1/2/3, .entry-nav, .faq-anchor, a:hover's underline, ...)
+     resolves through these four names, never a dye name directly — so
+     this is the ONLY place that mapping lives. Position 3 stays the
+     WCAG-fixed --aporia-interactive, not raw --aporia (forkwright/typikon#64)
+     — ci/check-interactive-contrast.py scans this file precisely so a
+     regression here (like #64's) fails the gate exactly as it would in core. */
+  --accent-1: var(--aima);
+  --accent-2: var(--thanatochromia);
+  --accent-3: var(--aporia-interactive);
+  --accent-4: var(--natural);
+}
+
+/* === DYE MARKS (home page hover preview) === */
+.dye-marks {
+  display: flex;
+  gap: var(--space-s);
+  margin-top: var(--space-m);
+}
+
+.mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.mark:hover {
+  transform: scale(1.5);
+}
+
+.mark-aima { background: var(--aima); }
+.mark-thanatochromia { background: var(--thanatochromia); }
+.mark-aporia { background: var(--aporia); }
+
+/* Background transitions on mark hover */
+.home-page {
+  transition: background 0.5s ease;
+}
+
+.home-page:has(.mark-aima:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #E8D5D0 50%, #D4B8B0 100%);
+}
+
+.home-page:has(.mark-thanatochromia:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #DDD8E8 50%, #C8C0D8 100%);
+}
+
+.home-page:has(.mark-aporia:hover) {
+  background: linear-gradient(135deg, #F5F0E8 0%, #D8E8D8 50%, #C0D8C0 100%);
+}
+
+/* === DYES === */
+.dye-entry {
+  margin: var(--space-l) 0;
+  padding: var(--space-m);
+  border: 1px solid var(--rule);
+  transition: background 0.3s ease;
+}
+
+/* Each dye entry gets its own color background */
+.dye-entry-aima {
+  background: linear-gradient(145deg,
+    rgba(88, 21, 35, 0.06) 0%,
+    rgba(88, 21, 35, 0.12) 50%,
+    rgba(88, 21, 35, 0.08) 100%);
+}
+
+.dye-entry-thanatochromia {
+  background: linear-gradient(145deg,
+    rgba(44, 27, 58, 0.06) 0%,
+    rgba(44, 27, 58, 0.12) 50%,
+    rgba(44, 27, 58, 0.08) 100%);
+}
+
+.dye-entry-natural {
+  background: linear-gradient(145deg,
+    rgba(139, 90, 43, 0.06) 0%,
+    rgba(139, 90, 43, 0.12) 50%,
+    rgba(139, 90, 43, 0.08) 100%);
+}
+
+.dye-entry-aporia {
+  background: linear-gradient(145deg,
+    rgba(92, 142, 99, 0.06) 0%,
+    rgba(92, 142, 99, 0.12) 50%,
+    rgba(92, 142, 99, 0.08) 100%);
+}
+
+.dye-entry h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.dye-greek {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--step--1);
+  color: var(--text-mid);
+  display: block;
+  margin-bottom: var(--space-s);
+}
+
+.dye-swatch {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  height: 0.75rem;
+  margin: var(--space-s) 0;
+  border: 1px solid var(--rule);
+}
+
+.swatch-aima { background: linear-gradient(to right, var(--aima), var(--aima-aged)); }
+.swatch-thanatochromia { background: linear-gradient(to right, var(--thanatochromia), var(--thanatochromia-aged)); }
+.swatch-aporia { background: linear-gradient(to right, var(--aporia), var(--aporia-aged)); }
+.swatch-natural { background: linear-gradient(to right, var(--natural), var(--natural-aged)); }
+
+/* === DYE PRONUNCIATION === */
+.dye-pronunciation {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  color: var(--text-light);
+  letter-spacing: 0.05em;
+  margin-top: var(--space-3xs);
+  opacity: 0.7;
+}
+
+/* === INGREDIENT NOTE === */
+.ingredient-note {
+  font-style: italic;
+  color: var(--text-mid);
+  line-height: 1.8;
+}
+
+/* === TRIAD HOVER — DECORATIVE COLOR WASH ===
+   Purely additive: core's own .triad-1/2/3 (style.css) already render in
+   --accent-1/2/3 and the cycling/settling mechanics work with no skin at
+   all. This section only layers a full-bleed color wash on top when a
+   settled triad word (or a dye mark) is hovered. */
+
+/* Background color shift on hover (only when settled, using :has) */
+.home-page::before,
+.home-page::after,
+.home > .triad-mark::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-page::before {
+  background: linear-gradient(180deg, rgba(88, 21, 35, 0.15) 0%, rgba(88, 21, 35, 0.3) 50%, rgba(88, 21, 35, 0.45) 100%);
+}
+
+.home-page::after {
+  background: linear-gradient(180deg, rgba(44, 27, 58, 0.18) 0%, rgba(44, 27, 58, 0.35) 50%, rgba(44, 27, 58, 0.5) 100%);
+}
+
+.home > .triad-mark::after {
+  background: linear-gradient(180deg, rgba(92, 142, 99, 0.15) 0%, rgba(92, 142, 99, 0.3) 50%, rgba(92, 142, 99, 0.45) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-1:hover)::before {
+  opacity: 1;
+}
+
+.home-page:has(.triad-mark.settled .triad-2:hover)::after {
+  opacity: 1;
+}
+
+.home-page:has(.triad-mark.settled .triad-3:hover) .triad-mark::after {
+  opacity: 1;
+}
+
+/* Only apply when triad is settled - this is the key to avoiding conflicts */
+.home-page {
+  transition: background 0.6s ease;
+}
+
+/* Individual word hover effects - only when settled */
+.home-page:has(.triad-mark.settled .triad-1:hover) {
+  background: linear-gradient(135deg,
+    rgba(88, 21, 35, 0.08) 0%,
+    rgba(88, 21, 35, 0.04) 50%,
+    rgba(248, 243, 232, 1) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-2:hover) {
+  background: linear-gradient(135deg,
+    rgba(44, 27, 58, 0.1) 0%,
+    rgba(44, 27, 58, 0.05) 50%,
+    rgba(248, 243, 232, 1) 100%);
+}
+
+.home-page:has(.triad-mark.settled .triad-3:hover) {
+  background: linear-gradient(135deg,
+    rgba(92, 142, 99, 0.08) 0%,
+    rgba(92, 142, 99, 0.04) 50%,
+    rgba(248, 243, 232, 1) 100%);
+}

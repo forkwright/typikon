@@ -1,4 +1,7 @@
-# Sample shop — exercises section + product + page + faq schemas.
+# Sample shop — exercises section + product + page + faq schemas, and
+# (forkwright/typikon#55) the shipped first-party leather skin via
+# consumer_css — see examples/sample-blog for a consumer-owned palette
+# instead.
 title = "Sample Shop"
 description = "A typikon fixture demonstrating section + product + page + faq schemas with a different brand identity than ardent or sample-blog."
 base_url = "https://sample-shop.example.com"
@@ -18,6 +21,7 @@ logo_path = "img/logo.svg"
 theme_color = "#F0EFE5"
 og_locale = "en_US"
 founding_date = "2026"
+consumer_css = ["css/skins/leather.css"]
 
 font_preload = ["/fonts/eb-garamond-variable.woff2", "/fonts/spectral-400.woff2"]
 

@@ -7,4 +7,9 @@ template = "index.html"
 body_class = "home-page"
 home_logo = "img/logo.svg"
 home_tagline = "A fixture for the typikon substrate."
+
+[extra.triad]
+greek = ["αἷμα", "θανατοχρωμία", "ἀπορία"]
+english = ["blood", "death-color", "impasse"]
+target = "/dyes/"
 +++

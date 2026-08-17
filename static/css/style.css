@@ -1,15 +1,22 @@
 /*
  * Typikon — fleet web-property substrate
- * Dark academia × Japanese workwear
+ * Neutral core: structure, spacing, and type scale. No brand skin.
  *
  * Default fonts: EB Garamond (display), Spectral (body), IBM Plex Mono (specs)
  * Default scale: 1.2 ratio, 16px base, 1.625 line-height
  *
  * Consumers override the design tokens (colors, fonts, scale) by redeclaring
- * the relevant `:root` custom properties in their own CSS file loaded after
- * this one (config.toml [extra] consumer_css = "css/site.css", referenced from
- * base.html). Do not edit the tokens here for site-specific work — fork by
- * override, not by mutation.
+ * the relevant `:root` custom properties in their own CSS file(s), loaded
+ * after this one via config.toml's `[extra] consumer_css = ["css/site.css"]`
+ * (a list, rendered in order by templates/base.html's Consumer stylesheet
+ * hook comment — forkwright/typikon#55). Do not edit the tokens here for
+ * site-specific work — fork by override, not by mutation.
+ *
+ * --accent-1..4 below are the one exception worth calling out: they carry
+ * no brand opinion of their own (they default to --text-mid) and exist so
+ * every interactive hover/accent rule in this file resolves through a
+ * semantic name rather than a hard-coded hue. static/css/skins/leather.css
+ * is the first-party example of a skin that redeclares them.
  */
 
 :root {
@@ -46,23 +53,21 @@
      this darker split token instead. */
   --control-border: #827E77;  /* 3.64:1 vs --bg, 3.40:1 vs --bg-accent */
 
-  /* Default brand accents — ardent's iron-mordanted botanical dye palette.
-     Other typikon consumers should redeclare these (or rename them) in
-     site-specific CSS. Class hooks like .swatch-aima / .dye-entry-aima are
-     ardent-specific shapes that can stay unused on other sites. */
-  --aima: #581523;
-  --aima-aged: #4A1A1A;
-  --thanatochromia: #2C1B3A;
-  --thanatochromia-aged: #382838;
-  --aporia: #5C8E63;
-  --aporia-aged: #4A7A5A;
-  /* WHY: --aporia is the true dye hue (used for swatches/backgrounds) and
-     only reaches 3.44:1 on --bg, below WCAG 2.2 AA's 4.5:1 for small text.
-     Interactive text uses this darker same-hue token instead; the dye
-     tokens above stay unmutated so swatches keep their accurate color. */
-  --aporia-interactive: #4A7350;
-  --natural: #8B5A2B;
-  --natural-aged: #5C3A1F;
+  /* Semantic interactive-accent tokens (forkwright/typikon#55). Every
+     hover/accent rule below (.nav-links, a:hover's underline, .buy-btn,
+     .triad-1/2/3, .products-list/.journal-list, .entry-nav, .faq-anchor)
+     resolves through one of these four names, never a brand hue directly.
+     The neutral default is --text-mid: safe (9.27:1 on --bg, 8.64:1 on
+     --bg-accent — comfortably clears the 4.5:1 WCAG 1.4.3 floor every
+     consumer of these four names needs) and undifferentiated on purpose —
+     a site with no skin gets a working, contrast-clean, monochrome
+     interactive state, not a broken one. A skin (e.g.
+     static/css/skins/leather.css) redeclares these four to a brand
+     palette; core never chooses one for it. */
+  --accent-1: var(--text-mid);
+  --accent-2: var(--text-mid);
+  --accent-3: var(--text-mid);
+  --accent-4: var(--text-mid);
   
   /* Fonts */
   --font-display: 'EB Garamond', Garamond, serif;          /* 16th c. philosophical text */
@@ -199,12 +204,12 @@ nav {
   opacity: 0;
 }
 
-/* Nav links get dye colors on hover */
-.nav-links a:nth-child(1):hover { color: var(--aima); }
-.nav-links a:nth-child(2):hover { color: var(--thanatochromia); }
-.nav-links a:nth-child(3):hover { color: var(--aporia-interactive); }
+/* Nav links get an accent color on hover — see the --accent-N tokens */
+.nav-links a:nth-child(1):hover { color: var(--accent-1); }
+.nav-links a:nth-child(2):hover { color: var(--accent-2); }
+.nav-links a:nth-child(3):hover { color: var(--accent-3); }
 .nav-links a:nth-child(4):hover { color: var(--text-mid); }
-.nav-links a:nth-child(5):hover { color: var(--natural); }
+.nav-links a:nth-child(5):hover { color: var(--accent-4); }
 .nav-links a:nth-child(6):hover { color: var(--text); }
 
 /* === MAIN === */
@@ -316,7 +321,7 @@ a {
 }
 
 a:hover {
-  text-decoration-color: var(--aima);
+  text-decoration-color: var(--accent-1);
 }
 
 /* === HOME PAGE === */
@@ -364,44 +369,10 @@ a:hover {
   transition: opacity 0.4s ease;
 }
 
-.dye-marks {
-  display: flex;
-  gap: var(--space-s);
-  margin-top: var(--space-m);
-}
-
-.mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  transition: transform 0.3s ease;
-  cursor: pointer;
-}
-
-.mark:hover {
-  transform: scale(1.5);
-}
-
-.mark-aima { background: var(--aima); }
-.mark-thanatochromia { background: var(--thanatochromia); }
-.mark-aporia { background: var(--aporia); }
-
-/* Background transitions on mark hover */
-.home-page {
-  transition: background 0.5s ease;
-}
-
-.home-page:has(.mark-aima:hover) {
-  background: linear-gradient(135deg, #F5F0E8 0%, #E8D5D0 50%, #D4B8B0 100%);
-}
-
-.home-page:has(.mark-thanatochromia:hover) {
-  background: linear-gradient(135deg, #F5F0E8 0%, #DDD8E8 50%, #C8C0D8 100%);
-}
-
-.home-page:has(.mark-aporia:hover) {
-  background: linear-gradient(135deg, #F5F0E8 0%, #D8E8D8 50%, #C0D8C0 100%);
-}
+/* .dye-marks / .mark / .mark-* and their hover-triggered home-page
+   background wash moved to static/css/skins/leather.css
+   (forkwright/typikon#55) — no core template emits these classes; they
+   exist purely for a skin's own content-authoring convention. */
 
 /* Home nav below content */
 .home-nav {
@@ -467,7 +438,7 @@ a:hover {
 
 .products-list a:hover,
 .journal-list a:hover {
-  color: var(--aima);
+  color: var(--accent-1);
 }
 
 .product-name,
@@ -657,7 +628,7 @@ th {
 }
 
 .buy-btn:hover {
-  background: var(--aima);
+  background: var(--accent-1);
 }
 
 /* Specs line */
@@ -671,77 +642,9 @@ th {
   border-top: 1px solid var(--rule);
 }
 
-/* === DYES === */
-.dye-entry {
-  margin: var(--space-l) 0;
-  padding: var(--space-m);
-  border: 1px solid var(--rule);
-  transition: background 0.3s ease;
-}
-
-/* Each dye entry gets its own color background */
-.dye-entry-aima {
-  background: linear-gradient(145deg, 
-    rgba(88, 21, 35, 0.06) 0%, 
-    rgba(88, 21, 35, 0.12) 50%,
-    rgba(88, 21, 35, 0.08) 100%);
-}
-
-.dye-entry-thanatochromia {
-  background: linear-gradient(145deg, 
-    rgba(44, 27, 58, 0.06) 0%, 
-    rgba(44, 27, 58, 0.12) 50%,
-    rgba(44, 27, 58, 0.08) 100%);
-}
-
-.dye-entry-natural {
-  background: linear-gradient(145deg,
-    rgba(139, 90, 43, 0.06) 0%,
-    rgba(139, 90, 43, 0.12) 50%,
-    rgba(139, 90, 43, 0.08) 100%);
-}
-
-.dye-entry-aporia {
-  background: linear-gradient(145deg,
-    rgba(92, 142, 99, 0.06) 0%,
-    rgba(92, 142, 99, 0.12) 50%,
-    rgba(92, 142, 99, 0.08) 100%);
-}
-
-.dye-entry h2 {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  font-family: var(--font-display);
-  font-size: var(--step-1);
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text);
-}
-
-.dye-greek {
-  font-family: var(--font-body);
-  font-style: italic;
-  font-size: var(--step--1);
-  color: var(--text-mid);
-  display: block;
-  margin-bottom: var(--space-s);
-}
-
-.dye-swatch {
-  display: block;
-  width: 100%;
-  max-width: 200px;
-  height: 0.75rem;
-  margin: var(--space-s) 0;
-  border: 1px solid var(--rule);
-}
-
-.swatch-aima { background: linear-gradient(to right, var(--aima), var(--aima-aged)); }
-.swatch-thanatochromia { background: linear-gradient(to right, var(--thanatochromia), var(--thanatochromia-aged)); }
-.swatch-aporia { background: linear-gradient(to right, var(--aporia), var(--aporia-aged)); }
-.swatch-natural { background: linear-gradient(to right, var(--natural), var(--natural-aged)); }
+/* .dye-entry / .dye-entry-* / .dye-greek / .dye-swatch / .swatch-* moved
+   to static/css/skins/leather.css (forkwright/typikon#55) — dye-specific
+   content-authoring vocabulary, not consumed by any core template. */
 
 /* === FOOTER === */
 footer {
@@ -891,16 +794,8 @@ footer p {
   color: var(--text);
 }
 
-/* === DYE PRONUNCIATION === */
-.dye-pronunciation {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: var(--step--2);
-  color: var(--text-light);
-  letter-spacing: 0.05em;
-  margin-top: var(--space-3xs);
-  opacity: 0.7;
-}
+/* .dye-pronunciation moved to static/css/skins/leather.css
+   (forkwright/typikon#55). */
 
 /* === LAUNCH NOTIFICATION === */
 .launch-note {
@@ -996,12 +891,8 @@ main hr {
   margin-top: var(--space-xs);
 }
 
-/* === INGREDIENT NOTE === */
-.ingredient-note {
-  font-style: italic;
-  color: var(--text-mid);
-  line-height: 1.8;
-}
+/* .ingredient-note moved to static/css/skins/leather.css
+   (forkwright/typikon#55). */
 
 /* === TRIAD MARK (HOME) === */
 .triad-mark {
@@ -1113,50 +1004,15 @@ main hr {
   opacity: 1;
 }
 
-/* Colors */
-.triad-1 { color: var(--aima); }
-.triad-2 { color: var(--thanatochromia); }
-.triad-3 { color: var(--aporia-interactive); }
+/* Colors — see the --accent-N tokens at the top of this file */
+.triad-1 { color: var(--accent-1); }
+.triad-2 { color: var(--accent-2); }
+.triad-3 { color: var(--accent-3); }
 
-/* Background color shift on hover (only when settled, using :has) */
-.home-page::before,
-.home-page::after,
-.home > .triad-mark::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0;
-  transition: opacity 3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.home-page::before {
-  background: linear-gradient(180deg, rgba(88, 21, 35, 0.15) 0%, rgba(88, 21, 35, 0.3) 50%, rgba(88, 21, 35, 0.45) 100%);
-}
-
-.home-page::after {
-  background: linear-gradient(180deg, rgba(44, 27, 58, 0.18) 0%, rgba(44, 27, 58, 0.35) 50%, rgba(44, 27, 58, 0.5) 100%);
-}
-
-.home > .triad-mark::after {
-  background: linear-gradient(180deg, rgba(92, 142, 99, 0.15) 0%, rgba(92, 142, 99, 0.3) 50%, rgba(92, 142, 99, 0.45) 100%);
-}
-
-.home-page:has(.triad-mark.settled .triad-1:hover)::before {
-  opacity: 1;
-}
-
-.home-page:has(.triad-mark.settled .triad-2:hover)::after {
-  opacity: 1;
-}
-
-.home-page:has(.triad-mark.settled .triad-3:hover) .triad-mark::after {
-  opacity: 1;
-}
+/* The decorative full-bleed color-wash-on-hover overlay (originally here)
+   moved to static/css/skins/leather.css (forkwright/typikon#55) — purely
+   additive on top of the cycling/settling mechanics above, which work
+   with no skin loaded at all. */
 
 /* === FOOTER IMPROVEMENTS === */
 .footer-brand {
@@ -1220,33 +1076,9 @@ main hr {
   opacity: 0.8;
 }
 
-/* === TRIAD HOVER BACKGROUND EFFECTS === */
-/* Only apply when triad is settled - this is the key to avoiding conflicts */
-.home-page {
-  transition: background 0.6s ease;
-}
-
-/* Individual word hover effects - only when settled */
-.home-page:has(.triad-mark.settled .triad-1:hover) {
-  background: linear-gradient(135deg, 
-    rgba(88, 21, 35, 0.08) 0%, 
-    rgba(88, 21, 35, 0.04) 50%, 
-    rgba(248, 243, 232, 1) 100%);
-}
-
-.home-page:has(.triad-mark.settled .triad-2:hover) {
-  background: linear-gradient(135deg, 
-    rgba(44, 27, 58, 0.1) 0%, 
-    rgba(44, 27, 58, 0.05) 50%, 
-    rgba(248, 243, 232, 1) 100%);
-}
-
-.home-page:has(.triad-mark.settled .triad-3:hover) {
-  background: linear-gradient(135deg, 
-    rgba(92, 142, 99, 0.08) 0%, 
-    rgba(92, 142, 99, 0.04) 50%, 
-    rgba(248, 243, 232, 1) 100%);
-}
+/* The remaining triad-hover background-gradient effects (originally here)
+   also moved to static/css/skins/leather.css alongside the overlay above
+   (forkwright/typikon#55) — same reasoning. */
 
 /* Accessibility */
 .sr-only {
@@ -1294,7 +1126,7 @@ main hr {
 }
 
 .entry-nav a:hover {
-  color: var(--aima);
+  color: var(--accent-1);
 }
 
 .entry-nav a[rel="next"] {
@@ -1361,8 +1193,8 @@ main hr {
 }
 
 .faq-anchor:hover {
-  color: var(--aima);
-  border-bottom: 1px solid var(--aima);
+  color: var(--accent-1);
+  border-bottom: 1px solid var(--accent-1);
 }
 
 .faq-answer {
