@@ -113,11 +113,15 @@ def scan(path: str) -> list[tuple[int, str]]:
 def main(argv: list[str]) -> int:
     if argv:
         paths = argv
+    elif sys.stdin.isatty():
+        # WHY this gate is load-bearing rather than redundant: iterating a LIVE tty blocks
+        # forever, waiting for input no interactive caller knows to send, so a bare
+        # invocation hangs instead of printing the usage below. Only a closed or piped
+        # stdin reaches EOF and falls through to an empty paths list; a terminal never
+        # does. The stdin path itself stays, because it is what keeps a large file set
+        # from hitting the argv size limit.
+        paths = []
     else:
-        # WHY not sys.stdin.isatty()-gated: an empty/closed stdin (a
-        # direct interactive invocation with no argv) falls through to
-        # an empty paths list either way, hitting the same "no paths"
-        # error below rather than blocking on a read.
         paths = [line.rstrip("\n") for line in sys.stdin if line.strip()]
 
     if not paths:

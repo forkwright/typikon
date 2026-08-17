@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.2](https://github.com/forkwright/typikon/compare/v0.4.1...v0.4.2) (2026-08-17)
+
+
+### Bug Fixes
+
+* **bin,ci,schemas,templates:** resolve 16 low-severity correctness and claim-accuracy defects ([#171](https://github.com/forkwright/typikon/issues/171)) ([77d3146](https://github.com/forkwright/typikon/commit/77d314675231bf87dc77f380fefaadd447addd71)), closes [#92](https://github.com/forkwright/typikon/issues/92)
+* **ci,typikon-validate:** derive the fixture list; route+accept journal-entry.html extras ([#170](https://github.com/forkwright/typikon/issues/170)) ([0771a99](https://github.com/forkwright/typikon/commit/0771a9906a8c84489d4354e772f855273bd30642))
+* **ci:** csp-scan hangs at a terminal instead of printing its usage ([#173](https://github.com/forkwright/typikon/issues/173)) ([41b6e76](https://github.com/forkwright/typikon/commit/41b6e76acd1da8082930a085f3fa7231186cbd29))
+
 ## [0.4.1](https://github.com/forkwright/typikon/compare/v0.4.0...v0.4.1) (2026-08-16)
 
 
