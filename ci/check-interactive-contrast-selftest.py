@@ -32,7 +32,12 @@ is the #64 regression and the coverage-scan gap from the PR body's own
 five-mutation list, now committed instead of hand-typed.
 
 NOTE: runs standalone (no consumer site or zola build needed) as part of
-ci/run-fixtures.sh, immediately after the checker it tests.
+ci/run-fixtures.sh. Order relative to check-interactive-contrast.py in that
+run is NOT guaranteed (forkwright/typikon#169: the runner discovers
+ci/check-*.py alphabetically rather than declaring an order, and
+"-selftest.py" sorts before ".py") -- harmless here because Part B invokes
+check-interactive-contrast.py itself as a real subprocess against a
+guaranteed-restored file rather than depending on a prior run's state.
 """
 
 from __future__ import annotations

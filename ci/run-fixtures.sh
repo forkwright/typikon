@@ -5,26 +5,54 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-python3 "$ROOT/ci/check-triad-schema.py"
-python3 "$ROOT/ci/check-consumer-schema-registry.py"
-python3 "$ROOT/ci/check-page-template-cascade.py"
-python3 "$ROOT/ci/check-font-coverage.py"
-python3 "$ROOT/ci/check-release-config.py"
-python3 "$ROOT/ci/check-asset-provenance.py"
-python3 "$ROOT/ci/check-favicon-path.py"
-python3 "$ROOT/ci/check-init-favicon-path.py"
-python3 "$ROOT/ci/check-asset-path-existence.py"
-python3 "$ROOT/ci/check-init-staging-scope.py"
-python3 "$ROOT/ci/check-control-contrast.py"
-python3 "$ROOT/ci/check-home-heading.py"
-python3 "$ROOT/ci/check-content-heading-collision.py"
-python3 "$ROOT/ci/check-interactive-contrast.py"
-python3 "$ROOT/ci/check-interactive-contrast-selftest.py"
+# WHY(forkwright/typikon#169): overridable only so ci/check-fixture-discovery.sh
+# can point discovery at a scratch ci/-shaped directory and exercise the
+# discovery + empty-set guard below without running the real (zola/lychee/
+# pa11y-dependent, slow) fixture suite. Unset in every real invocation, so
+# production behavior always resolves to the ROOT-derived ci/ directory below.
+FIXTURE_CI_DIR="${FIXTURE_CI_DIR:-$ROOT/ci}"
+
+# WHY: these two check-* scripts take positional arguments (a template path,
+# a built-site dir) and are invoked explicitly, with those arguments, further
+# down. The no-arg glob discovery below cannot express that call shape, so
+# each exclusion is named here with the reason it is not auto-run.
+declare -A ARG_TAKING_FIXTURES=(
+    [check-workflow-template.sh]="invoked below with github-workflow.yml.tmpl"
+    [check-xml-output.sh]="invoked below per-example against the built public/ dir"
+)
+
+mapfile -t _discovered < <(
+    find "$FIXTURE_CI_DIR" -maxdepth 1 -type f \( -name 'check-*.sh' -o -name 'check-*.py' \) -printf '%f\n' \
+        | LC_ALL=C sort
+)
+
+# WHY(forkwright/typikon#169 "Fail if the glob matches nothing, rather than
+# reporting a vacuous pass"): a runner that discovers zero fixtures and
+# exits 0 is the empty-keep-set defect class, just in a new shape.
+_fixtures=()
+for _f in "${_discovered[@]}"; do
+    [[ -n "${ARG_TAKING_FIXTURES[$_f]:-}" ]] && continue
+    _fixtures+=("$_f")
+done
+
+if [[ "${#_fixtures[@]}" -eq 0 ]]; then
+    echo "run-fixtures: ci/check-*.sh + ci/check-*.py under $FIXTURE_CI_DIR found ${#_discovered[@]} file(s), ${#ARG_TAKING_FIXTURES[@]} of them excluded (arg-taking) -- 0 left to run. Refusing to report a vacuous pass." >&2
+    exit 1
+fi
+
+if [[ "${1:-}" == "--list" ]]; then
+    printf '%s\n' "${_fixtures[@]}"
+    exit 0
+fi
+
+for _f in "${_fixtures[@]}"; do
+    case "$_f" in
+        *.py) python3 "$FIXTURE_CI_DIR/$_f" ;;
+        *.sh) "$FIXTURE_CI_DIR/$_f" ;;
+    esac
+done
+
 "$ROOT/ci/check-workflow-template.sh" "$ROOT/ci/github-workflow.yml.tmpl"
-"$ROOT/ci/check-consumer-check-extension.sh"
-"$ROOT/ci/check-fixture-corpus-exemption.sh"
-python3 "$ROOT/ci/check-deploy-bundle-gate.py"
-python3 "$ROOT/ci/check-cf-deploy-gate.py"
 
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-blog"
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-shop"
