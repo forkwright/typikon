@@ -24,6 +24,7 @@ python3 "$ROOT/ci/check-interactive-contrast-selftest.py"
 "$ROOT/ci/check-consumer-check-extension.sh"
 "$ROOT/ci/check-fixture-corpus-exemption.sh"
 python3 "$ROOT/ci/check-deploy-bundle-gate.py"
+python3 "$ROOT/ci/check-cf-deploy-gate.py"
 
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-blog"
 "$ROOT/bin/typikon-check" "$ROOT/examples/sample-shop"
