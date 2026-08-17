@@ -56,9 +56,12 @@ Output:
 
 Exit codes:
     0 — all files valid
-    1 — at least one file invalid
-    2 — runtime error (missing schemas, malformed frontmatter, malformed
-        registry.toml, etc.)
+    1 — at least one file invalid, INCLUDING malformed frontmatter — a
+        parse failure is reported as a per-file failure record (Output,
+        below) exactly like a schema-validation failure, not as the
+        top-level {"error": ...} + exit-2 shape below
+    2 — runtime error unrelated to any single file's content (missing or
+        malformed schema files, malformed registry.toml, etc.)
 """
 
 from __future__ import annotations
@@ -420,7 +423,13 @@ def validate_file(
     validator = Draft202012Validator(schema, registry=jsonschema_registry, format_checker=FORMAT_CHECKER)
     failures = []
     for err in sorted(validator.iter_errors(fm), key=lambda e: e.path):
-        pointer = "/" + "/".join(str(p) for p in err.absolute_path)
+        # NOTE: RFC 6901's root pointer is "" (the empty string), not "/" —
+        # "/" addresses the member keyed by the empty string, a different
+        # location. err.absolute_path is empty for exactly the most common
+        # top-level failure (a missing required top-level field), so the
+        # unconditional "/" + join() previously emitted "/" for that case.
+        segments = [str(p) for p in err.absolute_path]
+        pointer = "/" + "/".join(segments) if segments else ""
         failures.append({
             "file": file_label,
             "schema": schema_name,
@@ -483,7 +492,11 @@ def load_schemas() -> tuple[dict[str, dict], Registry]:
         if not p.exists():
             print(json.dumps({"error": f"missing schema: {p}"}), file=sys.stderr)
             sys.exit(2)
-        schema = json.loads(p.read_text(encoding="utf-8"))
+        try:
+            schema = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(json.dumps({"error": f"malformed schema {p}: {exc}"}), file=sys.stderr)
+            sys.exit(2)
         _refuse_unsupported_formats(schema, slug)
         schemas[slug] = schema
         resources.append((schema["$id"], Resource.from_contents(schema, default_specification=DRAFT202012)))
@@ -493,7 +506,11 @@ def load_schemas() -> tuple[dict[str, dict], Registry]:
         if not p.exists():
             print(json.dumps({"error": f"missing core schema: {p}"}), file=sys.stderr)
             sys.exit(2)
-        core = json.loads(p.read_text(encoding="utf-8"))
+        try:
+            core = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(json.dumps({"error": f"malformed core schema {p}: {exc}"}), file=sys.stderr)
+            sys.exit(2)
         _refuse_unsupported_formats(core, f"{slug}.core")
         resources.append((core["$id"], Resource.from_contents(core, default_specification=DRAFT202012)))
 

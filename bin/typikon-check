@@ -101,9 +101,14 @@ emit() {
 }
 
 base_host() {
+    # NOTE: TOML permits both basic ("...") and literal ('...') strings for
+    # base_url. Matching only the double-quoted form left a single-quoted
+    # value unsubstituted, so the raw `base_url = '...'` line fell through
+    # untouched to the trailing-slash/scheme/path strips below, none of
+    # which match a line starting with `base_url` (forkwright/typikon#92).
     grep -E '^base_url\s*=' config.toml \
         | head -1 \
-        | sed -E 's/^base_url\s*=\s*"([^"]+)".*/\1/' \
+        | sed -E 's/^base_url\s*=\s*["'"'"']([^"'"'"']+)["'"'"'].*/\1/' \
         | sed 's:/$::' \
         | sed -E 's|^https?://||' \
         | sed -E 's|/.*$||'

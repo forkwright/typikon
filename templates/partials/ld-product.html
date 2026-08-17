@@ -17,6 +17,7 @@
    unverified stock claim in structured data misleads search engines.
 #}
 {% import "partials/assert.html" as assert %}
+{% import "partials/ld-json.html" as ldjson %}
 {{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-product.html") }}
 {{ assert::required(ok=page.description is defined and page.description, field="page.description", template="partials/ld-product.html") }}
 {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-product.html") }}
@@ -26,33 +27,35 @@
 {%- set price_numeric = page.extra.price | trim_start_matches(pat="$") -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}
-  {%- set image_url = config.base_url ~ "/" ~ page.extra.og_image -%}
+  {#- get_url(), not hand string-concatenation — same rationale as
+     partials/ld-article.html (forkwright/typikon#92). -#}
+  {%- set image_url = get_url(path=page.extra.og_image, trailing_slash=false) -%}
 {%- endif -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Product",
-  "name": {{ page.title | json_encode | safe }},
-  "description": {{ page.description | json_encode | safe }},
-  "url": {{ page.permalink | json_encode | safe }},
+  "name": {{ ldjson::str(value=page.title) }},
+  "description": {{ ldjson::str(value=page.description) }},
+  "url": {{ ldjson::str(value=page.permalink) }},
   "brand": {
     "@type": "Organization",
-    "name": {{ config.title | json_encode | safe }}
+    "name": {{ ldjson::str(value=config.title) }}
   },
   "offers": {
     "@type": "Offer",
-    "price": {{ price_numeric | json_encode | safe }},
+    "price": {{ ldjson::str(value=price_numeric) }},
     "priceCurrency": "USD"
     {%- if page.extra.availability and page.extra.availability_source -%}
     {%- set availability_url = "https://schema.org/" ~ page.extra.availability -%}
     ,
-    "availability": {{ availability_url | json_encode | safe }}
+    "availability": {{ ldjson::str(value=availability_url) }}
     {%- endif -%}
     ,
-    "url": {{ page.extra.stripe_url | json_encode | safe }}
+    "url": {{ ldjson::str(value=page.extra.stripe_url) }}
   }
   {%- if image_url -%},
-  "image": {{ image_url | json_encode | safe }}
+  "image": {{ ldjson::str(value=image_url) }}
   {%- endif %}
 }
 </script>

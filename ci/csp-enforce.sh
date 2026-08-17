@@ -63,7 +63,12 @@ SCAN_ERR="$(mktemp)"
 trap 'rm -f "$SCAN_ERR"' EXIT
 
 status=0
-python3 "$SCRIPT_DIR/csp-scan.py" "${FILES[@]}" 2>"$SCAN_ERR" || status=$?
+# NOTE: paths go over stdin, not argv — an execve() argv list has a kernel-
+# enforced size ceiling (E2BIG), and FILES here is every *.html under a
+# built site with no upper bound on count. `printf` is a bash builtin (no
+# execve of its own), so building this list never itself risks the limit
+# it exists to avoid (forkwright/typikon#92).
+printf '%s\n' "${FILES[@]}" | python3 "$SCRIPT_DIR/csp-scan.py" 2>"$SCAN_ERR" || status=$?
 
 if [[ $status -eq 2 ]]; then
     cat "$SCAN_ERR" >&2

@@ -40,8 +40,22 @@
   {%- endif %}
 
   <dl class="faq-list">
+    {#- WHY the seen-anchor dedup: two questions (explicit anchor or
+       slugify(item.q)) that resolve to the same string previously
+       produced two elements with the identical `id`, which is invalid
+       HTML and makes the SECOND element the only one any fragment link
+       to that id can ever reach (forkwright/typikon#92). set_global is
+       required for `faq_seen_anchors` to survive across loop
+       iterations — a plain `set` re-initializes on every pass. #}
+    {%- set_global faq_seen_anchors = [] -%}
     {%- for item in page.extra.questions %}
-    {%- set anchor = item.anchor | default(value=item.q | slugify) %}
+    {%- set base_anchor = item.anchor | default(value=item.q | slugify) -%}
+    {%- if base_anchor in faq_seen_anchors -%}
+    {%- set anchor = base_anchor ~ "-" ~ loop.index -%}
+    {%- else -%}
+    {%- set anchor = base_anchor -%}
+    {%- endif -%}
+    {%- set_global faq_seen_anchors = faq_seen_anchors | concat(with=anchor) -%}
     <div class="faq-item" id="{{ anchor }}">
       <dt class="faq-question">
         <a href="#{{ anchor }}" class="faq-anchor">{{ item.q }}</a>

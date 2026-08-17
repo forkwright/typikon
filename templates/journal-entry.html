@@ -13,7 +13,12 @@
 {% extends "page.html" %}
 {% import "partials/assert.html" as assert %}
 
-{% block og_type %}article{% endblock og_type %}
+{# NOTE: no og_type block override here (forkwright/typikon#92) — a prior
+   hardcoded `{% block og_type %}article{% endblock %}` silently discarded
+   page.extra.og_type, the same settable field journal-entry.schema.json
+   declares and page.html's own block already reads correctly:
+   `page.extra.og_type | default(value="article")`. Inheriting that block
+   keeps the identical default while letting the override through. #}
 
 {% block ld_json %}
   {%- include "partials/ld-organization.html" -%}

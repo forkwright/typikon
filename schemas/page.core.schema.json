@@ -61,7 +61,7 @@
         },
         "og_image": {
           "type": "string",
-          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|webp)$",
+          "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$",
           "description": "Path under static/ (e.g. 'img/og-cover.png'). get_url() resolves to absolute."
         },
         "og_type": {

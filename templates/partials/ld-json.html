@@ -1,0 +1,26 @@
+{# Shared JSON-LD string-escaping helper for every partials/ld-*.html.
+
+   WHY (forkwright/typikon#92): json_encode() escapes JSON's own syntax
+   characters (quotes, control chars) but leaves "/" untouched, so any
+   untrusted string field embedded in a <script type="application/ld+json">
+   block (config.title, page.title/description, item.q/a, page.extra.author,
+   decision_tree steps, ...) can carry a literal "</script" sequence. A
+   browser's HTML parser scans for that byte sequence BEFORE any JSON or JS
+   parsing happens -- case-insensitively, oblivious to JSON string-quoting
+   -- so it closes the script element early regardless of how validly the
+   JSON payload itself is escaped, breaking whatever HTML follows into the
+   page as markup. Escaping every "/" as the JSON-legal "\/" removes the
+   literal substring "</script" from the byte stream while round-tripping
+   through JSON.parse()/serde_json unchanged: "\/" and "/" decode to the
+   identical character per RFC 8259 SS7. Verified against a zola build:
+   the escaped payload still `json.loads()`-decodes to the exact original
+   string, and "</script" no longer occurs anywhere between the <script>
+   tags.
+
+   Every partials/ld-*.html routes every field value (string, number, or
+   array alike -- replace() is a no-op on a value with no "/") through
+   this macro instead of calling json_encode directly, so no future
+   ld-*.html addition can reintroduce the gap by omission. #}
+{% macro str(value) -%}
+{{- value | json_encode | replace(from="/", to="\/") | safe -}}
+{%- endmacro str %}

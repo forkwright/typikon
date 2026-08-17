@@ -5,8 +5,27 @@
      and section.html override `title_text`, `description_text`, etc.
      base.html does not access `page.*` or `section.*` directly so it works
      in every rendering context.
+
+   WHY the assert import below (forkwright/typikon#92): Tera resolves a
+   macro namespace by which TEMPLATE an include tag is textually written
+   in, not by the included partial's own imports, once that block is
+   reached via extends plus a child's super() call (verified: a flat
+   include honors the partial's own import; the identical include inside
+   an inherited block that a child renders via super() does not — Tera
+   attributes it to base.html regardless of which child called super()).
+   partials/ld-organization.html is included directly in the ld_json
+   block below and calls assert::required; every child template's own
+   super() call would otherwise fail exactly the way an unimported macro
+   namespace does.
+
+   WARNING: this file tolerates only ONE leading comment block before its
+   import statements — Tera's parser rejects a second, separate leading
+   comment block ahead of an import with a parse error naming the import
+   line (verified), so any addition here must stay inside this single
+   comment, never a new one placed above the imports.
 #}
 {% import "partials/ld-breadcrumb.html" as crumb %}
+{% import "partials/assert.html" as assert %}
 <!DOCTYPE html>
 <html lang="{{ lang | default(value="en") }}">
 <head>

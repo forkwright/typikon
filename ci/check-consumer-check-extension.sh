@@ -29,8 +29,7 @@ set -euo pipefail
 #      errors out when a consumer simply doesn't use the extension point
 #      is the opposite defect and just as real.
 #
-# Usage:
-#     ci/check-consumer-check-extension.sh
+# NOTE: usage — ci/check-consumer-check-extension.sh
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GH_TMPL="$ROOT/ci/github-workflow.yml.tmpl"
