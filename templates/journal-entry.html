@@ -8,7 +8,25 @@
 
    The template assumes journal entries have:
      page.title, page.description, page.date (ISO), page.extra.components,
-     page.extra.words. See schemas/journal-entry.schema.json.
+     page.extra.audience.
+
+   page.extra.audience is rendered in entry-header, alongside components:
+   it is reader-orienting context ("who this piece is for"), so it belongs
+   where a reader decides whether to keep reading, not buried past the
+   body -- the same reasoning that puts entry-components (what it's about)
+   there rather than in the closing .specs line.
+
+   The `.specs` word-count line renders Zola's own page.word_count by
+   default -- a hand-written count can drift from the body it claims to
+   describe; page.word_count cannot, because Zola recomputes it from the
+   rendered body on every build. It counts the rendered body's words
+   (headings, emphasis, inline code, link text AND link targets, image
+   alt text AND src) but EXCLUDES fenced code block content entirely --
+   verified against zola 0.22.1. page.extra.words overrides it when a
+   consumer needs a custom string (a translated unit, a deliberate count
+   that excludes something page.word_count includes); setting it requires
+   page.extra.words_source alongside it. See
+   schemas/journal-entry.schema.json.
 #}
 {% extends "page.html" %}
 {% import "partials/assert.html" as assert %}
@@ -32,14 +50,18 @@
 {{ assert::required(ok=page.date is defined and page.date, field="page.date", template="journal-entry.html") }}
 {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="journal-entry.html") }}
 {{ assert::required(ok=page.extra.components is defined and page.extra.components, field="page.extra.components", template="journal-entry.html") }}
-{{ assert::required(ok=page.extra.words is defined and page.extra.words, field="page.extra.words", template="journal-entry.html") }}
+{%- if page.extra.words %}
 {{ assert::required(ok=page.extra.words_source is defined and page.extra.words_source, field="page.extra.words_source", template="journal-entry.html") }}
+{%- endif %}
 <article class="journal-entry-page">
   <header class="entry-header">
     <h1>{{ page.title }}</h1>
     <p class="entry-date"><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></p>
     {%- if page.extra.components %}
     <p class="entry-components">{{ page.extra.components }}</p>
+    {%- endif %}
+    {%- if page.extra.audience %}
+    <p class="entry-audience">{{ page.extra.audience }}</p>
     {%- endif %}
   </header>
 
@@ -53,9 +75,7 @@
   {{ assert::no_h1(content=page.content, template="journal-entry.html") }}
   {{ page.content | safe }}
 
-  {%- if page.extra.words %}
-  <p class="specs">{{ page.extra.words }}</p>
-  {%- endif %}
+  <p class="specs">{{ page.extra.words | default(value=page.word_count ~ " words") }}</p>
 
   {%- if page.lower or page.higher %}
   <nav class="entry-nav" aria-label="Journal navigation">

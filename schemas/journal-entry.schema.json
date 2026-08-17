@@ -21,7 +21,7 @@
     "draft": { "type": "boolean" },
     "extra": {
       "type": "object",
-      "required": ["audience", "components", "words", "words_source"],
+      "required": ["audience", "components"],
       "additionalProperties": false,
       "properties": {
         "audience": {
@@ -39,13 +39,13 @@
         "words": {
           "type": "string",
           "pattern": "^~?\\d+( words)?$",
-          "description": "Approximate word count, e.g. '~480' or '~480 words'."
+          "description": "Optional override for the rendered word-count line. journal-entry.html/journal-section.html render Zola's own page.word_count/entry.word_count by default (counted from the rendered body, excluding fenced code blocks) so the figure cannot drift from the body. Set this only to force a custom string; requires words_source alongside it."
         },
         "words_source": {
           "type": "string",
           "minLength": 3,
           "maxLength": 200,
-          "description": "Source for the rendered word-count claim, e.g. 'manual count' or the counting tool used."
+          "description": "Required alongside words: where the overriding word-count claim came from. Not needed for the default derived count, which is self-sourced (Zola's own page.word_count) and carries no separate provenance claim to trace."
         },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
@@ -71,7 +71,9 @@
         }
       },
       "dependentRequired": {
-        "figure": ["figure_alt"]
+        "figure": ["figure_alt"],
+        "words": ["words_source"],
+        "words_source": ["words"]
       }
     }
   }

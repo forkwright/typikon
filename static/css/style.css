@@ -860,13 +860,22 @@ footer p {
   margin-bottom: var(--space-xs);
 }
 
-.entry-header .entry-components {
+.entry-header .entry-components,
+.entry-header .entry-audience {
   font-family: var(--font-mono);
   font-size: var(--step--2);
   color: var(--text-light);
   letter-spacing: 0.05em;
   margin: 0;
   flex: none;
+}
+
+/* WHY: entry-components carries no top margin of its own -- it sits
+   flush under entry-date's margin-bottom. entry-audience, when it
+   follows entry-components (both required, both always rendered), needs
+   its own small gap or the two lines touch. */
+.entry-header .entry-components + .entry-audience {
+  margin-top: var(--space-3xs);
 }
 
 /* === LEXICON === */

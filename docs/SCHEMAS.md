@@ -145,23 +145,23 @@ list_caption = "Newest at top."
 
 Pages under `content/journal/` (excluding `_index.md`), OR any page whose effective `template` — explicit or resolved through the `page_template` cascade (see the routing table above) — is `journal-entry.html`, regardless of its path. Stricter than page: requires `description`, `date`, and the entry-level extras so the auto-generated journal listing renders cleanly.
 
-**Required:** `title`, `description`, `date`, `extra.audience`, `extra.components`, `extra.words`, `extra.words_source`.
+**Required:** `title`, `description`, `date`, `extra.audience`, `extra.components`.
 
-**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `author`, `skip_sitemap`, `figure`, `figure_alt`, `tier`.
+**Optional `[extra]`:** `words`, `words_source`, `seo_title`, `body_class`, `og_image`, `og_type`, `author`, `skip_sitemap`, `figure`, `figure_alt`, `tier`.
 
 **Constraints:**
 - description: 20–200 chars
 - date: ISO 8601
-- extra.audience: 3–120 chars
+- extra.audience: 3–120 chars. Rendered in the entry header, alongside `extra.components` — reader-orienting context for who the piece is for
 - extra.components: 5–120 chars (the conceptual-tags line)
-- extra.words: matches `^~?\d+( words)?$`
-- extra.words_source: 3–200 chars. Source for the rendered word-count claim
+- extra.words: matches `^~?\d+( words)?$`. **Optional override** — `journal-entry.html`/`journal-section.html` render Zola's own `page.word_count`/`entry.word_count` by default (the rendered body's word count, excluding fenced code blocks — see `templates/journal-entry.html`), so the figure cannot drift from the body it describes. Set this only to force a custom string
+- extra.words_source: 3–200 chars. **Required alongside `extra.words`, forbidden without it** (`dependentRequired`, both directions — same pattern as `product.schema.json`'s `availability`/`availability_source`). Not needed for the default derived count, which carries no separate provenance claim
 - extra.og_image: ends in `.svg|.png|.jpg|.webp`
 - extra.figure: ends in `.svg|.png|.jpg|.webp`. Not consumed by typikon's own stock `journal-entry.html` — a consumer shadow template renders it as furniture above the entry body (forkwright/typikon#163)
 - extra.figure_alt: 5–500 chars. **Required whenever `extra.figure` is set** (enforced via `dependentRequired`, not just documented)
 - extra.tier: one of `notes | research`. Not consumed by typikon's own stock `journal-section.html` — a consumer shadow template that groups its listing by tier reads it (forkwright/typikon#163)
 
-**Example:**
+**Example — explicit `words` override:**
 
 ```toml
 +++
@@ -174,6 +174,20 @@ audience = "readers following the workbench journal"
 components = "ἀπορία · productive uncertainty · the green"
 words = "~430 words"
 words_source = "manual count"
++++
+```
+
+**Example — derived `words`:** omitting `words`/`words_source` renders `page.word_count` instead:
+
+```toml
++++
+title = "ἀπορία"
+description = "On the green dye and the tensions it holds. Why the color that can't decide is the one I keep thinking about."
+date = 2026-01-20
+
+[extra]
+audience = "readers following the workbench journal"
+components = "ἀπορία · productive uncertainty · the green"
 +++
 ```
 
