@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.1](https://github.com/forkwright/typikon/compare/v0.4.0...v0.4.1) (2026-08-16)
+
+
+### Bug Fixes
+
+* **ci:** fail loud when favicon_path/logo_path/og_image has no backing asset ([#162](https://github.com/forkwright/typikon/issues/162)) ([1c72599](https://github.com/forkwright/typikon/commit/1c72599d6bacb1c502b922df74811f766c08d50d))
+* **ci:** require + verify the Cloudflare deploy control-file bundle ([#165](https://github.com/forkwright/typikon/issues/165)) ([9ebb45a](https://github.com/forkwright/typikon/commit/9ebb45ac3220085008886815a8a08cf0819deea9))
+* **templates:** source every page's h1 from front matter, guarded against markdown collision ([#161](https://github.com/forkwright/typikon/issues/161)) ([559f9a7](https://github.com/forkwright/typikon/commit/559f9a7991b6e4691b97727955f5c9f31cd9f366)), closes [#157](https://github.com/forkwright/typikon/issues/157) [#149](https://github.com/forkwright/typikon/issues/149)
+* **typikon-init,sizing-guide:** scope init staging to own outputs; unify sizing-table column schema ([#167](https://github.com/forkwright/typikon/issues/167)) ([a46722b](https://github.com/forkwright/typikon/commit/a46722b71e5a4f03e033a9788bd4ca4b2bb3bde8))
+* **typikon-validate:** simulate Zola's page_template cascade in classify() ([#164](https://github.com/forkwright/typikon/issues/164)) ([d2866a1](https://github.com/forkwright/typikon/commit/d2866a1a0f43c041d958f8ea81a69ed1a42ff3e7))
+
 ## [0.4.0](https://github.com/forkwright/typikon/compare/v0.3.0...v0.4.0) (2026-08-16)
 
 
