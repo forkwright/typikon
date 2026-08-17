@@ -12,13 +12,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # production behavior always resolves to the ROOT-derived ci/ directory below.
 FIXTURE_CI_DIR="${FIXTURE_CI_DIR:-$ROOT/ci}"
 
-# WHY: these two check-* scripts take positional arguments (a template path,
-# a built-site dir) and are invoked explicitly, with those arguments, further
+# WHY: these check-* scripts take positional arguments (a template path, a
+# built-site dir) and are invoked explicitly, with those arguments, further
 # down. The no-arg glob discovery below cannot express that call shape, so
 # each exclusion is named here with the reason it is not auto-run.
+#
+# A check that needs BUILT output belongs here by construction, not by choice:
+# discovery runs before any example is built, so a no-arg invocation of one
+# either fails on its usage line or -- worse -- inspects a directory that does
+# not exist yet and reports a vacuous pass.
 declare -A ARG_TAKING_FIXTURES=(
     [check-workflow-template.sh]="invoked below with github-workflow.yml.tmpl"
     [check-xml-output.sh]="invoked below per-example against the built public/ dir"
+    [check-faq-rendering.py]="invoked below against sample-shop's built public/ dir"
 )
 
 mapfile -t _discovered < <(
@@ -68,3 +74,8 @@ done
 # consumers deploy.
 "$ROOT/ci/check-xml-output.sh" "$ROOT/examples/sample-blog/public"
 "$ROOT/ci/check-xml-output.sh" "$ROOT/examples/sample-shop/public"
+
+# sample-shop only: its faq.md carries the colliding-question and script-breakout
+# fixture content this check exists to witness. Pointed at the production build
+# for the same reason as the feeds above.
+"$ROOT/ci/check-faq-rendering.py" "$ROOT/examples/sample-shop/public"
