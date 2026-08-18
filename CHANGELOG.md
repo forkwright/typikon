@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/forkwright/typikon/compare/v0.4.2...v0.5.0) (2026-08-17)
+
+
+### Features
+
+* **templates,css,ci:** expose a real consumer design API, split Leather's skin out of core ([#175](https://github.com/forkwright/typikon/issues/175)) ([b61228c](https://github.com/forkwright/typikon/commit/b61228cbbf3ca9e88a04161173dcf2faea79a8ec))
+* **templates,schemas:** render audience, derive the journal word count from Zola ([#178](https://github.com/forkwright/typikon/issues/178)) ([af66fa0](https://github.com/forkwright/typikon/commit/af66fa027563466ba3e36df99dbf3f598c3c2ff9))
+
 ## [0.4.2](https://github.com/forkwright/typikon/compare/v0.4.1...v0.4.2) (2026-08-17)
 
 
