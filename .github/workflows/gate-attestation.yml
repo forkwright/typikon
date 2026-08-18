@@ -139,6 +139,11 @@ jobs:
       # WHY false: no Cargo.toml, so no git dependency to authenticate.
       needs_fleet_repo_token: false
       rust_cache_key: "gate-attestation"
+      # WHY 90m: the 45m default canceled this repo's 0.5.0 release gate at
+      # 45m20s with the fixture build still running (run 32162840929). The
+      # timeout is a ceiling for runaway jobs, not a target. Same shape as
+      # aletheia#6896's 60m and harmonia#718's 90m raises this week.
+      full_gate_timeout_minutes: 90
       ai_attribution_check: true
       # WHY false, not the reusable's true default: the reusable's
       # docs-only classifier keys on file extension alone (*.md, docs/*,
