@@ -10,20 +10,18 @@
      config.extra.founding_date — optional ISO 8601 year (e.g. "2024")
      config.extra.footer_links — list of {url, rel}; entries with rel="me" emit as sameAs
 #}
-{% import "partials/assert.html" as assert %}
-{% import "partials/ld-json.html" as ldjson %}
 {#- WHY this guard (forkwright/typikon#92): every sibling partials/ld-*.html
-   imports partials/assert.html and asserts its own documented required
-   inputs; this file did neither. config.extra.logo_path feeds logo_url
+   uses the shared typikon.assert.required component for its documented
+   inputs; this file previously did neither. config.extra.logo_path feeds logo_url
    below UNCONDITIONALLY — there is no `{% if %}` around it the way
    brand_greek/founding_date/footer_links each get — so an absent value
    still failed the build (Tera's `~` concatenation errors on an undefined
    variable), but with a bare "Variable `config.extra.logo_path` not found
    in context" engine error naming neither the missing field's role nor
    which template needs it — verified against a zola build. Every sibling
-   partial instead names both, via the same assert::required this file now
-   also uses. -#}
-{{ assert::required(ok=config.extra.logo_path is defined and config.extra.logo_path, field="config.extra.logo_path", template="partials/ld-organization.html") }}
+   partial instead names both, via the same typikon.assert.required
+   component this file now also uses. -#}
+{{ <typikon.assert.required ok={config.extra.logo_path is defined and config.extra.logo_path} field="config.extra.logo_path" template="partials/ld-organization.html" /> }}
 {#- get_url(), not hand string-concatenation (forkwright/typikon#92): the
    visible <link rel="icon"> in base.html resolves config.extra.favicon_path
    the same way, and get_url() normalizes base_url/path joining (a
@@ -36,26 +34,26 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": {{ ldjson::str(value=config.title) }},
-  "description": {{ ldjson::str(value=config.description) }},
-  "url": {{ ldjson::str(value=config.base_url) }},
-  "logo": {{ ldjson::str(value=logo_url) }}
+  "name": {{ <typikon.ldjson.str value={config.title} /> }},
+  "description": {{ <typikon.ldjson.str value={config.description} /> }},
+  "url": {{ <typikon.ldjson.str value={config.base_url} /> }},
+  "logo": {{ <typikon.ldjson.str value={logo_url} /> }}
   {%- if config.extra.brand_greek -%},
-  "alternateName": {{ ldjson::str(value=config.extra.brand_greek) }}
+  "alternateName": {{ <typikon.ldjson.str value={config.extra.brand_greek} /> }}
   {%- endif -%}
   {%- if config.extra.founding_date -%},
-  "foundingDate": {{ ldjson::str(value=config.extra.founding_date) }}
+  "foundingDate": {{ <typikon.ldjson.str value={config.extra.founding_date} /> }}
   {%- endif -%}
   {%- if config.extra.footer_links -%}
     {%- set sameas = [] -%}
     {%- for link in config.extra.footer_links -%}
       {%- set rel_val = link.rel | default(value="") -%}
       {%- if rel_val == "me" -%}
-        {%- set_global sameas = sameas | concat(with=link.url) -%}
+        {%- set_global sameas = [...sameas, link.url] -%}
       {%- endif -%}
     {%- endfor -%}
     {%- if sameas | length > 0 -%},
-  "sameAs": {{ ldjson::str(value=sameas) }}
+  "sameAs": {{ <typikon.ldjson.str value={sameas} /> }}
     {%- endif -%}
   {%- endif %}
 }

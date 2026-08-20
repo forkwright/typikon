@@ -5,18 +5,17 @@
    Schema: schemas/faq.schema.json
 #}
 {% extends "page.html" %}
-{% import "partials/assert.html" as assert %}
 
 {% block ld_json %}
   {%- include "partials/ld-organization.html" -%}
   {%- include "partials/ld-faq.html" -%}
-  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+  {{ <typikon.crumb.breadcrumb config={config} lang={page.lang} title={page.title} permalink={page.permalink} ancestors={page.ancestors} /> }}
 {% endblock ld_json %}
 
 {% block content %}
-{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="faq.html") }}
-{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="faq.html") }}
-{{ assert::required(ok=page.extra.questions is defined and page.extra.questions | length > 0, field="page.extra.questions", template="faq.html") }}
+{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="faq.html" /> }}
+{{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="faq.html" /> }}
+{{ <typikon.assert.required ok={page.extra.questions is defined and page.extra.questions | length > 0} field="page.extra.questions" template="faq.html" /> }}
 <article class="faq-page">
   <header class="page-header">
     <h1>{{ page.title }}</h1>
@@ -32,7 +31,7 @@
      convention, colliding with the one in page-header above -- same
      posture as index.html (forkwright/typikon#152), the fail-closed
      precedent this mirrors. -#}
-  {{ assert::no_h1(content=page.content, template="faq.html") }}
+  {{ <typikon.assert.no_h1 content={page.content} template="faq.html" /> }}
   {%- if page.content %}
   <div class="faq-intro">
     {{ page.content | safe }}
@@ -43,8 +42,8 @@
     {#- WHY the seen-anchor dedup: two questions (explicit anchor or
        slugify(item.q)) that resolve to the same string previously
        produced two elements with the identical `id`, which is invalid
-       HTML and makes the SECOND element the only one any fragment link
-       to that id can ever reach (forkwright/typikon#92). set_global is
+       HTML and leaves every later element with that id unreachable by a
+       fragment link (forkwright/typikon#92). set_global is
        required for `faq_seen_anchors` to survive across loop
        iterations — a plain `set` re-initializes on every pass. #}
     {%- set_global faq_seen_anchors = [] -%}
@@ -55,7 +54,7 @@
     {%- else -%}
     {%- set anchor = base_anchor -%}
     {%- endif -%}
-    {%- set_global faq_seen_anchors = faq_seen_anchors | concat(with=anchor) -%}
+    {%- set_global faq_seen_anchors = [...faq_seen_anchors, anchor] -%}
     <div class="faq-item" id="{{ anchor }}">
       <dt class="faq-question">
         <a href="#{{ anchor }}" class="faq-anchor">{{ item.q }}</a>

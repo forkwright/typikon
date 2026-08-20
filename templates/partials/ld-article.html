@@ -10,13 +10,11 @@
      config.extra.author.name — fallback brand author
      config.title       — publisher name
 #}
-{% import "partials/assert.html" as assert %}
-{% import "partials/ld-json.html" as ldjson %}
-{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="partials/ld-article.html") }}
-{{ assert::required(ok=page.description is defined and page.description, field="page.description", template="partials/ld-article.html") }}
-{{ assert::required(ok=page.date is defined and page.date, field="page.date", template="partials/ld-article.html") }}
-{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-article.html") }}
-{%- set author_name = page.extra.author | default(value=config.extra.author.name) | default(value=config.title) -%}
+{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="partials/ld-article.html" /> }}
+{{ <typikon.assert.required ok={page.description is defined and page.description} field="page.description" template="partials/ld-article.html" /> }}
+{{ <typikon.assert.required ok={page.date is defined and page.date} field="page.date" template="partials/ld-article.html" /> }}
+{{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="partials/ld-article.html" /> }}
+{%- set author_name = page.extra.author | default(value=config.extra.author?.name) | default(value=config.title) -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}
   {#- get_url(), not hand string-concatenation (forkwright/typikon#92):
@@ -31,23 +29,23 @@
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": {{ ldjson::str(value=page.title) }},
-  "description": {{ ldjson::str(value=page.description) }},
-  "url": {{ ldjson::str(value=page.permalink) }},
-  "datePublished": {{ ldjson::str(value=page.date) }},
+  "headline": {{ <typikon.ldjson.str value={page.title} /> }},
+  "description": {{ <typikon.ldjson.str value={page.description} /> }},
+  "url": {{ <typikon.ldjson.str value={page.permalink} /> }},
+  "datePublished": {{ <typikon.ldjson.str value={page.date} /> }},
   "author": {
     "@type": "Person",
-    "name": {{ ldjson::str(value=author_name) }}
+    "name": {{ <typikon.ldjson.str value={author_name} /> }}
   },
   "publisher": {
     "@type": "Organization",
-    "name": {{ ldjson::str(value=config.title) }}
+    "name": {{ <typikon.ldjson.str value={config.title} /> }}
   }
   {%- if page.updated -%},
-  "dateModified": {{ ldjson::str(value=page.updated) }}
+  "dateModified": {{ <typikon.ldjson.str value={page.updated} /> }}
   {%- endif -%}
   {%- if image_url -%},
-  "image": {{ ldjson::str(value=image_url) }}
+  "image": {{ <typikon.ldjson.str value={image_url} /> }}
   {%- endif %}
 }
 </script>

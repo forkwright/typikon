@@ -25,7 +25,7 @@ Usage:
     ci/check-faq-rendering.py <built-sample-shop-public-dir>
 
 NOTE: unlike the standalone checks in this directory, this one needs a
-real Tera render (get_url(), assert::required, and Tera's own macro/
+real Tera render (get_url(), typikon.assert.required, and Tera's component
 scoping rules are all in play) — there is no meaningful way to simulate
 that without invoking zola, so it runs against already-built output
 rather than constructing its own fixture in-process.

@@ -22,14 +22,13 @@
    rendered body on every build. It counts the rendered body's words
    (headings, emphasis, inline code, link text AND link targets, image
    alt text AND src) but EXCLUDES fenced code block content entirely --
-   verified against zola 0.22.1. page.extra.words overrides it when a
+   verified against Zola 0.23.3. page.extra.words overrides it when a
    consumer needs a custom string (a translated unit, a deliberate count
    that excludes something page.word_count includes); setting it requires
    page.extra.words_source alongside it. See
    schemas/journal-entry.schema.json.
 #}
 {% extends "page.html" %}
-{% import "partials/assert.html" as assert %}
 
 {# NOTE: no og_type block override here (forkwright/typikon#92) — a prior
    hardcoded `{% block og_type %}article{% endblock %}` silently discarded
@@ -41,17 +40,17 @@
 {% block ld_json %}
   {%- include "partials/ld-organization.html" -%}
   {%- include "partials/ld-article.html" -%}
-  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+  {{ <typikon.crumb.breadcrumb config={config} lang={page.lang} title={page.title} permalink={page.permalink} ancestors={page.ancestors} /> }}
 {% endblock ld_json %}
 
 {% block content %}
-{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="journal-entry.html") }}
-{{ assert::required(ok=page.description is defined and page.description, field="page.description", template="journal-entry.html") }}
-{{ assert::required(ok=page.date is defined and page.date, field="page.date", template="journal-entry.html") }}
-{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="journal-entry.html") }}
-{{ assert::required(ok=page.extra.components is defined and page.extra.components, field="page.extra.components", template="journal-entry.html") }}
+{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="journal-entry.html" /> }}
+{{ <typikon.assert.required ok={page.description is defined and page.description} field="page.description" template="journal-entry.html" /> }}
+{{ <typikon.assert.required ok={page.date is defined and page.date} field="page.date" template="journal-entry.html" /> }}
+{{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="journal-entry.html" /> }}
+{{ <typikon.assert.required ok={page.extra.components is defined and page.extra.components} field="page.extra.components" template="journal-entry.html" /> }}
 {%- if page.extra.words %}
-{{ assert::required(ok=page.extra.words_source is defined and page.extra.words_source, field="page.extra.words_source", template="journal-entry.html") }}
+{{ <typikon.assert.required ok={page.extra.words_source is defined and page.extra.words_source} field="page.extra.words_source" template="journal-entry.html" /> }}
 {%- endif %}
 <article class="journal-entry-page">
   <header class="entry-header">
@@ -72,7 +71,7 @@
      colliding with the one in entry-header above -- same posture as
      index.html (forkwright/typikon#152), the fail-closed precedent this
      mirrors. -#}
-  {{ assert::no_h1(content=page.content, template="journal-entry.html") }}
+  {{ <typikon.assert.no_h1 content={page.content} template="journal-entry.html" /> }}
   {{ page.content | safe }}
 
   <p class="specs">{{ page.extra.words | default(value=page.word_count ~ " words") }}</p>

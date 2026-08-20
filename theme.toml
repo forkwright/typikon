@@ -4,7 +4,7 @@ name = "typikon"
 description = "Fleet web-property substrate — Zola theme, frontmatter schemas, agentic scaffolding, strict CI gates"
 license = "AGPL-3.0-or-later"
 homepage = "https://github.com/forkwright/typikon"
-min_version = "0.22.0"
+min_version = "0.23.3"
 
 [author]
 name = "Cody Kickertz"

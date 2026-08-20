@@ -1,9 +1,8 @@
 {# Default section template. Renders the section index's markdown content. #}
 {% extends "base.html" %}
-{% import "partials/assert.html" as assert %}
 
-{% block title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="section.html") }}{{ section.extra.seo_title | default(value=section.title) }} - {{ config.title }}{% endblock title %}
-{% block og_title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="section.html") }}{{ section.extra.seo_title | default(value=section.title) }} - {{ config.title }}{% endblock og_title %}
+{% block title %}{{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="section.html" /> }}{{ section.extra.seo_title | default(value=section.title) }} - {{ config.title }}{% endblock title %}
+{% block og_title %}{{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="section.html" /> }}{{ section.extra.seo_title | default(value=section.title) }} - {{ config.title }}{% endblock og_title %}
 
 {% block description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock description %}
 {% block og_description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock og_description %}
@@ -19,7 +18,7 @@
 
 {% block ld_json %}
   {{ super() }}
-  {{ crumb::breadcrumb(title=section.title, permalink=section.permalink, ancestors=section.ancestors) }}
+  {{ <typikon.crumb.breadcrumb config={config} lang={section.lang} title={section.title} permalink={section.permalink} ancestors={section.ancestors} /> }}
 {% endblock ld_json %}
 
 {% block content %}
@@ -32,7 +31,7 @@
    section.title is already required (asserted in the title/og_title
    blocks above), so sourcing the heading from it is a guarantee, not a
    convention. -#}
-{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="section.html") }}
+{{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="section.html" /> }}
 <h1>{{ section.title }}</h1>
 {#- WHY this guard (forkwright/typikon#157 class): now that this template
    renders its own <h1> above, section.content is unconditional
@@ -41,7 +40,7 @@
    journal-entry.html/faq.html. Adding the heading above without this
    guard would have reproduced the very defect class #149 exists to
    close, in a template #157 never named. -#}
-{{ assert::no_h1(content=section.content, template="section.html") }}
+{{ <typikon.assert.no_h1 content={section.content} template="section.html" /> }}
 {{ section.content | safe }}
 
 {# NOTE: default child-page listing (e.g. content/products/_index.md).

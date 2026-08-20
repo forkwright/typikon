@@ -16,28 +16,26 @@
 
    Schema reference: https://schema.org/HowTo
 #}
-{% import "partials/assert.html" as assert %}
-{% import "partials/ld-json.html" as ldjson %}
-{{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="partials/ld-howto.html") }}
-{{ assert::required(ok=page.extra.product_type is defined and page.extra.product_type, field="page.extra.product_type", template="partials/ld-howto.html") }}
-{{ assert::required(ok=page.extra.measurement_source is defined and page.extra.measurement_source, field="page.extra.measurement_source", template="partials/ld-howto.html") }}
-{{ assert::required(ok=page.extra.decision_tree is defined and page.extra.decision_tree | length > 0, field="page.extra.decision_tree", template="partials/ld-howto.html") }}
+{{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="partials/ld-howto.html" /> }}
+{{ <typikon.assert.required ok={page.extra.product_type is defined and page.extra.product_type} field="page.extra.product_type" template="partials/ld-howto.html" /> }}
+{{ <typikon.assert.required ok={page.extra.measurement_source is defined and page.extra.measurement_source} field="page.extra.measurement_source" template="partials/ld-howto.html" /> }}
+{{ <typikon.assert.required ok={page.extra.decision_tree is defined and page.extra.decision_tree | length > 0} field="page.extra.decision_tree" template="partials/ld-howto.html" /> }}
 {%- set howto_name = "How to choose your " ~ page.extra.product_type ~ " size" -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  "name": {{ ldjson::str(value=howto_name) }},
-  "description": {{ ldjson::str(value=page.description) }},
+  "name": {{ <typikon.ldjson.str value={howto_name} /> }},
+  "description": {{ <typikon.ldjson.str value={page.description} /> }},
   {%- if page.extra.duration is defined and page.extra.duration %}
-  "totalTime": {{ ldjson::str(value=page.extra.duration) }},
+  "totalTime": {{ <typikon.ldjson.str value={page.extra.duration} /> }},
   {%- endif %}
   "step": [
     {%- for line in page.extra.decision_tree -%}
     {
       "@type": "HowToStep",
       "position": {{ loop.index }},
-      "text": {{ ldjson::str(value=line) }}
+      "text": {{ <typikon.ldjson.str value={line} /> }}
     }{%- if not loop.last -%},{%- endif -%}
     {%- endfor %}
   ]

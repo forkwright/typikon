@@ -2,10 +2,9 @@
    shared base shell. Consumers can override per-page via frontmatter
    `template = "..."` or per-section by shipping `<section>/page.html`. #}
 {% extends "base.html" %}
-{% import "partials/assert.html" as assert %}
 
-{% block title %}{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock title %}
-{% block og_title %}{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock og_title %}
+{% block title %}{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="page.html" /> }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock title %}
+{% block og_title %}{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="page.html" /> }}{{ page.extra.seo_title | default(value=page.title) }} - {{ config.title }}{% endblock og_title %}
 
 {% block description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock description %}
 {% block og_description %}{{ page.description | default(value=config.description | default(value="")) }}{% endblock og_description %}
@@ -25,14 +24,14 @@
   {{ super() }}
   {# Product JSON-LD when frontmatter is product-shaped (per schema). #}
   {%- if page.extra.price or page.extra.stripe_url or page.extra.price_source -%}
-  {{ assert::required(ok=page.extra.audience is defined and page.extra.audience, field="page.extra.audience", template="page.html") }}
-  {{ assert::required(ok=page.extra.price is defined and page.extra.price, field="page.extra.price", template="page.html") }}
-  {{ assert::required(ok=page.extra.price_source is defined and page.extra.price_source, field="page.extra.price_source", template="page.html") }}
-  {{ assert::required(ok=page.extra.stripe_url is defined and page.extra.stripe_url, field="page.extra.stripe_url", template="page.html") }}
+  {{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="page.html" /> }}
+  {{ <typikon.assert.required ok={page.extra.price is defined and page.extra.price} field="page.extra.price" template="page.html" /> }}
+  {{ <typikon.assert.required ok={page.extra.price_source is defined and page.extra.price_source} field="page.extra.price_source" template="page.html" /> }}
+  {{ <typikon.assert.required ok={page.extra.stripe_url is defined and page.extra.stripe_url} field="page.extra.stripe_url" template="page.html" /> }}
   {%- include "partials/ld-product.html" -%}
   {%- endif -%}
   {# BreadcrumbList for non-home pages. #}
-  {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+  {{ <typikon.crumb.breadcrumb config={config} lang={page.lang} title={page.title} permalink={page.permalink} ancestors={page.ancestors} /> }}
 {% endblock ld_json %}
 
 {% block content %}
@@ -43,7 +42,7 @@
    built with zero headings at any level. page.title is already required
    (asserted in the title/og_title blocks above), so sourcing the heading
    from it is a guarantee, not a convention. -#}
-{{ assert::required(ok=page.title is defined and page.title, field="page.title", template="page.html") }}
+{{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="page.html" /> }}
 <h1>{{ page.title }}</h1>
 {# Product gallery renders before page content when extra.images is set —
    the operator drops the placeholder <div class="product-images"> from
@@ -60,7 +59,7 @@
    with it exactly as #157 found in journal-entry.html/faq.html. Adding
    the heading above without this guard would have reproduced the very
    defect class #149 exists to close, in a template #157 never named. -#}
-{{ assert::no_h1(content=page.content, template="page.html") }}
+{{ <typikon.assert.no_h1 content={page.content} template="page.html" /> }}
 {{ page.content | safe }}
 {# Process video renders after page content when extra.video is set. #}
 {%- include "partials/video.html" -%}

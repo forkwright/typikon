@@ -8,9 +8,13 @@ source_docs = [
 ]
 
 [state]
-summary = "Typikon is the active fleet Zola theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
-current_phase = "v1 substrate active with consumer adoption through submodules."
-updated = "2026-08-09"
+summary = "Typikon is the active fleet Zola 0.23/Tera 2 theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
+current_phase = "v0.5 substrate active; Zola 0.23.3/Tera 2 compatibility is the prerequisite for scoped root-feed work in issue #179."
+updated = "2026-08-19"
+
+[[recent]]
+date = "2026-08-19"
+item = "Migrated the substrate contract from Zola 0.22/Tera 1 to pinned Zola 0.23.3/Tera 2 before issue #179 feed semantics."
 
 [[recent]]
 date = "2026-05-05"

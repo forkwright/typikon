@@ -7,14 +7,14 @@
      config.extra.author.uri  — optional author URL
      page.extra.author        — per-entry override (becomes Person)
 #}
-{%- set author_name = config.extra.author.name | default(value=config.title) -%}
-{%- set author_uri = config.extra.author.uri | default(value=config.base_url) -%}
-{# Section feeds get section.pages; the global feed already receives
-   Zola's site-wide `pages` in context, so leave it untouched here. #}
-{%- if section %}{% set pages = section.pages %}{% endif -%}
+{%- set author_name = config.extra.author?.name | default(value=config.title) -%}
+{%- set author_uri = config.extra.author?.uri | default(value=config.base_url) -%}
+{# Zola supplies `pages` for global, section, and taxonomy feeds after
+   applying its date/render/hidden/include_in_feeds filter, deterministic
+   feed ordering, and feed_limit. Never replace that engine-owned set here. #}
 <?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"{% if lang %} xml:lang="{{ lang }}"{% endif %}>
-    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section.title %} - {{ section.title }}{% endif %}</title>
+    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section and section.title %} - {{ section.title }}{% endif %}</title>
     {%- if config.description %}
     <subtitle>{{ config.description }}</subtitle>
     {%- endif %}
