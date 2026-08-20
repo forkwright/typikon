@@ -72,3 +72,11 @@ status = "accepted"
 context = "A stored checkout URL and recorded price do not establish current availability or fulfillment readiness."
 decision = "Render checkout and Offer URLs only for sourced purchasable availability. Render shipping text only with paired provenance."
 consequences = "Unknown or negative readiness keeps the product legible as a catalog record without inviting a transaction."
+
+[[decision]]
+id = "D-two-phase-release"
+title = "Separate release content from compatibility evidence"
+status = "accepted"
+context = "Squash-only publication changes the commit identity, while both consumers must test the exact commit and source archive later tagged as the release."
+decision = "Freeze the one-parent release squash as candidate R, gate both consumer gitlinks at R, commit only the lock and receipts afterward, and publish an annotated tag at R through a replayed evidence lock."
+consequences = "The evidence commit never becomes release content; promotion and distinct per-consumer rollback subjects are typed, and publication credentials stay outside PR gates."

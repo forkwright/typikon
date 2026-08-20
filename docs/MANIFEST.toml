@@ -17,3 +17,9 @@ path = "docs/AGENTIC.md"
 type = "authored"
 evergreen = true
 description = "Agent operating contract for working on typikon or a consumer site."
+
+[[doc]]
+path = "docs/RELEASING.md"
+type = "authored"
+evergreen = true
+description = "Two-phase release candidate, consumer lock, rollback, and publication contract."

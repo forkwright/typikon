@@ -322,6 +322,49 @@ def run_case(root: Path, theme_dir: Path, case: ContentTemplate, failures: list[
         )
 
 
+def run_error_page_case(root: Path, theme_dir: Path, failures: list[str]) -> None:
+    """Prove a 404 page styles the template-owned H1 through body_class."""
+    site = root / "error-page" / "site"
+    content = site / "content"
+    content.mkdir(parents=True)
+    (site / "themes").mkdir()
+    (site / "themes" / "typikon").symlink_to(theme_dir, target_is_directory=True)
+    (site / "config.toml").write_text(CONFIG_TOML)
+    (content / "_index.md").write_text(HOME_FRONTMATTER)
+    (content / "404.md").write_text(
+        '+++\ntitle = "Aporia"\ndescription = "Page not found."\n'
+        '\n[extra]\nbody_class = "error-page"\ngreek = "Ἀπορία"\n'
+        'skip_sitemap = true\n+++\n'
+        "The requested page is not here.\n"
+    )
+
+    validation = validate_content(site)
+    if validation.returncode != 0:
+        failures.append(
+            "404 body-class contract: schema rejected the valid page:\n"
+            f"{validation.stdout}\n{validation.stderr}"
+        )
+        return
+    result = zola_build(site)
+    if result.returncode != 0:
+        failures.append(f"404 body-class contract: build failed:\n{result.stderr}")
+        return
+    source = rendered_html(site, "404")
+    if '<body class="error-page">' not in source:
+        failures.append("404 body-class contract: rendered body lost class=error-page")
+    if '<h1 data-greek="Ἀπορία"><span>Aporia</span></h1>' not in source:
+        failures.append("404 body-class contract: template-owned qualified H1 is absent")
+    if '<div class="error-page">' in source:
+        failures.append("404 body-class contract: fixture relies on a body-content wrapper")
+
+    css = (theme_dir / "static" / "css" / "style.css").read_text(encoding="utf-8")
+    for selector in ("body.error-page main {", "body.error-page main > h1 {"):
+        if selector not in css:
+            failures.append(
+                f"404 body-class contract: stylesheet does not bind {selector!r}"
+            )
+
+
 def main() -> int:
     # WHY a hard failure, not a skip: same posture as check-home-heading.py
     # — zola is installed unconditionally before ci/run-fixtures.sh runs
@@ -340,6 +383,7 @@ def main() -> int:
 
         for case in CASES:
             run_case(root, theme_dir, case, failures)
+        run_error_page_case(root, theme_dir, failures)
 
     if failures:
         print("check-content-heading-collision: FAIL", file=sys.stderr)
@@ -347,7 +391,7 @@ def main() -> int:
             print(f"  - {f}", file=sys.stderr)
         return 1
 
-    total = len(CASES) * 3 + 6
+    total = len(CASES) * 3 + 7
     print(f"check-content-heading-collision: ok ({total}/{total} fixtures behaved as required)")
     return 0
 

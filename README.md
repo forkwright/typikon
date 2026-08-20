@@ -15,6 +15,7 @@ Optimized for agentic operation. Humans should not need to develop here. The sub
 - **Fail-closed commerce** - catalog prices may render without readiness. Checkout and Offer URLs require sourced purchasable availability, and shipping claims require their own source.
 - **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
 - **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
+- **Release control** (`release/`, `docs/RELEASING.md`) - freezes one untagged candidate, binds Tools and Leather to that exact commit, records per-consumer rollback pins, and publishes only through a reviewed compatibility lock.
 - **Headers** (`_headers.tmpl`, `_redirects.tmpl`) - Cloudflare Pages strict-CSP + redirect templates.
 
 ## Visitor runtime
@@ -69,7 +70,7 @@ and taxonomy feeds remain Zola-owned.
 Set `include_in_feeds = false` to exclude an individual page. Missing or empty
 configured sources fail the build.
 
-See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmatter reference, `docs/BOOTSTRAP.md` for the scaffolder behavior.
+See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmatter reference, `docs/BOOTSTRAP.md` for the scaffolder behavior, and `docs/RELEASING.md` for the two-phase release protocol.
 
 ## License
 

@@ -10,6 +10,8 @@ fixtures. It does not replace that renderer proof.
 
 from __future__ import annotations
 
+import copy
+import json
 import re
 import sys
 from pathlib import Path
@@ -114,11 +116,79 @@ def check_pin_coherence() -> list[str]:
         detail = ", ".join(f"{path.relative_to(ROOT)}={value}" for path, value in hashes)
         failures.append(f"Zola artifact hashes disagree: {detail}")
 
+    try:
+        inventory = json.loads(
+            (ROOT / "release" / "components.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        failures.append(f"release/components.json: cannot read Zola inventory: {exc}")
+    else:
+        artifact_hash = hashes[0][1] if hashes else ""
+        failures.extend(check_inventory_zola_pin(inventory, default, artifact_hash))
+
     for path in (ROOT / "ci" / "github-workflow.yml.tmpl", ROOT / "ci" / "kanon-ci.toml.tmpl"):
         if "{{ ZOLA_VERSION }}" not in path.read_text(encoding="utf-8"):
             failures.append(f"{path.relative_to(ROOT)}: missing canonical ZOLA_VERSION placeholder")
 
     return failures
+
+
+def check_inventory_zola_pin(
+    inventory: object, version: str, artifact_hash: str
+) -> list[str]:
+    if not isinstance(inventory, dict) or not isinstance(
+        inventory.get("components"), list
+    ):
+        return ["release/components.json: components must be an array"]
+    rows = [
+        row
+        for row in inventory["components"]
+        if isinstance(row, dict) and row.get("name") == "Zola"
+    ]
+    if len(rows) != 1:
+        return ["release/components.json: expected exactly one Zola component"]
+    row = rows[0]
+    expected_url = (
+        "https://github.com/getzola/zola/releases/download/"
+        f"v{version}/zola-v{version}-x86_64-unknown-linux-gnu.tar.gz"
+    )
+    expected = {
+        "version": version,
+        "purl": f"pkg:github/getzola/zola@{version}?arch=x86_64&os=linux",
+        "hash": {
+            "kind": "external-distribution",
+            "url": expected_url,
+            "sha256": artifact_hash,
+        },
+    }
+    actual = {key: row.get(key) for key in expected}
+    if actual != expected:
+        return [
+            "release/components.json: Zola distribution differs from the runtime pin: "
+            f"{actual!r} != {expected!r}"
+        ]
+    return []
+
+
+def check_inventory_pin_witness() -> list[str]:
+    """Prove a drifted inventory digest is rejected by the coherence check."""
+    try:
+        inventory = json.loads(
+            (ROOT / "release" / "components.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        return []
+    mutated = copy.deepcopy(inventory)
+    for row in mutated.get("components", []):
+        if isinstance(row, dict) and row.get("name") == "Zola":
+            row.get("hash", {})["sha256"] = "0" * 64
+    if not check_inventory_zola_pin(
+        mutated,
+        "0.23.3",
+        "f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958",
+    ):
+        return ["internal Zola inventory detector accepted a drifted artifact digest"]
+    return []
 
 
 def check_xml_preamble() -> list[str]:
@@ -177,6 +247,7 @@ def check_template_dialect() -> list[str]:
 def main() -> int:
     failures = [
         *check_pattern_witnesses(),
+        *check_inventory_pin_witness(),
         *check_pin_coherence(),
         *check_xml_preamble(),
         *check_template_dialect(),

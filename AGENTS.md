@@ -17,6 +17,7 @@ Typikon is a Zola theme + frontmatter schemas + CI gates for agentic fleet web p
 3. [docs/AGENTIC.md](docs/AGENTIC.md) — agent contract
 4. [docs/SCHEMAS.md](docs/SCHEMAS.md) — frontmatter field reference
 5. [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — scaffolder behavior
+6. [docs/RELEASING.md](docs/RELEASING.md) — exact candidate and consumer-lock protocol
 
 ## Key binaries
 
@@ -60,6 +61,7 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Fail-closed checkout**: a catalog price does not imply readiness. Checkout and Offer URLs require sourced purchasable availability; shipping copy requires paired provenance.
 - **Push authority**: `origin` is GitHub; no forge remote is configured. forkwright/kanon#3045 owns the typed authority split.
 - **License**: PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). `LICENSE` is authoritative.
+- **Two-phase releases**: the SemVer tag targets the frozen one-parent release commit, not the later evidence commit. Tools and Leather must pass that exact gitlink; the typed lock records both promotion and per-consumer rollback subjects.
 
 ## Boundaries
 
@@ -69,6 +71,7 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Schema changes are migrations.** Ship a `bin/` migration for incompatible transformations that can preserve truth. A newly required provenance value is the explicit exception: name every blocked consumer, then author the source or intentionally remove the gated fact in a consumer PR; never synthesize provenance.
 - **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema here; do not fork the theme.
 - **Owned headings carry qualified metadata.** Default page and section H1s consume typed `extra.greek`; consumers do not hand-author a replacement H1 to attach that metadata.
+- **Do not publish from a provisional tree.** Keep the Release Please PR untagged until both consumer receipts and the evidence-only lock pass `ci/verify-release-lock.py`. Credential installation and the final manual dispatch remain operator-owned actions.
 
 ## Dispatch entry points
 

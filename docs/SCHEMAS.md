@@ -92,6 +92,10 @@ Top-level pages and section children that aren't journal entries or products. Bu
 
 **Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `greek` (qualified alternate-language text carried by the owned H1), `audience`, `price`, `price_source`, `stripe_url`, paired `availability`/`availability_source`, and paired `shipping_note`/`shipping_source`.
 
+`body_class` is the semantic hook for page-wide presentation. A branded
+not-found page uses `body_class = "error-page"`. Its Markdown body does not
+wrap or replace the H1 because `page.html` owns that heading.
+
 **Constraints:**
 - title: ≤80 chars
 - description: ≤200 chars

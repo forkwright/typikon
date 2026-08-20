@@ -765,18 +765,20 @@ footer p {
   opacity: 0;
 }
 
-/* === 404 PAGE === */
-.error-page {
+/* === 404 PAGE ===
+   The default page template owns the H1, so the semantic hook belongs on
+   body rather than on a Markdown wrapper below that heading (#187). */
+body.error-page main {
   text-align: center;
   padding: var(--space-xl) 0;
 }
 
-.error-page h1 {
+body.error-page main > h1 {
   font-size: var(--step-3);
   margin-bottom: var(--space-l);
 }
 
-.error-page p {
+body.error-page main p {
   color: var(--text-mid);
   margin-bottom: var(--space-s);
 }

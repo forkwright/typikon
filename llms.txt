@@ -16,6 +16,10 @@ Product pages fail closed: a recorded price remains catalog data until sourced p
 
 `bin/typikon-check` - run the local web-property gate.
 
+`ci/verify-release-lock.py` - replay the exact candidate, consumer PR/run/artifact, promotion, and rollback subjects before publication.
+
+`ci/publish-locked-release.py` - reconcile or publish only the exact annotated tag, draft, and nine locked release assets while the verified evidence commit is current.
+
 ## Architecture
 
 Structured LLM corpus:
@@ -33,3 +37,5 @@ Structured LLM corpus:
 - Default page and section templates carry qualified `extra.greek` metadata on the single Typikon-owned H1.
 - [scaffolds/](scaffolds/): reserved, currently empty — typikon-init scaffolds content inline
 - [bin/](bin/): typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
+- [docs/RELEASING.md](docs/RELEASING.md): two-phase candidate, compatibility-lock, credential, rollback, and publication contract
+- [release/compatibility-lock.schema.json](release/compatibility-lock.schema.json): closed v0.6 two-consumer evidence shape
