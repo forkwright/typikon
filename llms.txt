@@ -4,6 +4,8 @@
 
 Typikon governs how consumer sites are built, validated, and deployed. Consumers pin it as a git submodule under `themes/typikon/` and keep site-specific content and brand config in their own repos.
 
+Consumers may set `config.extra.feed_source_section` to make one section own the canonical root Atom feed. The contract is fail-closed and preserves Zola's native section and taxonomy feeds.
+
 ## Tools
 
 `bin/typikon-init` - scaffold a consumer site or content primitive.

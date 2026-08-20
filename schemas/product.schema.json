@@ -15,6 +15,7 @@
     "template": { "type": "string", "pattern": "^[a-z0-9_-]+\\.html$" },
     "weight": { "type": "integer", "minimum": 0 },
     "draft": { "type": "boolean" },
+    "include_in_feeds": { "type": "boolean", "description": "Whether Zola may include this dated product in generated feeds. Defaults to true." },
     "extra": {
       "type": "object",
       "required": ["audience", "price", "price_source", "stripe_url"],

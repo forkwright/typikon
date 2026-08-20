@@ -28,8 +28,8 @@ when it set none):
     frontmatter `template` matches a `[[entry]]` in
       <root>/schemas/registry.toml with `template = "..."`
                                                    -> the entry's consumer schema
-    content/_index.md                            -> section.schema.json
-    content/<section>/_index.md                  -> section.schema.json
+    content/_index[.<lang>].md                   -> section.schema.json
+    content/<section>/_index[.<lang>].md         -> section.schema.json
     content/journal/<slug>.md                    -> journal-entry.schema.json
     content/products/<slug>.md                   -> product.schema.json
     path matches a `[[entry]]` in registry.toml
@@ -53,7 +53,10 @@ Output:
     JSONL on stderr, one line per failure:
         {"file": "...", "pointer": "/extra/price", "error": "..."}
     Summary on stdout (exit-zero only when zero failures):
-        {"checked": 17, "passed": 17, "failed": 0}
+        {"checked": 17, "passed": 17, "failed": 0, "config_failed": false}
+    `checked`/`passed`/`failed` count content files. `config_failed` reports
+    the separate root-feed configuration contract without corrupting those
+    content-file counts.
 
 Exit codes:
     0 — all files valid
@@ -72,7 +75,7 @@ import json
 import sys
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 try:
     from jsonschema import Draft202012Validator
@@ -161,6 +164,15 @@ class MismatchedExtendsError(Exception):
         self.expected = expected
         self.registered = registered
         super().__init__(f"{discriminator_kind}={discriminator!r} extends={registered!r} expected={expected!r}")
+
+
+def is_section_index_name(name: str) -> bool:
+    """Return whether a Zola content filename is a section index.
+
+    Zola translations use `_index.<lang>.md`; treating only `_index.md` as a
+    section misroutes every translated owner through a page schema.
+    """
+    return name == "_index.md" or (name.startswith("_index.") and name.endswith(".md"))
 
 
 @dataclass(frozen=True)
@@ -299,8 +311,8 @@ def classify(
     # parts[0] == "content"
     name = parts[-1]
     content_relative = "/".join(parts[1:])
-    structural_kind = "section" if name == "_index.md" else "page"
-    if name == "_index.md":
+    structural_kind = "section" if is_section_index_name(name) else "page"
+    if is_section_index_name(name):
         base = "section"
     elif len(parts) == 2:
         base = "page"
@@ -438,6 +450,87 @@ def validate_file(
             "pointer": pointer,
             "error": err.message,
         })
+    return failures
+
+
+def validate_feed_source_contract(root: Path, content_root: Path) -> list[dict]:
+    """Require a scoped root-feed owner to expose Zola's native date order.
+
+    `get_section().pages` only contains the section's serialized page set and
+    follows that section's `sort_by`. A weight/title/none owner can omit dated
+    pages or order them differently from Atom's native parsed-instant contract.
+    Bind the configured owner to `sort_by = "date"` before rendering rather
+    than trying to reconstruct Zola's hidden datetime ordering in Tera.
+    """
+    config_path = root / "config.toml"
+    if not config_path.is_file():
+        return []
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [{"file": "config.toml", "pointer": "", "error": f"malformed config.toml: {exc}"}]
+    extra = config.get("extra")
+    source = extra.get("feed_source_section") if isinstance(extra, dict) else None
+    if source is None:
+        return []
+    if not isinstance(source, str) or not source:
+        return [{
+            "file": "config.toml",
+            "pointer": "/extra/feed_source_section",
+            "error": "feed_source_section must be a non-empty content-relative section path",
+        }]
+    raw_parts = source.split("/")
+    posix_source = PurePosixPath(source)
+    if (
+        "\\" in source
+        or posix_source.is_absolute()
+        or any(part in {"", ".", ".."} for part in raw_parts)
+        or str(posix_source) != source
+        or posix_source.name != "_index.md"
+    ):
+        return [{
+            "file": "config.toml",
+            "pointer": "/extra/feed_source_section",
+            "error": (
+                "feed_source_section must be a normalized POSIX content-relative path "
+                "whose filename is exactly _index.md; translated section files are "
+                "resolved from that path per language"
+            ),
+        }]
+    source_path = (content_root / source).resolve()
+    try:
+        source_path.relative_to(content_root.resolve())
+    except ValueError:
+        return [{
+            "file": "config.toml",
+            "pointer": "/extra/feed_source_section",
+            "error": "feed_source_section must stay within content/",
+        }]
+    if not source_path.is_file():
+        return [{
+            "file": "config.toml",
+            "pointer": "/extra/feed_source_section",
+            "error": f"configured feed source section not found: {source}",
+        }]
+    owners = [source_path, *sorted(source_path.parent.glob("_index.*.md"))]
+    failures: list[dict] = []
+    for owner in owners:
+        rel = str(owner.relative_to(root))
+        try:
+            frontmatter = parse_frontmatter(owner.read_text(encoding="utf-8"), rel)
+        except Exception as exc:
+            failures.append({"file": rel, "pointer": "", "error": str(exc)})
+            continue
+        if frontmatter.get("sort_by") != "date":
+            failures.append({
+                "file": rel,
+                "pointer": "/sort_by",
+                "error": (
+                    "configured root-feed source section and every translation must set "
+                    "sort_by = 'date' so Zola supplies the complete native "
+                    "parsed-datetime feed order"
+                ),
+            })
     return failures
 
 
@@ -641,7 +734,8 @@ def main(argv: list[str]) -> int:
     page_template_cascade = build_page_template_cascade(content_root)
 
     files = sorted(content_root.rglob("*.md"))
-    failures: list[dict] = []
+    contract_failures = validate_feed_source_contract(root, content_root)
+    failures: list[dict] = list(contract_failures)
     for f in files:
         failures.extend(validate_file(
             f, content_root, schemas, consumer_registry.jsonschema_registry, consumer_registry, page_template_cascade,
@@ -650,7 +744,20 @@ def main(argv: list[str]) -> int:
     for failure in failures:
         print(json.dumps(failure), file=sys.stderr)
 
-    summary = {"checked": len(files), "passed": len(files) - len({f["file"] for f in failures}), "failed": len({f["file"] for f in failures})}
+    # WHY: `checked` has always counted content files. A config-level contract
+    # error must not be subtracted from that denominator as though config.toml
+    # were an additional failed content file. Content-owner contract failures
+    # still count against their real content file; configuration failures get
+    # their own explicit field and still make the command fail closed.
+    content_labels = {str(path.relative_to(content_root.parent)) for path in files}
+    failed_content = {failure["file"] for failure in failures} & content_labels
+    config_failed = any(failure["file"] == "config.toml" for failure in contract_failures)
+    summary = {
+        "checked": len(files),
+        "passed": len(files) - len(failed_content),
+        "failed": len(failed_content),
+        "config_failed": config_failed,
+    }
     print(json.dumps(summary))
     return 0 if not failures else 1
 

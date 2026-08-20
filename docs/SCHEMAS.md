@@ -12,7 +12,7 @@ JSON Schema definitions for every content type a typikon-consuming site can auth
 | frontmatter `template = "sizing-guide.html"`             | sizing-guide                   |
 | frontmatter `template = "journal-entry.html"`            | journal-entry                  |
 | frontmatter `template` matches a `schemas/registry.toml` `template` entry | that entry's consumer schema |
-| `_index.md` (root or section)                           | section                        |
+| `_index.md` or `_index.<lang>.md` (root or section)     | section                        |
 | `journal/<slug>.md`                                     | journal-entry                  |
 | `products/<slug>.md`                                    | product                         |
 | path matches a `schemas/registry.toml` `path_prefix` entry | that entry's consumer schema |
@@ -88,7 +88,7 @@ Top-level pages and section children that aren't journal entries or products. Bu
 
 **Required:** `title`.
 
-**Optional core:** `description`, `date`, `updated`, `path`, `template`, `weight`, `draft`.
+**Optional core:** `description`, `date`, `updated`, `path`, `template`, `weight`, `draft`, `include_in_feeds`.
 
 **Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`.
 
@@ -100,6 +100,11 @@ Top-level pages and section children that aren't journal entries or products. Bu
 - og_image: ends in `.svg|.png|.jpg|.webp`
 
 Setting any one of `price`, `stripe_url`, or `price_source` triggers `ld-product` JSON-LD in `page.html`, which then requires all four of `audience`, `price`, `price_source`, and `stripe_url` together (enforced by the schema's `if`/`then` on `extra`, matching the template's assertions exactly). A dedicated product page under `content/products/` should use the `product` schema instead — these fields exist here for the rare non-product-section page that still needs a buy block.
+
+`include_in_feeds = false` is a top-level Zola page field, not an `[extra]`
+extension. Every closed page schema accepts it (`page`,
+`journal-entry`, `product`, `faq`, and `sizing-guide`) and excludes that page
+from native or configured Atom feeds without hiding the rendered page.
 
 **Example:**
 

@@ -56,6 +56,7 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Static SSG**: Zola 0.23.x with Tera 2 templates. No JavaScript build step in site build path.
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on inline script/style/handler.
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime.
+- **Root Atom ownership**: a consumer may set `extra.feed_source_section` to one canonical `_index.md` path. That owner and every translation use `sort_by = "date"`; missing, empty, or wrongly sorted sources fail while native section/taxonomy feeds remain Zola-owned.
 - **Push authority**: `origin` is GitHub; no forge remote is configured. forkwright/kanon#3045 owns the typed authority split.
 - **License**: PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). `LICENSE` is authoritative.
 

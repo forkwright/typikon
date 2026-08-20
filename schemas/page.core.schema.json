@@ -46,6 +46,10 @@
       "type": "boolean",
       "description": "Exclude from production build."
     },
+    "include_in_feeds": {
+      "type": "boolean",
+      "description": "Whether Zola may include this dated page in generated feeds. Defaults to true."
+    },
     "extra": {
       "type": "object",
       "properties": {

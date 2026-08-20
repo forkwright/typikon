@@ -9,8 +9,12 @@ source_docs = [
 
 [state]
 summary = "Typikon is the active fleet Zola 0.23/Tera 2 theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
-current_phase = "v0.5 substrate active; Zola 0.23.3/Tera 2 compatibility is the prerequisite for scoped root-feed work in issue #179."
-updated = "2026-08-19"
+current_phase = "Zola 0.23.3/Tera 2 substrate active; optional fail-closed root-feed section ownership is implemented for issue #179."
+updated = "2026-08-20"
+
+[[recent]]
+date = "2026-08-20"
+item = "Added optional root Atom ownership by one section, page-level feed exclusion, and rendered edge fixtures without changing native section or taxonomy feeds."
 
 [[recent]]
 date = "2026-08-19"

@@ -49,6 +49,25 @@ bin/typikon-check /path/to/consumer/site
 themes/typikon/bin/typikon-refresh
 ```
 
+To make one publication section the canonical root Atom feed, set its content
+path in the consumer config:
+
+```toml
+[extra]
+feed_source_section = "journal/_index.md"
+```
+
+The setting uses a normalized POSIX content-relative spelling and names the
+canonical `_index.md` path. Translated feeds resolve
+their language-specific section from it. The owner and every translation must
+set `sort_by = "date"`. Validation fails otherwise so
+Zola, not string sorting in the template, owns parsed-instant ordering. The
+root feed then uses only that section's dated direct pages. Native section
+and taxonomy feeds remain Zola-owned.
+
+Set `include_in_feeds = false` to exclude an individual page. Missing or empty
+configured sources fail the build.
+
 See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmatter reference, `docs/BOOTSTRAP.md` for the scaffolder behavior.
 
 ## License
