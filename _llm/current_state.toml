@@ -9,8 +9,12 @@ source_docs = [
 
 [state]
 summary = "Typikon is the active fleet Zola 0.23/Tera 2 theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
-current_phase = "Zola 0.23.3/Tera 2 substrate active; optional fail-closed root-feed section ownership is implemented for issue #179."
+current_phase = "Zola 0.23.3/Tera 2 substrate active; root-feed ownership and product checkout now fail closed on their typed source contracts."
 updated = "2026-08-20"
+
+[[recent]]
+date = "2026-08-20"
+item = "Separated catalog price from sale readiness: sourced purchasable availability gates checkout and Offer URLs, and sourced shipping facts replace the invented default."
 
 [[recent]]
 date = "2026-08-20"
@@ -26,5 +30,5 @@ item = "Typikon repo established as fleet web-property substrate."
 
 [[open_threads]]
 name = "Consumer migrations"
-issue = 0
-status = "Schema changes must ship migration scripts for existing consumers."
+issue = 183
+status = "Ardent Leatherworks must author sources or intentionally remove three products' shipping/readiness facts before bumping; Ardent Tools validates unchanged. A script may remove claims safely but cannot synthesize their provenance."

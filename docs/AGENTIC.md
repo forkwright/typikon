@@ -269,7 +269,7 @@ When you add a content type or change a primitive, update at least one fixture t
 
 ### 5. Schema migrations
 
-When a typikon schema changes incompatibly, the same PR ships a migration script — see `bin/typikon-migrate-template` and the migration section of [`SCHEMAS.md`](SCHEMAS.md). The PR description lists every consumer affected. On merge, run the migration against each consumer in a separate consumer-side PR.
+When a Typikon schema changes incompatibly, the same PR ships a migration script when a deterministic transformation preserves truth — see `bin/typikon-migrate-template` and the migration section of [`SCHEMAS.md`](SCHEMAS.md). A newly required provenance value is the explicit exception. The PR lists every blocked consumer, and each consumer authors the source or intentionally removes the gated fact in a separate reviewable PR. A script can automate safe removal. It cannot synthesize provenance.
 
 ## What this contract does not say
 

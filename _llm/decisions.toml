@@ -49,7 +49,6 @@ status = "accepted"
 context = "Visitor runtime should not depend on inline code or third-party CDNs."
 decision = "Fail CI on inline scripts/styles and serve fonts locally."
 consequences = "Security posture is encoded in headers, assets, and gates."
-
 [[decision]]
 id = "D-root-feed-section"
 title = "Let one section own the canonical root feed"
@@ -57,3 +56,11 @@ status = "accepted"
 context = "Publication-focused consumers need a stable root Atom feed that does not change when unrelated product or policy pages change."
 decision = "When config.extra.feed_source_section names a canonical _index.md path, each root feed derives identity, direct dated membership, ordering, limit, and freshness from that language's sort_by=date owner. Missing, empty, or wrongly sorted canonical or translated sources fail. Native section and taxonomy feeds keep Zola's supplied pages."
 consequences = "Consumers can remove local Atom forks, and include_in_feeds can exclude one page without hiding it."
+
+[[decision]]
+id = "D-fail-closed-checkout"
+title = "Separate catalog facts from sale readiness"
+status = "accepted"
+context = "A stored checkout URL and recorded price do not establish current availability or fulfillment readiness."
+decision = "Render checkout and Offer URLs only for sourced purchasable availability. Render shipping text only with paired provenance."
+consequences = "Unknown or negative readiness keeps the product legible as a catalog record without inviting a transaction."

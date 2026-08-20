@@ -25,6 +25,7 @@ declare -A ARG_TAKING_FIXTURES=(
     [check-workflow-template.sh]="invoked below with github-workflow.yml.tmpl"
     [check-xml-output.sh]="invoked below per-example against the built public/ dir"
     [check-faq-rendering.py]="invoked below against sample-shop's built public/ dir"
+    [check-product-sale-state.py]="invoked below against sample-shop's built public/ dir"
 )
 
 mapfile -t _discovered < <(
@@ -79,3 +80,8 @@ done
 # fixture content this check exists to witness. Pointed at the production build
 # for the same reason as the feeds above.
 "$ROOT/ci/check-faq-rendering.py" "$ROOT/examples/sample-shop/public"
+
+# sample-shop only: four product states prove that catalog price remains
+# visible while checkout, shipping, and Offer URLs fail closed on sourced
+# readiness. The checker also exercises the paired-fact JSON Schema contract.
+python3 "$ROOT/ci/check-product-sale-state.py" "$ROOT/examples/sample-shop/public"

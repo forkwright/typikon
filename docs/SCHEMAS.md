@@ -90,7 +90,7 @@ Top-level pages and section children that aren't journal entries or products. Bu
 
 **Optional core:** `description`, `date`, `updated`, `path`, `template`, `weight`, `draft`, `include_in_feeds`.
 
-**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`.
+**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`, paired `availability`/`availability_source`, and paired `shipping_note`/`shipping_source`.
 
 **Constraints:**
 - title: ≤80 chars
@@ -99,7 +99,14 @@ Top-level pages and section children that aren't journal entries or products. Bu
 - template: matches `^[a-z0-9_-]+\.html$`
 - og_image: ends in `.svg|.png|.jpg|.webp`
 
-Setting any one of `price`, `stripe_url`, or `price_source` triggers `ld-product` JSON-LD in `page.html`, which then requires all four of `audience`, `price`, `price_source`, and `stripe_url` together (enforced by the schema's `if`/`then` on `extra`, matching the template's assertions exactly). A dedicated product page under `content/products/` should use the `product` schema instead — these fields exist here for the rare non-product-section page that still needs a buy block.
+Setting any commercial fact triggers the product-shaped contract in `page.html`,
+which requires `audience`, `price`, and `price_source`. Those three fields
+render a catalog price and Product/Offer data without implying readiness.
+`stripe_url` is optional and renders only when paired with sourced
+purchasable availability. Shipping text likewise requires its own paired
+source. A dedicated product page under `content/products/` should use the
+`product` schema instead — these fields exist here for the rare
+non-product-section page that still needs catalog or purchase output.
 
 `include_in_feeds = false` is a top-level Zola page field, not an `[extra]`
 extension. Every closed page schema accepts it (`page`,
@@ -200,15 +207,26 @@ components = "ἀπορία · productive uncertainty · the green"
 
 Pages under `content/products/`. Required for the purchase block to render.
 
-**Required:** `title`, `description`, `extra.audience`, `extra.price`, `extra.price_source`, `extra.stripe_url`.
+**Required:** `title`, `description`, `extra.audience`, `extra.price`, `extra.price_source`.
+
+Those fields establish a catalog record, not sale readiness. Typikon shows the
+recorded price but emits a checkout link and `Offer.url` only when
+`extra.availability` is one of `InStock`, `PreOrder`, `BackOrder`, or
+`LimitedAvailability` and a source records that state.
 
 **Constraints:**
 - description: 30–200 chars
 - audience: 3–120 chars
 - price: matches `^\$?\d{1,5}(\.\d{2})?$` (e.g. `$150`, `85`, `12.50`)
 - price_source: 3–200 chars. Source for the rendered price claim
-- stripe_url: matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`
-- shipping_note (optional): ≤200 chars
+- stripe_url (optional): matches `^https://buy\.stripe\.com/[A-Za-z0-9_]+$`.
+  When present, availability and its source become required, and availability
+  must be one of the four purchasable states
+- availability + availability_source (optional paired fields): a sourced
+  Schema.org state. `OutOfStock`, `Discontinued`, or absence keeps the page
+  catalog-only
+- shipping_note + shipping_source (optional paired fields): ≤200-char public
+  claim plus its provenance. Typikon renders no default shipping promise
 - images (optional): array of `{src, alt, caption?}`. Zola's `resize_image` produces 400/800/1200px WebP variants automatically, and the product-gallery partial renders responsive `<picture>` per item
 
 **Example:**
@@ -224,6 +242,10 @@ audience = "customers choosing a made-to-order belt"
 price = "$150"
 price_source = "Stripe price price_123"
 stripe_url = "https://buy.stripe.com/cNi9AT1ZHfFDeNRdsh6Ri02"
+availability = "InStock"
+availability_source = "inventory record checked at publication"
+shipping_note = "Ask for the current lead time."
+shipping_source = "workshop fulfillment record"
 
 [[extra.images]]
 src = "img/products/belt/01.jpg"
@@ -336,13 +358,18 @@ This section is for a type shared by ≥2 consumers, landing in typikon itself (
 
 ## Schema migrations
 
-When a schema changes incompatibly:
+For incompatible schema changes where a deterministic transformation preserves truth:
 
 1. Copy `bin/typikon-migrate-template` → `bin/typikon-migrate-<from>-<to>`.
 2. Replace the `migrate(frontmatter, file_path)` body with the field transformation. Idempotence rule: running it twice on the same input must produce the same output as once.
 3. The script walks a consumer site root, parses frontmatter, runs `migrate()`, and writes back when the result differs.
 4. The typikon PR description lists every consumer affected.
 5. On merge, run the migration against each consumer in a separate consumer-side PR. That captures the rewrite as a reviewable diff.
+
+A newly required provenance value is the exception. A migration may automate
+safe removal of a now-gated claim, but it cannot synthesize the source that
+makes the claim true. The Typikon PR names every blocked consumer. Each one
+authors the source or intentionally removes the gated fact in a separate PR.
 
 The skeleton handles parsing, idempotence checking, basic TOML serialization, and JSONL change reporting. It uses `tomli_w` when installed and falls back to a minimal emitter otherwise. Install `tomli_w` via `uv tool install tomli_w` if your migration needs round-trip fidelity for inline tables or multi-line strings.
 

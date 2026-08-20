@@ -6,6 +6,8 @@ Typikon governs how consumer sites are built, validated, and deployed. Consumers
 
 Consumers may set `config.extra.feed_source_section` to make one section own the canonical root Atom feed. The contract is fail-closed and preserves Zola's native section and taxonomy feeds.
 
+Product pages fail closed: a recorded price remains catalog data until sourced purchasable availability permits checkout. Shipping claims require paired provenance.
+
 ## Tools
 
 `bin/typikon-init` - scaffold a consumer site or content primitive.

@@ -1,21 +1,41 @@
 {# Visible storefront primitive for a schema-derived product page. Renders
-   when page.extra.price AND page.extra.stripe_url are both set (product.schema.json),
-   so price/shipping/checkout are never JSON-LD-only.
+   when page.extra.price is set. The catalog
+   name and recorded price remain visible when readiness is unknown, but an
+   active checkout requires sourced purchasable availability.
 
    Inputs:
      page.title                — product name
      page.extra.price          — display price, e.g. "$150"
-     page.extra.shipping_note  — optional; falls back to the schema-documented default
-     page.extra.stripe_url     — direct checkout URL
+     page.extra.shipping_note    — optional sourced shipping claim
+     page.extra.shipping_source  — provenance paired with shipping_note
+     page.extra.availability     — sourced Schema.org availability state
+     page.extra.availability_source — provenance paired with availability
+     page.extra.stripe_url       — stored direct checkout URL; emitted only when purchasable
 
    WHY no assert here: page.html's ld_json block renders earlier (in <head>)
    and already asserts this field combination; not repeated in this partial.
 
    Schema: schemas/product.schema.json#extra
 #}
+{%- set purchasable = page.extra.stripe_url and page.extra.availability_source and page.extra.availability in ["InStock", "PreOrder", "BackOrder", "LimitedAvailability"] -%}
 <div class="product-header">
   <p class="product-name">{{ page.title }}</p>
   <p class="product-price-large">{{ page.extra.price }}</p>
-  <p class="product-shipping">{{ page.extra.shipping_note | default(value="Shipping included · Tax at checkout · Ships within one week") }}</p>
+  {%- if page.extra.shipping_note and page.extra.shipping_source %}
+  <p class="product-shipping">{{ page.extra.shipping_note }}</p>
+  {%- endif %}
+  {%- if page.extra.availability and page.extra.availability_source %}
+  <p class="product-availability">
+    {%- if page.extra.availability == "InStock" -%}In stock
+    {%- elif page.extra.availability == "OutOfStock" -%}Out of stock
+    {%- elif page.extra.availability == "PreOrder" -%}Pre-order
+    {%- elif page.extra.availability == "BackOrder" -%}Back order
+    {%- elif page.extra.availability == "LimitedAvailability" -%}Limited availability
+    {%- elif page.extra.availability == "Discontinued" -%}Discontinued
+    {%- endif -%}
+  </p>
+  {%- endif %}
+  {%- if purchasable %}
   <a class="buy-btn" href="{{ page.extra.stripe_url | safe }}" aria-label="Buy {{ page.title }}">Buy now</a>
+  {%- endif %}
 </div>

@@ -12,6 +12,7 @@ Optimized for agentic operation. Humans should not need to develop here. The sub
 
 - **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal.
 - **Schemas** (`schemas/`) - JSON Schema for every content type. Frontmatter must validate before commit.
+- **Fail-closed commerce** - catalog prices may render without readiness. Checkout and Offer URLs require sourced purchasable availability, and shipping claims require their own source.
 - **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
 - **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
 - **Headers** (`_headers.tmpl`, `_redirects.tmpl`) - Cloudflare Pages strict-CSP + redirect templates.

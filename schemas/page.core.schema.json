@@ -85,23 +85,45 @@
           "type": "string",
           "minLength": 3,
           "maxLength": 120,
-          "description": "Intended buyer or reader context. Required alongside price, price_source, and stripe_url when any one of the three is set — see the extra-level dependency below."
+          "description": "Intended buyer or reader context. Required alongside recorded commercial facts — see the extra-level dependency below."
         },
         "price": {
           "type": "string",
           "pattern": "^\\$?\\d{1,5}(\\.\\d{2})?$",
-          "description": "Display price with optional leading $ (e.g. '$150', '85'). Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
+          "description": "Display price with optional leading $ (e.g. '$150', '85'). Product-shaped pages require audience and price provenance; checkout remains optional and readiness-gated."
         },
         "price_source": {
           "type": "string",
           "minLength": 3,
           "maxLength": 200,
-          "description": "Source for the rendered price claim, e.g. the Stripe price object, SKU ledger, or fixture note. Required alongside audience, price, and stripe_url when any one of the three is set — see the extra-level dependency below."
+          "description": "Source for the rendered price claim, e.g. the Stripe price object, SKU ledger, or fixture note. Required alongside audience and price for any commercial fact."
         },
         "stripe_url": {
           "type": "string",
           "pattern": "^https://buy\\.stripe\\.com/[A-Za-z0-9_]+$",
-          "description": "Stripe direct-checkout URL. Setting price, stripe_url, or price_source triggers ld-product JSON-LD, which requires all four of audience, price, price_source, and stripe_url together."
+          "description": "Optional direct-checkout URL. When present, sourced purchasable availability is required before templates may emit it."
+        },
+        "availability": {
+          "type": "string",
+          "enum": ["InStock", "OutOfStock", "PreOrder", "BackOrder", "LimitedAvailability", "Discontinued"],
+          "description": "Sourced Schema.org availability. Only purchasable values permit the stored checkout URL to render."
+        },
+        "availability_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for availability. Required alongside availability."
+        },
+        "shipping_note": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Public shipping or lead-time claim. Rendered only alongside shipping_source."
+        },
+        "shipping_source": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Source for the shipping or lead-time claim. Required alongside shipping_note."
         },
         "video": {
           "type": "object",
@@ -142,12 +164,35 @@
         "anyOf": [
           { "required": ["price"] },
           { "required": ["stripe_url"] },
-          { "required": ["price_source"] }
+          { "required": ["price_source"] },
+          { "required": ["availability"] },
+          { "required": ["availability_source"] },
+          { "required": ["shipping_note"] },
+          { "required": ["shipping_source"] }
         ]
       },
       "then": {
-        "required": ["audience", "price", "price_source", "stripe_url"]
-      }
+        "required": ["audience", "price", "price_source"]
+      },
+      "dependentRequired": {
+        "availability": ["availability_source"],
+        "availability_source": ["availability"],
+        "shipping_note": ["shipping_source"],
+        "shipping_source": ["shipping_note"]
+      },
+      "allOf": [
+        {
+          "if": { "required": ["stripe_url"] },
+          "then": {
+            "required": ["availability", "availability_source"],
+            "properties": {
+              "availability": {
+                "enum": ["InStock", "PreOrder", "BackOrder", "LimitedAvailability"]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
