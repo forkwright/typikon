@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/forkwright/typikon/release/compatibility-lock.schema.json",
+  "title": "Typikon release cohort compatibility lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "release", "candidate_artifact", "consumers"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "tag", "release_pr", "candidate_commit", "candidate_tree"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "tag": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "release_pr": { "type": "integer", "minimum": 1 },
+        "candidate_commit": { "$ref": "#/$defs/sha" },
+        "candidate_tree": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "candidate_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflow_run_id", "run_attempt", "artifact_id", "artifact_name", "artifact_digest", "archive_name", "archive_sha256", "archive_size", "checksum_name", "checksum_sha256", "checksum_size", "sbom_name", "sbom_sha256", "sbom_size", "provenance_bundle_name", "provenance_bundle_sha256", "provenance_bundle_size", "sbom_bundle_name", "sbom_bundle_sha256", "sbom_bundle_size"],
+      "properties": {
+        "workflow_run_id": { "type": "integer", "minimum": 1 },
+        "run_attempt": { "type": "integer", "minimum": 1 },
+        "artifact_id": { "type": "integer", "minimum": 1 },
+        "artifact_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+-candidate$" },
+        "artifact_digest": { "$ref": "#/$defs/digest" },
+        "archive_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz$" },
+        "archive_sha256": { "$ref": "#/$defs/hex_digest" },
+        "archive_size": { "type": "integer", "minimum": 1 },
+        "checksum_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz\\.sha256$" },
+        "checksum_sha256": { "$ref": "#/$defs/hex_digest" },
+        "checksum_size": { "type": "integer", "minimum": 1 },
+        "sbom_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz\\.cdx\\.json$" },
+        "sbom_sha256": { "$ref": "#/$defs/hex_digest" },
+        "sbom_size": { "type": "integer", "minimum": 1 },
+        "provenance_bundle_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz\\.provenance\\.intoto\\.jsonl$" },
+        "provenance_bundle_sha256": { "$ref": "#/$defs/hex_digest" },
+        "provenance_bundle_size": { "type": "integer", "minimum": 1 },
+        "sbom_bundle_name": { "type": "string", "pattern": "^typikon-v[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz\\.sbom\\.intoto\\.jsonl$" },
+        "sbom_bundle_sha256": { "$ref": "#/$defs/hex_digest" },
+        "sbom_bundle_size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "consumers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "$ref": "#/$defs/tools_consumer" },
+        { "$ref": "#/$defs/leather_consumer" }
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "hex_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "tools_consumer": {
+      "allOf": [
+        { "$ref": "#/$defs/consumer" },
+        {
+          "properties": {
+            "id": { "const": "tools" },
+            "repository": { "const": "ardent-tools/ardent-tools-site" },
+            "receipt_path": { "const": "release/compatibility/receipts/tools.json" }
+          }
+        }
+      ]
+    },
+    "leather_consumer": {
+      "allOf": [
+        { "$ref": "#/$defs/consumer" },
+        {
+          "properties": {
+            "id": { "const": "leather" },
+            "repository": { "const": "forkwright/ardent-site" },
+            "receipt_path": { "const": "release/compatibility/receipts/leather.json" }
+          }
+        }
+      ]
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "pull_request", "base_commit", "head_commit", "head_tree", "merge_commit", "merge_tree", "gitlink_path", "previous_gitlink_commit", "previous_gitlink_tree", "gitlink_commit", "gitlink_tree", "workflow_path", "workflow_commit", "workflow_blob", "workflow_run_id", "run_attempt", "required_job", "receipt_path", "receipt_sha256", "artifact_id", "artifact_name", "artifact_digest"],
+      "properties": {
+        "id": { "enum": ["tools", "leather"] },
+        "repository": { "enum": ["ardent-tools/ardent-tools-site", "forkwright/ardent-site"] },
+        "pull_request": { "type": "integer", "minimum": 1 },
+        "base_commit": { "$ref": "#/$defs/sha" },
+        "head_commit": { "$ref": "#/$defs/sha" },
+        "head_tree": { "$ref": "#/$defs/sha" },
+        "merge_commit": { "$ref": "#/$defs/sha" },
+        "merge_tree": { "$ref": "#/$defs/sha" },
+        "gitlink_path": { "const": "themes/typikon" },
+        "previous_gitlink_commit": { "$ref": "#/$defs/sha" },
+        "previous_gitlink_tree": { "$ref": "#/$defs/sha" },
+        "gitlink_commit": { "$ref": "#/$defs/sha" },
+        "gitlink_tree": { "$ref": "#/$defs/sha" },
+        "workflow_path": { "type": "string", "pattern": "^\\.github/workflows/[A-Za-z0-9._/-]+\\.ya?ml$" },
+        "workflow_commit": { "$ref": "#/$defs/sha" },
+        "workflow_blob": { "$ref": "#/$defs/sha" },
+        "workflow_run_id": { "type": "integer", "minimum": 1 },
+        "run_attempt": { "type": "integer", "minimum": 1 },
+        "required_job": { "const": "gate-and-deploy" },
+        "receipt_path": { "type": "string", "pattern": "^release/compatibility/receipts/(tools|leather)\\.json$" },
+        "receipt_sha256": { "$ref": "#/$defs/hex_digest" },
+        "artifact_id": { "type": "integer", "minimum": 1 },
+        "artifact_name": { "type": "string", "pattern": "^typikon-consumer-receipt-[0-9]+-[0-9]+$" },
+        "artifact_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

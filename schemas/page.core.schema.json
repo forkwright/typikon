@@ -61,7 +61,7 @@
         "body_class": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9 -]*$",
-          "description": "CSS class on <body>. Used by the home page to hide nav/footer (body_class = 'home-page')."
+          "description": "CSS class on <body>. Used by the home page to hide nav/footer and by the branded error page to style its template-owned heading."
         },
         "og_image": {
           "type": "string",

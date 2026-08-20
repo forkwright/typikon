@@ -36,3 +36,11 @@ purpose = "Apply template/schema migrations for consumers."
 [[cli_commands]]
 name = "bin/typikon-refresh"
 purpose = "Re-render consumer-side templates after an upstream bump."
+
+[[cli_commands]]
+name = "ci/verify-release-lock.py"
+purpose = "Replay a typed two-consumer compatibility lock against exact Git and GitHub evidence."
+
+[[cli_commands]]
+name = "ci/publish-locked-release.py"
+purpose = "Inspect, resume, or publish the exact annotated tag and locked release assets."

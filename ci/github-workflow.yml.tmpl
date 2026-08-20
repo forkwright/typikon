@@ -227,7 +227,10 @@ jobs:
         # and lychee already ran against public/ above and are
         # unaffected by this substitution.
         run: |
-          cd public-local && python3 -m http.server 8080 &
+          # WARNING: start Python itself in the background. A compound `cd ... &&
+          # python ... &` gives $! to a shell process and can leave the real
+          # server alive after teardown (forkwright/typikon#186).
+          python3 -m http.server --directory public-local 8080 &
           echo $! > /tmp/server.pid
           sleep 2
 
@@ -288,6 +291,27 @@ jobs:
         # borrows the budget of the nearest comparable stage rather than guessing.
         timeout-minutes: 2
         run: bash ci/consumer-check.sh
+
+      # A successful PR run is later eligible for a release-cohort lock only
+      # when its exact checkout, workflow, and Typikon gitlink are retained as
+      # machine-readable evidence. The job conclusion remains GitHub-owned and
+      # is verified separately; this step records the subject it evaluated.
+      - name: Record Typikon consumer receipt
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 themes/typikon/ci/write-consumer-receipt.py \
+            --root "$GITHUB_WORKSPACE" \
+            --output /tmp/typikon-consumer-receipt.json
+
+      - name: Upload Typikon consumer receipt
+        if: github.event_name == 'pull_request'
+        id: typikon_receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: typikon-consumer-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/typikon-consumer-receipt.json
+          if-no-files-found: error
+          retention-days: 90
 
       # ── Deploy on green pushes to main only ───────────────────
       # Conditioned on ref being main (or master, for legacy consumer

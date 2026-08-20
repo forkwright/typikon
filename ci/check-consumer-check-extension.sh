@@ -155,6 +155,9 @@ else
     if ! "$ROOT/ci/check-workflow-template.sh" "$RENDERED" >/dev/null; then
         fail "rendered ${RENDERED} failed the canonical workflow-template contract"
     fi
+    if ! python3 "$ROOT/ci/check-static-server-template.py" "$RENDERED" >/dev/null; then
+        fail "rendered ${RENDERED} lost the direct static-server lifecycle contract"
+    fi
 
     # Negative mutation proof: comments cannot satisfy an executable action
     # pin, and package-manager-cache belongs specifically to setup-node's

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "name": "Zola",
+      "version": "0.23.3",
+      "purl": "pkg:github/getzola/zola@0.23.3?arch=x86_64&os=linux",
+      "scope": "required",
+      "license": "MIT",
+      "hash": {
+        "kind": "external-distribution",
+        "url": "https://github.com/getzola/zola/releases/download/v0.23.3/zola-v0.23.3-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958"
+      }
+    },
+    {
+      "name": "EB Garamond variable italic WOFF2",
+      "version": "1.003",
+      "purl": "pkg:generic/eb-garamond@1.003?file_name=eb-garamond-variable-italic.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/eb-garamond-variable-italic.woff2"
+      }
+    },
+    {
+      "name": "EB Garamond variable WOFF2",
+      "version": "1.003",
+      "purl": "pkg:generic/eb-garamond@1.003?file_name=eb-garamond-variable.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/eb-garamond-variable.woff2"
+      }
+    },
+    {
+      "name": "IBM Plex Mono 400 WOFF2",
+      "version": "2.004",
+      "purl": "pkg:generic/ibm-plex-mono@2.004?file_name=ibm-plex-mono-400.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/ibm-plex-mono-400.woff2"
+      }
+    },
+    {
+      "name": "IBM Plex Mono 500 WOFF2",
+      "version": "2.004",
+      "purl": "pkg:generic/ibm-plex-mono@2.004?file_name=ibm-plex-mono-500.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/ibm-plex-mono-500.woff2"
+      }
+    },
+    {
+      "name": "Spectral 400 italic WOFF2",
+      "version": "2.005",
+      "purl": "pkg:generic/spectral@2.005?file_name=spectral-400-italic.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/spectral-400-italic.woff2"
+      }
+    },
+    {
+      "name": "Spectral 400 WOFF2",
+      "version": "2.005",
+      "purl": "pkg:generic/spectral@2.005?file_name=spectral-400.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/spectral-400.woff2"
+      }
+    },
+    {
+      "name": "Spectral 500 italic WOFF2",
+      "version": "2.005",
+      "purl": "pkg:generic/spectral@2.005?file_name=spectral-500-italic.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/spectral-500-italic.woff2"
+      }
+    },
+    {
+      "name": "Spectral 500 WOFF2",
+      "version": "2.005",
+      "purl": "pkg:generic/spectral@2.005?file_name=spectral-500.woff2",
+      "scope": "required",
+      "license": "OFL-1.1",
+      "hash": {
+        "kind": "repository-file",
+        "path": "static/fonts/spectral-500.woff2"
+      }
+    }
+  ]
+}

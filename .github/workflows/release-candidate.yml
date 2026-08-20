@@ -1,0 +1,124 @@
+name: Release Candidate # kanon:ignore CI/release-yml-missing-attestation -- split signer job; Kanon 2558
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: typikon-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  freeze-candidate:
+    runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect a pure Release Please squash commit
+        id: detect
+        run: python3 ci/build-release-candidate.py detect --github-output "$GITHUB_OUTPUT"
+
+      - name: Prepare candidate staging directory
+        if: steps.detect.outputs.candidate == 'true'
+        run: |
+          candidate_dir="$RUNNER_TEMP/typikon-release-candidate"
+          mkdir -p "$candidate_dir"
+          echo "CANDIDATE_DIR=$candidate_dir" >> "$GITHUB_ENV"
+
+      - name: Generate the inventory-backed CycloneDX SBOM
+        if: steps.detect.outputs.candidate == 'true'
+        run: python3 ci/build-release-candidate.py seed-sbom --output-dir "$CANDIDATE_DIR"
+
+      - name: Freeze exact archive and candidate manifest
+        if: steps.detect.outputs.candidate == 'true'
+        run: python3 ci/build-release-candidate.py freeze --output-dir "$CANDIDATE_DIR"
+
+      - name: Validate the CycloneDX schema
+        if: steps.detect.outputs.candidate == 'true'
+        env:
+          CYCLONEDX_CLI_SHA256: bfc8b2538da86fe239bc53658bbb63c1c8c510a293c1e6891aa5bea5d3c58746
+        run: |
+          cli="$RUNNER_TEMP/cyclonedx-linux-x64"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 240 --retry 3 --retry-all-errors \
+            --output "$cli" \
+            https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64
+          printf '%s  %s\n' "$CYCLONEDX_CLI_SHA256" "$cli" | sha256sum --check --strict
+          chmod 0755 "$cli"
+          "$cli" validate \
+            --input-format json \
+            --input-file "$CANDIDATE_DIR/typikon-${{ steps.detect.outputs.tag }}.tar.gz.cdx.json" \
+            --fail-on-errors
+
+      - name: Attest the frozen source archive
+        if: steps.detect.outputs.candidate == 'true'
+        id: provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: ${{ env.CANDIDATE_DIR }}/typikon-${{ steps.detect.outputs.tag }}.tar.gz
+
+      - name: Attest the frozen CycloneDX SBOM
+        if: steps.detect.outputs.candidate == 'true'
+        id: sbom_attestation
+        uses: actions/attest-sbom@5026d3663739160db546203eeaffa6aa1c51a4d6 # v1
+        with:
+          subject-path: ${{ env.CANDIDATE_DIR }}/typikon-${{ steps.detect.outputs.tag }}.tar.gz
+          sbom-path: ${{ env.CANDIDATE_DIR }}/typikon-${{ steps.detect.outputs.tag }}.tar.gz.cdx.json
+
+      - name: Freeze the offline attestation bundles
+        if: steps.detect.outputs.candidate == 'true'
+        run: |
+          python3 ci/build-release-candidate.py attach-attestations \
+            --output-dir "$CANDIDATE_DIR" \
+            --provenance-bundle "${{ steps.provenance.outputs.bundle-path }}" \
+            --sbom-bundle "${{ steps.sbom_attestation.outputs.bundle-path }}"
+
+      - name: Verify both frozen offline attestation bundles
+        if: steps.detect.outputs.candidate == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          archive="$CANDIDATE_DIR/typikon-${{ steps.detect.outputs.tag }}.tar.gz"
+          signer="$GITHUB_REPOSITORY/.github/workflows/release-candidate.yml"
+          gh attestation verify "$archive" \
+            --bundle "$archive.provenance.intoto.jsonl" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$signer" \
+            --source-digest "$GITHUB_SHA" \
+            --predicate-type https://slsa.dev/provenance/v1
+          gh attestation verify "$archive" \
+            --bundle "$archive.sbom.intoto.jsonl" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$signer" \
+            --source-digest "$GITHUB_SHA" \
+            --predicate-type https://cyclonedx.org/bom
+
+      - name: Upload immutable candidate bundle
+        if: steps.detect.outputs.candidate == 'true'
+        id: candidate_artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: typikon-${{ steps.detect.outputs.tag }}-candidate
+          path: ${{ env.CANDIDATE_DIR }}/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Record candidate artifact identity
+        if: steps.detect.outputs.candidate == 'true'
+        run: |
+          {
+            echo "### Frozen untagged release candidate"
+            echo "- commit: ${{ steps.detect.outputs.candidate_commit }}"
+            echo "- tree: ${{ steps.detect.outputs.candidate_tree }}"
+            echo "- artifact id: ${{ steps.candidate_artifact.outputs.artifact-id }}"
+            echo "- artifact digest: ${{ steps.candidate_artifact.outputs.artifact-digest }}"
+          } >> "$GITHUB_STEP_SUMMARY"

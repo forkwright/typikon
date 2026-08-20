@@ -25,7 +25,8 @@ typikon/
 ├── scaffolds/              # reserved, currently empty — typikon-init scaffolds content inline
 ├── bin/                    # typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
 ├── ci/                     # strict gate config (lychee, pa11y, playwright, csp-enforce, asset-provenance)
-├── docs/                   # AGENTIC.md, SCHEMAS.md, BOOTSTRAP.md
+├── docs/                   # AGENTIC.md, SCHEMAS.md, BOOTSTRAP.md, RELEASING.md
+├── release/                # strict two-consumer compatibility-lock schema and evidence
 ├── _headers.tmpl           # Cloudflare Pages strict-CSP
 ├── _redirects.tmpl         # Cloudflare Pages redirects
 ├── theme.toml              # Zola theme manifest
@@ -53,6 +54,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 - **Fail-closed checkout**: product price is catalog data. Checkout and Offer URLs require sourced purchasable availability, and shipping text requires its own source.
 - **Push authority**: `origin` is GitHub (`forkwright/typikon`); no forge remote is configured. The typed forge/GitHub authority split is unresolved — forkwright/kanon#3045 owns it.
 - **License**: PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). `LICENSE` is authoritative.
+- **Two-phase releases**: Release Please prepares the PR but does not tag. The release squash is frozen as exact candidate `R`; Tools and Leather gate `R`; a later evidence-only commit records typed promotion and rollback; manual publication creates the annotated SemVer tag at `R` only after replaying the lock.
 - **Consumer schema registry**: a consumer site's custom-templated content types register in `schemas/registry.toml` and validate against their own schema, composed from typikon's open `page.core.schema.json`/`section.core.schema.json` building blocks and closed with `unevaluatedProperties: false`. A custom `template` with no registry entry fails validation naming the missing registration rather than falling back to `page`'s shape. See `docs/SCHEMAS.md#consumer-schema-registry`. <!-- kanon:ignore STANDARDS/citation-must-be-resolvable -- anchor exists at docs/SCHEMAS.md:26. Resolver drops the docs/ prefix and checks the wrong directory. Filed kanon (forge) issue #10073. -->
 
 ## How an agent operates here
@@ -70,6 +72,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 - **Push to `origin`.** It is GitHub; there is no mirror step. Verify with `git remote -v` rather than assuming.
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
 - **Schema changes are migrations.** Ship a `bin/` migration for incompatible transformations that can preserve truth. A newly required provenance value is the explicit exception: name every blocked consumer, then author the source or intentionally remove the gated fact in a consumer PR; never synthesize provenance.
+- **Release credentials are operator-owned.** The two cross-repository receipt tokens are read-only and scoped to one consumer each. Never create, widen, or install them without explicit operator direction. See `docs/RELEASING.md`.
 
 <!-- kanon:auto-start -->
 ## Generated kanon context

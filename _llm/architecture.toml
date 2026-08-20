@@ -17,6 +17,7 @@ layers = [
   "scaffolds",
   "bin",
   "ci",
+  "release-control",
   "static-assets",
   "docs",
 ]
@@ -46,6 +47,11 @@ name = "ci"
 path = "ci"
 role = "Strict web-property gate configuration."
 
+[[architecture.crates]]
+name = "release-control"
+path = "release"
+role = "Typed exact-candidate consumer promotion and rollback evidence."
+
 [[interfaces]]
 name = "typikon CLI tools"
 kind = "cli"
@@ -55,3 +61,8 @@ path = "bin"
 name = "Zola theme"
 kind = "static-web"
 path = "theme.toml"
+
+[[interfaces]]
+name = "release compatibility verifier"
+kind = "cli"
+path = "ci/verify-release-lock.py"

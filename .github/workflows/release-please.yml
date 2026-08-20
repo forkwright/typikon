@@ -1,102 +1,287 @@
-name: Release Please
+name: Release Please # kanon:ignore CI/release-yml-missing-attestation -- publishes candidate attestations; Kanon 2558/3556
 
-# WHY this exists: release-please-config.json and .release-please-manifest.json
-# declare intent only — without a workflow that runs them, the manifest can
-# assert a version that no tag, GitHub release, or CHANGELOG entry backs
-# (forkwright/typikon#73).
-
+# Main pushes may prepare a release PR only while the manifest version already
+# has an exact published release. Publication is a separate, manually
+# dispatched, compatibility-locked state machine that always targets the
+# frozen untagged squash commit.
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      lock_path:
+        description: Tracked compatibility lock to verify before publication
+        required: true
+        default: release/compatibility/v0.6.0.json
+        type: string
+      acknowledge_private_consumer_metadata:
+        description: Publish the lock and receipt identifiers for the private Leather repository
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: typikon-release-main
   cancel-in-progress: false
 
-# WHY attestations/id-token are here despite this repo shipping no binaries: the
-# attested subject is the release SOURCE ARCHIVE, not a build output. Consumers pin
-# this theme by submodule SHA, so the source tree IS the artifact they take.
-permissions:
-  attestations: write
-  contents: write
-  id-token: write
-  pull-requests: write
+permissions: {}
 
 jobs:
-  release-please:
+  prepare-release-pr:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created || steps.release_retry.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name || steps.release_retry.outputs.tag_name }}
-    steps:
-      # WHY pinned to a SHA: a mutable tag lets the action's behaviour change under
-      # an already-reviewed workflow. Same pin as forkwright/kanon.
-      - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
-        id: release
-        continue-on-error: true
-        with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-
-      # NOTE: GitHub's release-create API creates the tag inline when it does not
-      # yet exist, and can 422 with "Published releases must have a valid tag" while
-      # that tag is still propagating server-side. It is a GitHub-side race, not
-      # manifest drift. One retry clears it; a genuine failure still fails the job.
-      # This retry belongs in a shared reusable workflow, not duplicated per-repo
-      # (see kanon#2436).
-      - name: Wait for tag propagation before retry
-        if: steps.release.outcome == 'failure'
-        run: sleep 15
-
-      - name: Retry release-please after transient tag-validation race
-        if: steps.release.outcome == 'failure'
-        id: release_retry
-        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
-        with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-
-  # WHY a second job rather than more steps: it must run only when a release was
-  # actually cut, and the attested archive has to be checked out AT THE TAG — the
-  # first job's tree is whatever main was when it started.
-  attest-release:
-    needs: [release-please]
-    # WARNING: GH-native attestations cannot be persisted for user-owned PRIVATE
-    # repositories; the job 422s there on every cut. typikon is public, so this is
-    # live — the guard keeps it a non-fatal skip if visibility ever flips.
-    if: needs.release-please.outputs.release_created == 'true' && !github.event.repository.private
-    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ needs.release-please.outputs.tag_name }}
 
-      - name: Stage source archive
-        id: source
+      - name: Determine whether the manifest version is already published
+        id: state
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          archive="typikon-${{ needs.release-please.outputs.tag_name }}.tar.gz"
-          git archive --format=tar.gz --output "$archive" HEAD
-          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          version=$(python3 - <<'PY'
+          import json
+          print(json.load(open(".release-please-manifest.json", encoding="utf-8"))["."])
+          PY
+          )
+          if python3 -I ci/verify-published-release.py --version "$version"; then
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prepare=false" >> "$GITHUB_OUTPUT"
+            echo "Manifest version $version is not an exact published release; release PR preparation is parked."
+          fi
 
-      - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@57aae528053a48a3f6235f2d9461b05fbcb7366d # v0
+      - name: Prepare or refresh the release pull request only
+        if: steps.state.outputs.prepare == 'true'
+        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
         with:
-          artifact-name: ${{ steps.source.outputs.archive }}.cdx.json
-          format: cyclonedx-json
-          output-file: ${{ steps.source.outputs.archive }}.cdx.json
-          upload-artifact: false
-          upload-release-assets: false
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
-      - name: Attest source provenance
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
-        with:
-          subject-path: ${{ steps.source.outputs.archive }}
+  verify-locked-release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    outputs:
+      candidate_commit: ${{ steps.verify.outputs.candidate_commit }}
+      candidate_tree: ${{ steps.verify.outputs.candidate_tree }}
+      evidence_commit: ${{ github.sha }}
+      lock_sha256: ${{ steps.verify.outputs.lock_sha256 }}
+      release_pr: ${{ steps.verify.outputs.release_pr }}
+      staging_artifact_digest: ${{ steps.staging.outputs.artifact-digest }}
+      staging_artifact_id: ${{ steps.staging.outputs.artifact-id }}
+      staging_run_attempt: ${{ github.run_attempt }}
+      staging_run_id: ${{ github.run_id }}
+      tag: ${{ steps.verify.outputs.tag }}
+    steps:
+      - name: Require explicit public-evidence privacy acknowledgment
+        env:
+          PRIVACY_ACKNOWLEDGED: ${{ inputs.acknowledge_private_consumer_metadata }}
+        run: |
+          test "$PRIVACY_ACKNOWLEDGED" = true
+          echo "Operator acknowledged publication of private-consumer receipt metadata." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Attest CycloneDX SBOM
-        uses: actions/attest-sbom@5026d3663739160db546203eeaffa6aa1c51a4d6 # v1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          subject-path: ${{ steps.source.outputs.archive }}
-          sbom-path: ${{ steps.source.outputs.archive }}.cdx.json
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove dispatch is on the current default-branch head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          default_branch=$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)
+          test "$default_branch" = main
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          live_head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$live_head" = "$GITHUB_SHA"
+
+      - name: Resolve the tracked lock path
+        id: lock
+        env:
+          REQUESTED_LOCK: ${{ inputs.lock_path }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          lock = (root / os.environ["REQUESTED_LOCK"]).resolve()
+          expected = root / "release" / "compatibility"
+          if expected not in lock.parents or lock.suffix != ".json" or not lock.is_file():
+              raise SystemExit(f"lock path is not a tracked compatibility JSON: {lock}")
+          print(f"path={lock.relative_to(root)}")
+          PY
+
+      - name: Replay candidate, artifact, consumer, workflow, and PR evidence
+        id: verify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TOOLS_RECEIPT_TOKEN: ${{ secrets.TOOLS_RECEIPT_TOKEN }}
+          LEATHER_RECEIPT_TOKEN: ${{ secrets.LEATHER_RECEIPT_TOKEN }}
+        run: |
+          python3 -I ci/verify-release-lock.py \
+            --lock "${{ steps.lock.outputs.path }}" \
+            --materialize-candidate "$RUNNER_TEMP/verified-candidate" \
+            --emit-github-output "$GITHUB_OUTPUT"
+
+      - name: Stage the exact release evidence set
+        run: |
+          publish_dir="$RUNNER_TEMP/publish"
+          mkdir -p "$publish_dir"
+          cp "$RUNNER_TEMP/verified-candidate/candidate.json" "$publish_dir/"
+          cp "$RUNNER_TEMP/verified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz" "$publish_dir/"
+          cp "$RUNNER_TEMP/verified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.sha256" "$publish_dir/"
+          cp "$RUNNER_TEMP/verified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.cdx.json" "$publish_dir/"
+          cp "$RUNNER_TEMP/verified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.provenance.intoto.jsonl" "$publish_dir/"
+          cp "$RUNNER_TEMP/verified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.sbom.intoto.jsonl" "$publish_dir/"
+          cp "${{ steps.lock.outputs.path }}" "$publish_dir/typikon-${{ steps.verify.outputs.tag }}-compatibility-lock.json"
+          cp release/compatibility/receipts/tools.json "$publish_dir/typikon-${{ steps.verify.outputs.tag }}-tools-receipt.json"
+          cp release/compatibility/receipts/leather.json "$publish_dir/typikon-${{ steps.verify.outputs.tag }}-leather-receipt.json"
+          echo "PUBLISH_DIR=$publish_dir" >> "$GITHUB_ENV"
+
+      - name: Revalidate live evidence before sealing the handoff
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TOOLS_RECEIPT_TOKEN: ${{ secrets.TOOLS_RECEIPT_TOKEN }}
+          LEATHER_RECEIPT_TOKEN: ${{ secrets.LEATHER_RECEIPT_TOKEN }}
+        run: |
+          python3 -I ci/verify-release-lock.py \
+            --lock "${{ steps.lock.outputs.path }}" \
+            --materialize-candidate "$RUNNER_TEMP/reverified-candidate"
+          reverified="$RUNNER_TEMP/reverified-publish"
+          mkdir -p "$reverified"
+          cp "$RUNNER_TEMP/reverified-candidate/candidate.json" "$reverified/"
+          cp "$RUNNER_TEMP/reverified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz" "$reverified/"
+          cp "$RUNNER_TEMP/reverified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.sha256" "$reverified/"
+          cp "$RUNNER_TEMP/reverified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.cdx.json" "$reverified/"
+          cp "$RUNNER_TEMP/reverified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.provenance.intoto.jsonl" "$reverified/"
+          cp "$RUNNER_TEMP/reverified-candidate/typikon-${{ steps.verify.outputs.tag }}.tar.gz.sbom.intoto.jsonl" "$reverified/"
+          cp "${{ steps.lock.outputs.path }}" "$reverified/typikon-${{ steps.verify.outputs.tag }}-compatibility-lock.json"
+          cp release/compatibility/receipts/tools.json "$reverified/typikon-${{ steps.verify.outputs.tag }}-tools-receipt.json"
+          cp release/compatibility/receipts/leather.json "$reverified/typikon-${{ steps.verify.outputs.tag }}-leather-receipt.json"
+          diff -qr "$PUBLISH_DIR" "$reverified"
+          live_head=$(python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/git/ref/heads/main",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(json.load(response)["object"]["sha"])
+          PY
+          )
+          test "$live_head" = "$GITHUB_SHA"
+          rm -rf "$PUBLISH_DIR"
+          mv "$reverified" "$PUBLISH_DIR"
+
+      - name: Seal the verified publication handoff
+        id: staging
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: typikon-${{ steps.verify.outputs.tag }}-verified-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PUBLISH_DIR }}/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-locked-release:
+    needs: verify-locked-release
+    if: needs.verify-locked-release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.verify-locked-release.outputs.evidence_commit }}
+
+      - name: Prove the verified evidence commit is still current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "${{ needs.verify-locked-release.outputs.evidence_commit }}"
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)" = main
+          live_head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$live_head" = "${{ needs.verify-locked-release.outputs.evidence_commit }}"
+
+      - name: Materialize the raw digest-bound publication handoff
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_RUN_ID" = "${{ needs.verify-locked-release.outputs.staging_run_id }}"
+          if test "$GITHUB_RUN_ATTEMPT" != "${{ needs.verify-locked-release.outputs.staging_run_attempt }}"; then
+            echo "Publisher-only retries are stale; rerun the complete workflow so live evidence is replayed." >&2
+            exit 1
+          fi
+          python3 -I ci/materialize-release-handoff.py \
+            --artifact-id "${{ needs.verify-locked-release.outputs.staging_artifact_id }}" \
+            --artifact-digest "${{ needs.verify-locked-release.outputs.staging_artifact_digest }}" \
+            --run-id "${{ needs.verify-locked-release.outputs.staging_run_id }}" \
+            --run-attempt "${{ needs.verify-locked-release.outputs.staging_run_attempt }}" \
+            --tag "${{ needs.verify-locked-release.outputs.tag }}" \
+            --output "$RUNNER_TEMP/publish"
+          echo "PUBLISH_DIR=$RUNNER_TEMP/publish" >> "$GITHUB_ENV"
+
+      - name: Inspect any exact interrupted publication state
+        id: publication
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 -I ci/publish-locked-release.py inspect \
+            --tag "${{ needs.verify-locked-release.outputs.tag }}" \
+            --candidate "${{ needs.verify-locked-release.outputs.candidate_commit }}" \
+            --evidence-commit "${{ needs.verify-locked-release.outputs.evidence_commit }}" \
+            --lock-sha256 "${{ needs.verify-locked-release.outputs.lock_sha256 }}" \
+            --tracked-lock "${{ inputs.lock_path }}" \
+            --assets-dir "$PUBLISH_DIR" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Publish or resume the exact locked release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 -I ci/publish-locked-release.py publish \
+            --tag "${{ steps.publication.outputs.tag }}" \
+            --candidate "${{ steps.publication.outputs.candidate_commit }}" \
+            --evidence-commit "${{ needs.verify-locked-release.outputs.evidence_commit }}" \
+            --lock-sha256 "${{ steps.publication.outputs.lock_sha256 }}" \
+            --tracked-lock "${{ inputs.lock_path }}" \
+            --assets-dir "$PUBLISH_DIR"
+
+      - name: Reconcile Release Please bookkeeping
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr="${{ steps.publication.outputs.release_pr }}"
+          printf '%s\n' '{"labels":["autorelease: tagged"]}' > "$RUNNER_TEMP/tagged-label.json"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$pr/labels" \
+            --input "$RUNNER_TEMP/tagged-label.json" >/dev/null
+          if gh api "repos/$GITHUB_REPOSITORY/issues/$pr/labels" \
+            --jq '.[].name' | grep -Fxq 'autorelease: pending'; then
+            gh api --method DELETE \
+              "repos/$GITHUB_REPOSITORY/issues/$pr/labels/autorelease%3A%20pending" \
+              >/dev/null
+          fi
