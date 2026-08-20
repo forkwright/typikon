@@ -68,11 +68,28 @@ jobs:
           sudo mv zola /usr/local/bin/
           zola --version
 
-      - name: Install Python deps for typikon-validate
+      - name: Set up pinned Python for typikon-validate
+        # WHY 5: the exact toolcache version is normally instant, while a
+        # cache miss may need a bounded runtime download before pip can run.
+        timeout-minutes: 5
+        # WHY: ubuntu-latest carried jsonschema 4.10.3 without the separately
+        # imported referencing package. The unconstrained install treated that
+        # old distro package as satisfied, then validation failed at import.
+        # Select one reviewed interpreter and consume the complete lock below.
+        id: python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.14'
+
+      - name: Install locked Python deps for typikon-validate
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's install-python-deps timeout_secs=120.
         timeout-minutes: 2
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
         run: |
-          python3 -m pip install --user jsonschema
+          "$PYTHON" -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: --require-hashes -r themes/typikon/ci/consumer-python-requirements.lock
+          "$PYTHON" -m pip check
+          "$PYTHON" -I -c 'from jsonschema import Draft202012Validator; from referencing import Registry, Resource; from referencing.jsonschema import DRAFT202012'
 
       - name: Setup Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -124,7 +141,10 @@ jobs:
       - name: typikon-validate (frontmatter schemas)
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's typikon-validate timeout_secs=120.
         timeout-minutes: 2
-        run: themes/typikon/bin/typikon-validate .
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+        run: |
+          "$PYTHON" -I themes/typikon/bin/typikon-validate .
 
       - name: zola check (internal links + assets)
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's zola-check timeout_secs=120.

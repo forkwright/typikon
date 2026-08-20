@@ -51,7 +51,10 @@ timeout_secs = 120
 [stages.install-python-deps]
 cmd = """
 set -euo pipefail
-python3 -m pip install --user jsonschema
+python3 -m venv --clear .kanon-ci/python
+.kanon-ci/python/bin/python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: --require-hashes -r themes/typikon/ci/consumer-python-requirements.lock
+.kanon-ci/python/bin/python -m pip check
+.kanon-ci/python/bin/python -I -c 'from jsonschema import Draft202012Validator; from referencing import Registry, Resource; from referencing.jsonschema import DRAFT202012'
 """
 timeout_secs = 120
 
@@ -84,7 +87,7 @@ timeout_secs = 900
 [stages.typikon-validate]
 cmd = """
 set -euo pipefail
-themes/typikon/bin/typikon-validate .
+.kanon-ci/python/bin/python -I themes/typikon/bin/typikon-validate .
 """
 timeout_secs = 120
 
@@ -224,7 +227,7 @@ timeout_secs = 30
 cmd = """
 set -euo pipefail
 if [ -f ci/consumer-check.sh ]; then
-  bash ci/consumer-check.sh
+  PATH="$PWD/.kanon-ci/python/bin:$PATH" bash ci/consumer-check.sh
 fi
 """
 timeout_secs = 120
