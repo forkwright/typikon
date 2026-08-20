@@ -121,6 +121,18 @@ def check_pin_coherence() -> list[str]:
     return failures
 
 
+def check_xml_preamble() -> list[str]:
+    """Keep the XML declaration at the first byte of the Atom template source."""
+    atom = ROOT / "templates" / "atom.xml"
+    declaration = b'<?xml version="1.0" encoding="UTF-8"?>'
+    if not atom.read_bytes().startswith(declaration):
+        return [
+            "templates/atom.xml: XML declaration must begin at byte zero; "
+            "leading template whitespace renders an invalid feed"
+        ]
+    return []
+
+
 def check_template_dialect() -> list[str]:
     failures: list[str] = []
     definitions: dict[str, Path] = {}
@@ -166,6 +178,7 @@ def main() -> int:
     failures = [
         *check_pattern_witnesses(),
         *check_pin_coherence(),
+        *check_xml_preamble(),
         *check_template_dialect(),
     ]
     if failures:
