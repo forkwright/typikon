@@ -226,9 +226,24 @@ The substrate is design-family neutral. Brand-specific values go in `config.toml
 | `font_preload`              | which `.woff2` files preload at first paint |
 | `nav_items`, `footer_links` | navigation structure                        |
 | `[extra.author]`            | atom feed `<author>` + JSON-LD Article author |
+| `feed_source_section`       | optional root Atom owner, e.g. `journal/_index.md` |
 | `consumer_css`              | list of stylesheet paths, each `<link>`ed after core's own `style.css`, in order (`templates/base.html`'s Consumer stylesheet hook) |
 
 If a brand needs a *visual* override beyond the table above (different scale ratio, different color palette, different type pairing), declare it via `consumer_css` and redeclare the relevant `:root` custom properties in that file. Core's own interactive-state CSS never hard-codes a hue. Nav hover, buttons, the home triad mark, FAQ anchors, and similar surfaces resolve through four semantic tokens: `--accent-1` through `--accent-4`. Those tokens default to a neutral `--text-mid` and exist solely for a skin to redeclare. `static/css/skins/leather.css` is the first-party example: it maps those four tokens to Ardent Leatherworks' dye palette and carries that brand's own content-authoring classes (`.dye-entry-*`, `.swatch-*`, `.dye-marks`) — copy its shape, not its colors, for a new skin. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
+
+`feed_source_section` applies only to the root Atom feed and names the
+normalized POSIX content-relative canonical `_index.md` path. Translated feeds resolve their language-specific
+owner from it. Typikon uses that section's title, description, permalink,
+dated direct pages, and freshness. The owner and every translation must set
+`sort_by = "date"`, which lets Zola preserve
+parsed-datetime ordering and prevents its section serializer from omitting
+pages under an incompatible sort key. `include_in_feeds = false` pages and pages bubbled from transparent
+subsections stay out. Native section and taxonomy feeds keep Zola's supplied
+membership.
+
+A missing source or one with no eligible direct pages fails the
+build and names the configured path instead of silently reverting to a
+site-wide feed.
 
 Beyond styles, `templates/base.html`'s own header comment documents the full design/extension surface (forkwright/typikon#55). It provides a `{% block %}` for head metadata, nav, footer, structured data (JSON-LD), scripts, and page composition. Each has a sane default that a consumer overrides only when needed. A consumer template extends `base.html` and overrides just the block(s) it needs — it does not need to copy the whole file to add a stylesheet, a nav item, or a JSON-LD field.
 
@@ -254,7 +269,7 @@ When you add a content type or change a primitive, update at least one fixture t
 
 ### 5. Schema migrations
 
-When a typikon schema changes incompatibly, the same PR ships a migration script — see `bin/typikon-migrate-template` and the migration section of [`SCHEMAS.md`](SCHEMAS.md). The PR description lists every consumer affected. On merge, run the migration against each consumer in a separate consumer-side PR.
+When a Typikon schema changes incompatibly, the same PR ships a migration script when a deterministic transformation preserves truth — see `bin/typikon-migrate-template` and the migration section of [`SCHEMAS.md`](SCHEMAS.md). A newly required provenance value is the explicit exception. The PR lists every blocked consumer, and each consumer authors the source or intentionally removes the gated fact in a separate reviewable PR. A script can automate safe removal. It cannot synthesize provenance.
 
 ## What this contract does not say
 

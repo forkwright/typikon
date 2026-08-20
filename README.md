@@ -10,8 +10,9 @@ A typikon does not contain the service. It governs how the site enacts the servi
 
 Optimized for agentic operation. Humans should not need to develop here. The substrate ships:
 
-- **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal.
+- **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal; default page and section headings preserve qualified `extra.greek` metadata.
 - **Schemas** (`schemas/`) - JSON Schema for every content type. Frontmatter must validate before commit.
+- **Fail-closed commerce** - catalog prices may render without readiness. Checkout and Offer URLs require sourced purchasable availability, and shipping claims require their own source.
 - **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
 - **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.
 - **Headers** (`_headers.tmpl`, `_redirects.tmpl`) - Cloudflare Pages strict-CSP + redirect templates.
@@ -49,11 +50,30 @@ bin/typikon-check /path/to/consumer/site
 themes/typikon/bin/typikon-refresh
 ```
 
+To make one publication section the canonical root Atom feed, set its content
+path in the consumer config:
+
+```toml
+[extra]
+feed_source_section = "journal/_index.md"
+```
+
+The setting uses a normalized POSIX content-relative spelling and names the
+canonical `_index.md` path. Translated feeds resolve
+their language-specific section from it. The owner and every translation must
+set `sort_by = "date"`. Validation fails otherwise so
+Zola, not string sorting in the template, owns parsed-instant ordering. The
+root feed then uses only that section's dated direct pages. Native section
+and taxonomy feeds remain Zola-owned.
+
+Set `include_in_feeds = false` to exclude an individual page. Missing or empty
+configured sources fail the build.
+
 See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmatter reference, `docs/BOOTSTRAP.md` for the scaffolder behavior.
 
 ## License
 
-AGPL-3.0-or-later. See LICENSE and NOTICE.
+PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). See LICENSE and NOTICE.
 
 Self-hosted fonts under `static/fonts/` are OFL-1.1. See NOTICE for attributions.
 

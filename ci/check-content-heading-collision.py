@@ -153,7 +153,14 @@ def copy_theme(dest: Path) -> None:
             shutil.copy2(src, dest / item)
 
 
-def make_site(root: Path, theme_dir: Path, case: ContentTemplate, body: str) -> tuple[Path, str]:
+def make_site(
+    root: Path,
+    theme_dir: Path,
+    case: ContentTemplate,
+    body: str,
+    *,
+    extra_frontmatter: str = "",
+) -> tuple[Path, str]:
     site = root / "site"
     content = site / "content"
     content.mkdir(parents=True)
@@ -165,7 +172,7 @@ def make_site(root: Path, theme_dir: Path, case: ContentTemplate, body: str) -> 
     frontmatter = (
         '+++\ntitle = "Fixture"\n'
         f'template = "{case.template}"\n'
-        f"{case.frontmatter_extra}+++\n"
+        f"{case.frontmatter_extra}{extra_frontmatter}+++\n"
     )
     if case.is_section:
         target_dir = content / "testsec"
@@ -191,6 +198,20 @@ def zola_build(site: Path) -> subprocess.CompletedProcess:
 def h1_count(site: Path, route: str) -> int:
     html = (site / "public" / route / "index.html").read_text()
     return len(H1_RE.findall(html))
+
+
+def rendered_html(site: Path, route: str) -> str:
+    return (site / "public" / route / "index.html").read_text(encoding="utf-8")
+
+
+def validate_content(site: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(THEME_ROOT / "bin" / "typikon-validate"), str(site)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
 
 
 def run_case(root: Path, theme_dir: Path, case: ContentTemplate, failures: list[str]) -> None:
@@ -246,6 +267,59 @@ def run_case(root: Path, theme_dir: Path, case: ContentTemplate, failures: list[
             )
         else:
             print(f"check-content-heading-collision: {label} frontmatter-only body confirmed exactly 1 <h1>")
+            if label in {"page.html", "section.html"}:
+                source = rendered_html(empty_site, empty_route)
+                if "<h1>Fixture</h1>" not in source:
+                    failures.append(
+                        f"{label} plain heading: did not preserve the exact owned H1"
+                    )
+
+    if label not in {"page.html", "section.html"}:
+        return
+
+    # Qualified alternate-language metadata belongs on the Typikon-owned
+    # heading. The Markdown body remains H1-free, so consumers never need a
+    # shadow template merely to carry this semantic attribute.
+    greek_site, greek_route = make_site(
+        root / f"{label}-greek",
+        theme_dir,
+        case,
+        body="",
+        extra_frontmatter='\n[extra]\ngreek = "Δοκιμή"\n',
+    )
+    validation = validate_content(greek_site)
+    if validation.returncode != 0:
+        failures.append(
+            f"{label} qualified Greek metadata: schema rejected a valid value:\n"
+            f"{validation.stdout}\n{validation.stderr}"
+        )
+    result = zola_build(greek_site)
+    if result.returncode != 0:
+        failures.append(
+            f"{label} qualified Greek metadata: expected a clean build:\n{result.stderr}"
+        )
+    else:
+        source = rendered_html(greek_site, greek_route)
+        if h1_count(greek_site, greek_route) != 1:
+            failures.append(f"{label} qualified Greek metadata: expected exactly 1 <h1>")
+        if '<h1 data-greek="Δοκιμή"><span>Fixture</span></h1>' not in source:
+            failures.append(
+                f"{label} qualified Greek metadata: owned H1 did not carry the exact "
+                "data-greek/span structure"
+            )
+
+    invalid_site, _ = make_site(
+        root / f"{label}-greek-invalid",
+        theme_dir,
+        case,
+        body="",
+        extra_frontmatter='\n[extra]\ngreek = "Δοκιμή"\ngreek_source = "invented"\n',
+    )
+    invalid = validate_content(invalid_site)
+    if invalid.returncode == 0:
+        failures.append(
+            f"{label} qualified Greek metadata: closed schema accepted an invented sibling"
+        )
 
 
 def main() -> int:
@@ -273,7 +347,7 @@ def main() -> int:
             print(f"  - {f}", file=sys.stderr)
         return 1
 
-    total = len(CASES) * 3
+    total = len(CASES) * 3 + 6
     print(f"check-content-heading-collision: ok ({total}/{total} fixtures behaved as required)")
     return 0
 

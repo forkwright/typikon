@@ -12,16 +12,67 @@
 {%- set author_uri = config.extra.author?.uri | default(value=config.base_url) -%}
 {# Zola supplies `pages` for global, section, and taxonomy feeds after
    applying its date/render/hidden/include_in_feeds filter, deterministic
-   feed ordering, and feed_limit. Never replace that engine-owned set here. #}
+   feed ordering, and feed_limit. Preserve that engine-owned set unless a
+   consumer explicitly assigns the root feed to one source section. Native
+   section/taxonomy feeds always keep their supplied set. #}
+{%- set_global feed_pages = pages -%}
+{%- set_global feed_updated_pages = pages -%}
+{%- set_global feed_title = config.title -%}
+{%- set_global feed_subtitle = config.description -%}
+{%- set_global feed_alternate = config.base_url -%}
+{%- if term -%}
+{%- set_global feed_title = config.title ~ " - " ~ term.name -%}
+{%- elif section and section.title -%}
+{%- set_global feed_title = config.title ~ " - " ~ section.title -%}
+{%- endif -%}
+{%- if config.extra.feed_source_section and not section and not term -%}
+{%- set feed_source_path = config.extra.feed_source_section -%}
+{%- if not (feed_source_path is ending_with(pat="_index.md")) -%}
+{{ throw(message="atom.xml: feed source must name the canonical _index.md path, not a translated or leaf path: `" ~ feed_source_path ~ "`") }}
+{%- endif -%}
+{%- set feed_source = get_section(path=feed_source_path, lang=lang, allow_missing=true) -%}
+{%- if not feed_source -%}
+{{ throw(message="atom.xml: configured feed source section `" ~ feed_source_path ~ "` was not found") }}
+{%- endif -%}
+{%- set source_depth = feed_source_path | split(pat="/") | length -%}
+{%- set native_feed_limit = pages | length -%}
+{%- set_global scoped_pages = [] -%}
+{%- for candidate in feed_source.pages -%}
+{%- set candidate_depth = candidate.relative_path | split(pat="/") | length -%}
+{# A colocated leaf bundle lives at <slug>/index.md but its physical parent
+   is still the configured source section. Normalize that storage-only index
+   segment before comparing depth; a nested transparent section remains one
+   level deeper and is excluded. #}
+{%- if candidate.colocated_path -%}
+{%- set candidate_depth = candidate_depth - 1 -%}
+{%- endif -%}
+{%- if candidate.date and candidate.include_in_feeds and candidate_depth == source_depth -%}
+{%- set_global scoped_pages = [...scoped_pages, candidate] -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if scoped_pages | length == 0 -%}
+{{ throw(message="atom.xml: configured feed source section `" ~ feed_source_path ~ "` has no dated, feed-eligible direct pages") }}
+{%- endif -%}
+{# typikon-validate requires the configured owner section to sort by date.
+   Preserve get_section().pages' native parsed-datetime/permalink ordering
+   instead of re-sorting serialized RFC3339 strings in Tera. `pages | length`
+   is the effective native feed_limit. Compute freshness over the full scope
+   before slicing, as Zola does. #}
+{%- set_global feed_updated_pages = scoped_pages -%}
+{%- set_global feed_pages = scoped_pages[:native_feed_limit] -%}
+{%- set_global feed_title = config.title ~ " - " ~ feed_source.title -%}
+{%- set_global feed_subtitle = feed_source.description -%}
+{%- set_global feed_alternate = feed_source.permalink -%}
+{%- endif -%}
 <feed xmlns="http://www.w3.org/2005/Atom"{% if lang %} xml:lang="{{ lang }}"{% endif %}>
-    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section and section.title %} - {{ section.title }}{% endif %}</title>
-    {%- if config.description %}
-    <subtitle>{{ config.description }}</subtitle>
+    <title>{{ feed_title }}</title>
+    {%- if feed_subtitle %}
+    <subtitle>{{ feed_subtitle }}</subtitle>
     {%- endif %}
     <link href="{{ feed_url | safe }}" rel="self" type="application/atom+xml"/>
-    <link href="{{ config.base_url | safe }}"/>
+    <link href="{{ feed_alternate | safe }}"/>
     <generator uri="https://www.getzola.org/">Zola</generator>
-    {%- if pages | length > 0 -%}
+    {%- if feed_updated_pages | length > 0 -%}
     {# WHY a full scan instead of `sort(attribute="date") | last`: the
        feed's <updated> must be the most recent EDIT across every entry,
        and one entry's most recent edit is `updated` when set, `date`
@@ -37,7 +88,7 @@
        to select the dated fallback for that falsey value. #}
     {%- set_global feed_updated_ts = 0 -%}
     {%- set_global feed_updated = "" -%}
-    {%- for p in pages -%}
+    {%- for p in feed_updated_pages -%}
     {%- set p_updated = p.updated | default(value=p.date, boolean=true) -%}
     {%- set p_ts = p_updated | date(format="%s") | int -%}
     {%- if p_ts > feed_updated_ts -%}
@@ -57,7 +108,7 @@
         <name>{{ author_name }}</name>
         <uri>{{ author_uri | safe }}</uri>
     </author>
-    {%- for page in pages %}
+    {%- for page in feed_pages %}
     <entry xml:lang="{{ page.lang | default(value=lang) }}">
         <title>{{ page.title }}</title>
         <published>{{ page.date | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</published>

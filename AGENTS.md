@@ -56,16 +56,19 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Static SSG**: Zola 0.23.x with Tera 2 templates. No JavaScript build step in site build path.
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on inline script/style/handler.
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime.
+- **Root Atom ownership**: a consumer may set `extra.feed_source_section` to one canonical `_index.md` path. That owner and every translation use `sort_by = "date"`; missing, empty, or wrongly sorted sources fail while native section/taxonomy feeds remain Zola-owned.
+- **Fail-closed checkout**: a catalog price does not imply readiness. Checkout and Offer URLs require sourced purchasable availability; shipping copy requires paired provenance.
 - **Push authority**: `origin` is GitHub; no forge remote is configured. forkwright/kanon#3045 owns the typed authority split.
-- **License**: AGPL-3.0-or-later. AI-training prohibited (NOTICE).
+- **License**: PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). `LICENSE` is authoritative.
 
 ## Boundaries
 
 - **Push to origin, which is GitHub.** There is no forge remote and no mirror step.
   Verify with `git remote -v` rather than assuming either shape.
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
-- **Schema changes are migrations.** When a schema changes incompatibly, ship a migration script in `bin/`.
+- **Schema changes are migrations.** Ship a `bin/` migration for incompatible transformations that can preserve truth. A newly required provenance value is the explicit exception: name every blocked consumer, then author the source or intentionally remove the gated fact in a consumer PR; never synthesize provenance.
 - **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema here; do not fork the theme.
+- **Owned headings carry qualified metadata.** Default page and section H1s consume typed `extra.greek`; consumers do not hand-author a replacement H1 to attach that metadata.
 
 ## Dispatch entry points
 

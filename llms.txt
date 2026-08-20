@@ -4,6 +4,10 @@
 
 Typikon governs how consumer sites are built, validated, and deployed. Consumers pin it as a git submodule under `themes/typikon/` and keep site-specific content and brand config in their own repos.
 
+Consumers may set `config.extra.feed_source_section` to make one section own the canonical root Atom feed. The contract is fail-closed and preserves Zola's native section and taxonomy feeds.
+
+Product pages fail closed: a recorded price remains catalog data until sourced purchasable availability permits checkout. Shipping claims require paired provenance.
+
 ## Tools
 
 `bin/typikon-init` - scaffold a consumer site or content primitive.
@@ -26,5 +30,6 @@ Structured LLM corpus:
 - [README.md](README.md): overview, usage, and design
 - [CLAUDE.md](CLAUDE.md): agent contract and locked decisions
 - [schemas/](schemas/): frontmatter contracts
+- Default page and section templates carry qualified `extra.greek` metadata on the single Typikon-owned H1.
 - [scaffolds/](scaffolds/): reserved, currently empty — typikon-init scaffolds content inline
 - [bin/](bin/): typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template

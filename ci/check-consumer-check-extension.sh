@@ -152,6 +152,110 @@ if [[ ! -f "$RENDERED" ]]; then
 else
     grep -qF "if: hashFiles('ci/consumer-check.sh') != ''" "$RENDERED" \
         || fail "rendered ${RENDERED} lost the hashFiles guard — a refresh would silently drop a consumer's gate check"
+    if ! "$ROOT/ci/check-workflow-template.sh" "$RENDERED" >/dev/null; then
+        fail "rendered ${RENDERED} failed the canonical workflow-template contract"
+    fi
+
+    # Negative mutation proof: comments cannot satisfy an executable action
+    # pin, and package-manager-cache belongs specifically to setup-node's
+    # with: block. These are the false-positive shapes that whole-file grep
+    # previously accepted.
+    python3 - "$RENDERED" "$WORK" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+root = Path(sys.argv[2])
+
+checkout = source.replace(
+    "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+    "actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    1,
+)
+checkout += "\n# actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09\n"
+(root / "mutant-checkout.yml").write_text(checkout, encoding="utf-8")
+
+setup = source.replace(
+    "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444",
+    "actions/setup-node@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    1,
+)
+setup += "\n# actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444\n"
+(root / "mutant-setup.yml").write_text(setup, encoding="utf-8")
+
+cache = source.replace("package-manager-cache: false", "# package-manager-cache: false", 1)
+cache_pattern = re.compile(r"^(\s*)persist-credentials:\s*false\s*$", re.MULTILINE)
+cache = cache_pattern.sub(
+    lambda match: match.group(0) + "\n" + match.group(1) + "package-manager-cache: false",
+    cache,
+    1,
+)
+(root / "mutant-cache.yml").write_text(cache, encoding="utf-8")
+
+scalar = source.replace(
+    "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+    "decoy/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    1,
+).replace(
+    "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444",
+    "decoy/setup-node@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    1,
+)
+decoy = '''      - name: Decoy action text
+        run: |
+          uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+          uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+          with:
+            package-manager-cache: false
+
+'''
+scalar = scalar.replace("      - name: Install Zola\n", decoy + "      - name: Install Zola\n", 1)
+(root / "mutant-run-scalar.yml").write_text(scalar, encoding="utf-8")
+
+matrix = source.replace(
+    "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+    "decoy/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    1,
+).replace(
+    "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444",
+    "decoy/setup-node@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    1,
+)
+matrix_decoy = '''    strategy:
+      matrix:
+        include:
+          - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+            with:
+              persist-credentials: false
+          - name: Decoy setup action
+            uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+            with:
+              package-manager-cache: false
+'''
+matrix = matrix.replace("    runs-on: ubuntu-latest\n", matrix_decoy + "    runs-on: ubuntu-latest\n", 1)
+(root / "mutant-matrix-include.yml").write_text(matrix, encoding="utf-8")
+
+persist = source.replace("persist-credentials: false", "# persist-credentials: false", 1)
+persist = persist.replace(
+    "          package-manager-cache: false\n",
+    "          package-manager-cache: false\n          persist-credentials: false\n",
+    1,
+)
+(root / "mutant-persist.yml").write_text(persist, encoding="utf-8")
+PY
+    for mutant in \
+        "$WORK/mutant-checkout.yml" \
+        "$WORK/mutant-setup.yml" \
+        "$WORK/mutant-cache.yml" \
+        "$WORK/mutant-run-scalar.yml" \
+        "$WORK/mutant-matrix-include.yml" \
+        "$WORK/mutant-persist.yml"
+    do
+        if "$ROOT/ci/check-workflow-template.sh" "$mutant" >/dev/null 2>&1; then
+            fail "workflow-template checker accepted negative mutant ${mutant##*/}"
+        fi
+    done
 fi
 
 RENDERED_TOML="$CONSUMER/.kanon-ci.toml"

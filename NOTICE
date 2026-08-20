@@ -1,25 +1,7 @@
-Copyright (C) 2026 Cody Kickertz
+Required Notice: Copyright Ardent Works LLC (https://ardent.tools)
 
-This software is licensed under the GNU Affero General Public License,
-version 3 or later (AGPL-3.0-or-later). See LICENSE for the full text.
-
-SUPPLEMENTAL NOTICE — AI TRAINING PROHIBITION
-
-Use of this work or its contents, in whole or in part, to train, fine-tune,
-distill, or otherwise improve machine learning or artificial intelligence
-models is expressly prohibited without prior written consent from the
-copyright holder. This prohibition applies regardless of the method of
-access (direct download, API, web scraping, or any other means) and
-regardless of whether the training is performed by the person who accessed
-the work or by a third party.
-
-This prohibition constitutes a machine-readable opt-out of text and data
-mining under Article 4 of the EU Directive on Copyright in the Digital
-Single Market (2019/790).
-
-This notice is supplemental to the AGPL-3.0 license. It does not modify
-the AGPL-3.0 text (which the FSF prohibits). It is an additional condition
-from the copyright holder exercising rights not addressed by the AGPL.
+This software is licensed under the PolyForm Noncommercial License 1.0.0
+(`LicenseRef-PolyForm-Noncommercial-1.0.0`). See LICENSE for the full terms.
 
 THIRD-PARTY ASSETS
 
@@ -31,8 +13,5 @@ upstream sources, and the per-family attributions the OFL requires
 derivative binaries (subsets, web conversions) to preserve. It is
 maintained alongside the font files themselves.
 
-This notice deliberately does not restate that list. It previously did,
-and drifted: it credited a family the theme had stopped shipping while
-omitting the one that replaced it, which is an attribution gap rather
-than a cosmetic staleness. A second copy of a fact only has to be
-forgotten once.
+To avoid attribution drift, this notice does not duplicate that list; a
+second copy only has to be forgotten once.

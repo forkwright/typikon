@@ -62,4 +62,4 @@ Behavior:
 
 ## Schema migrations
 
-When a schema change is incompatible, the migration ships as `bin/typikon-migrate-<from>-<to>` in the same PR. Running `typikon-refresh` bumps the submodule to the version carrying the migration script. The operator runs the migration script against the consumer separately — `typikon-refresh` itself does not invoke migrations.
+When an incompatible schema change can transform existing bytes without inventing facts, the migration ships as `bin/typikon-migrate-<from>-<to>` in the same PR. Running `typikon-refresh` bumps the submodule to the version carrying the migration script. The operator runs the migration script against the consumer separately — `typikon-refresh` itself does not invoke migrations. Newly required provenance is the exception: the Typikon PR names blocked consumers, and each consumer authors the source or intentionally removes the gated fact in its own PR.

@@ -1,28 +1,27 @@
-{# Schema.org/Product JSON-LD. Override the ld_json block from page.html
-   for any page that resolves to a product (frontmatter has both
-   extra.price AND extra.stripe_url).
+{# Schema.org/Product JSON-LD. Included by page.html for any page with
+   sourced catalog price facts; checkout remains a separate readiness gate.
 
    Inputs:
      page.title            — product name
      page.description      — short product description
      page.permalink        — canonical URL
      page.extra.price      — string like "$150" or "150"; numeric extracted for Offer
-     page.extra.stripe_url — direct checkout URL (becomes Offer.url)
+     page.extra.stripe_url — stored checkout URL (Offer.url only when availability is purchasable)
      page.extra.og_image   — primary product image (becomes image)
      config.title          — brand name (Product.brand)
      config.base_url       — for image absolute URL
 
    NOTE: Offer.availability is emitted only when both page.extra.availability
-   and page.extra.availability_source are set — never defaulted, since an
-   unverified stock claim in structured data misleads search engines.
+   and page.extra.availability_source are set. Offer.url uses the same sourced
+   state and is omitted for unknown or non-purchasable availability.
 #}
 {{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="partials/ld-product.html" /> }}
 {{ <typikon.assert.required ok={page.description is defined and page.description} field="page.description" template="partials/ld-product.html" /> }}
 {{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="partials/ld-product.html" /> }}
 {{ <typikon.assert.required ok={page.extra.price is defined and page.extra.price} field="page.extra.price" template="partials/ld-product.html" /> }}
 {{ <typikon.assert.required ok={page.extra.price_source is defined and page.extra.price_source} field="page.extra.price_source" template="partials/ld-product.html" /> }}
-{{ <typikon.assert.required ok={page.extra.stripe_url is defined and page.extra.stripe_url} field="page.extra.stripe_url" template="partials/ld-product.html" /> }}
 {%- set price_numeric = page.extra.price | trim_start(pat="$") -%}
+{%- set purchasable = page.extra.stripe_url and page.extra.availability_source and page.extra.availability in ["InStock", "PreOrder", "BackOrder", "LimitedAvailability"] -%}
 {%- set image_url = "" -%}
 {%- if page.extra.og_image -%}
   {#- get_url(), not hand string-concatenation — same rationale as
@@ -49,8 +48,10 @@
     ,
     "availability": {{ <typikon.ldjson.str value={availability_url} /> }}
     {%- endif -%}
+    {%- if purchasable -%}
     ,
     "url": {{ <typikon.ldjson.str value={page.extra.stripe_url} /> }}
+    {%- endif -%}
   }
   {%- if image_url -%},
   "image": {{ <typikon.ldjson.str value={image_url} /> }}

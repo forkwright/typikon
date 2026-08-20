@@ -27,7 +27,6 @@
   {{ <typikon.assert.required ok={page.extra.audience is defined and page.extra.audience} field="page.extra.audience" template="page.html" /> }}
   {{ <typikon.assert.required ok={page.extra.price is defined and page.extra.price} field="page.extra.price" template="page.html" /> }}
   {{ <typikon.assert.required ok={page.extra.price_source is defined and page.extra.price_source} field="page.extra.price_source" template="page.html" /> }}
-  {{ <typikon.assert.required ok={page.extra.stripe_url is defined and page.extra.stripe_url} field="page.extra.stripe_url" template="page.html" /> }}
   {%- include "partials/ld-product.html" -%}
   {%- endif -%}
   {# BreadcrumbList for non-home pages. #}
@@ -43,14 +42,19 @@
    (asserted in the title/og_title blocks above), so sourcing the heading
    from it is a guarantee, not a convention. -#}
 {{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="page.html" /> }}
+{%- if page.extra.greek %}
+<h1 data-greek="{{ page.extra.greek }}"><span>{{ page.title }}</span></h1>
+{%- else %}
 <h1>{{ page.title }}</h1>
+{%- endif %}
 {# Product gallery renders before page content when extra.images is set —
    the operator drops the placeholder <div class="product-images"> from
    markdown when photos arrive and the gallery takes its visual slot. #}
 {%- include "partials/product-gallery.html" -%}
 {# WHY: same product-shaped frontmatter that triggers ld-product.html above
-   must also render visibly — price/shipping/checkout were JSON-LD-only. #}
-{%- if page.extra.price and page.extra.stripe_url -%}
+   must also render visibly. The partial always shows the recorded catalog
+   price, but gates shipping and checkout on their sourced facts. #}
+{%- if page.extra.price -%}
 {%- include "partials/product-purchase.html" -%}
 {%- endif -%}
 {#- WHY this guard (forkwright/typikon#157 class): now that this template

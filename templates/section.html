@@ -32,7 +32,11 @@
    blocks above), so sourcing the heading from it is a guarantee, not a
    convention. -#}
 {{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="section.html" /> }}
+{%- if section.extra.greek %}
+<h1 data-greek="{{ section.extra.greek }}"><span>{{ section.title }}</span></h1>
+{%- else %}
 <h1>{{ section.title }}</h1>
+{%- endif %}
 {#- WHY this guard (forkwright/typikon#157 class): now that this template
    renders its own <h1> above, section.content is unconditional
    immediately below it -- a body starting with a markdown `# ` line

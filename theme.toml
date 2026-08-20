@@ -2,7 +2,7 @@
 
 name = "typikon"
 description = "Fleet web-property substrate — Zola theme, frontmatter schemas, agentic scaffolding, strict CI gates"
-license = "AGPL-3.0-or-later"
+license = "LicenseRef-PolyForm-Noncommercial-1.0.0"
 homepage = "https://github.com/forkwright/typikon"
 min_version = "0.23.3"
 
