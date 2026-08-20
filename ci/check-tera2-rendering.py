@@ -7,6 +7,8 @@ but only a real render can establish the migrated runtime semantics:
 
 - missing ``[extra.author]`` falls back to the site title/base URL in Atom and
   to the site title in Article JSON-LD;
+- Atom timestamps use Jiff-compatible RFC 3339 output and an absent page
+  ``updated`` value falls back to its publication date;
 - a component receives no ambient ``lang``, so the breadcrumb component must
   carry the translated page's language into every ``get_section`` lookup;
 - the array-spread replacement for Tera 1's ``concat`` retains ``rel="me"``
@@ -198,6 +200,13 @@ def check_atom_author(public: Path, failures: list[str]) -> None:
         failures.append(f"author-less Atom name: expected site title, got {name!r}")
     if uri != "https://renderer-fixture.example.com":
         failures.append(f"author-less Atom URI: expected base URL, got {uri!r}")
+    expected_timestamp = "2026-08-19T00:00:00+00:00"
+    feed_updated = atom.findtext("atom:updated", namespaces=namespace)
+    if feed_updated != expected_timestamp:
+        failures.append(
+            "Atom feed updated: expected Jiff-compatible RFC 3339 publication fallback "
+            f"{expected_timestamp!r}, got {feed_updated!r}"
+        )
     entries = atom.findall("atom:entry", namespace)
     if len(entries) != 1:
         failures.append(f"author-less Atom entries: expected exactly 1, got {len(entries)}")
@@ -206,6 +215,13 @@ def check_atom_author(public: Path, failures: list[str]) -> None:
         if entry_author != "Renderer Fixture":
             failures.append(
                 f"author-less Atom entry name: expected site title, got {entry_author!r}"
+            )
+        published = entries[0].findtext("atom:published", namespaces=namespace)
+        updated = entries[0].findtext("atom:updated", namespaces=namespace)
+        if published != expected_timestamp or updated != expected_timestamp:
+            failures.append(
+                "Atom entry timestamps: expected publication and null-updated fallback to "
+                f"{expected_timestamp!r}, got published={published!r}, updated={updated!r}"
             )
 
 

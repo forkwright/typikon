@@ -29,6 +29,7 @@ FORBIDDEN = {
     "positional Tera 2 test argument": re.compile(
         r"\bis\s+(?:matching|starting_with|ending_with)\s*\(\s*[^)=]+\)"
     ),
+    "unsupported Tera 2 date format": re.compile(r'date\(format="%\+"\)'),
 }
 
 PATTERN_WITNESSES = {
@@ -38,6 +39,7 @@ PATTERN_WITNESSES = {
     "removed string filter": "value | escape",
     "renamed trim filter": 'value | trim_end_matches(pat="/")',
     "positional Tera 2 test argument": 'value is ending_with(".svg")',
+    "unsupported Tera 2 date format": 'value | date(format="%+")',
 }
 
 

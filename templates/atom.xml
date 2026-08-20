@@ -51,7 +51,7 @@
        the feed valid. #}
     {%- set feed_updated = last_updated | default(value=now(), boolean=true) -%}
     {%- endif -%}
-    <updated>{{ feed_updated | date(format="%+") }}</updated>
+    <updated>{{ feed_updated | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</updated>
     <id>{{ feed_url | safe }}</id>
     <author>
         <name>{{ author_name }}</name>
@@ -60,8 +60,8 @@
     {%- for page in pages %}
     <entry xml:lang="{{ page.lang | default(value=lang) }}">
         <title>{{ page.title }}</title>
-        <published>{{ page.date | date(format="%+") }}</published>
-        <updated>{{ page.updated | default(value=page.date, boolean=true) | date(format="%+") }}</updated>
+        <published>{{ page.date | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</published>
+        <updated>{{ page.updated | default(value=page.date, boolean=true) | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</updated>
         <author>
             <name>{{ page.extra.author | default(value=author_name) }}</name>
         </author>
