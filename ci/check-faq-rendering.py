@@ -25,7 +25,7 @@ Usage:
     ci/check-faq-rendering.py <built-sample-shop-public-dir>
 
 NOTE: unlike the standalone checks in this directory, this one needs a
-real Tera render (get_url(), assert::required, and Tera's own macro/
+real Tera render (get_url(), typikon.assert.required, and Tera's component
 scoping rules are all in play) — there is no meaningful way to simulate
 that without invoking zola, so it runs against already-built output
 rather than constructing its own fixture in-process.
@@ -49,7 +49,32 @@ breakout silently merging/splitting the expected three blocks.
 import json
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+
+
+class VisibleTextParser(HTMLParser):
+    """Collect browser-visible text while excluding script/style payloads."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.hidden_depth = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        del attrs
+        if tag in {"script", "style"}:
+            self.hidden_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style"} and self.hidden_depth:
+            self.hidden_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden_depth:
+            self.parts.append(data)
 
 
 def main(argv: list[str]) -> int:
@@ -81,13 +106,20 @@ def main(argv: list[str]) -> int:
     if dupes:
         failures.append(f"duplicate element id(s) in rendered FAQ: {dupes}")
 
-    # Script-breakout escaping in visible text. The visible-text rendering
-    # goes through Tera's default HTML autoescaping (item.q is not
-    # `| safe`), so a literal "</script>" reaches the page HTML-entity
-    # encoded (verified against a real zola build: Tera's escaper encodes
-    # "/" as "&#x2F;", not just "<"/">"), not as the literal characters.
-    if "&lt;&#x2F;script&gt;" not in html:
-        failures.append("expected HTML-escaped question text '&lt;&#x2F;script&gt;' not found — fixture content missing")
+    # Script-breakout escaping in visible text. Assert browser semantics,
+    # not one renderer's entity spelling: HTMLParser decodes any safe
+    # equivalent escaping, while a literal </script> parsed as markup cannot
+    # reappear as a visible-text node. Script/style bodies are excluded so the
+    # JSON-LD copy cannot satisfy this witness.
+    visible = VisibleTextParser()
+    visible.feed(html)
+    visible.close()
+    expected_visible_question = "What if a question contains </script> ?"
+    if expected_visible_question not in "".join(visible.parts):
+        failures.append(
+            "script-breakout fixture did not render as browser-visible text — "
+            f"expected {expected_visible_question!r}"
+        )
 
     # The page renders THREE ld+json blocks (Organization, FAQPage,
     # BreadcrumbList) — the fixture content lives in FAQPage's, so every
@@ -104,9 +136,10 @@ def main(argv: list[str]) -> int:
         failures.append("no application/ld+json script block found on the FAQ page")
 
     saw_escaped_breakout = False
+    parsed_blocks = []
     for i, body in enumerate(ldjson_bodies):
         try:
-            json.loads(body)
+            parsed_blocks.append(json.loads(body))
         except json.JSONDecodeError as exc:
             failures.append(
                 f"application/ld+json block {i} is not valid JSON ({exc}) — an "
@@ -125,6 +158,39 @@ def main(argv: list[str]) -> int:
     # block.
     if not saw_escaped_breakout:
         failures.append("escaped '\\/script' not found in any valid JSON-LD block — fixture content missing")
+
+    # A second backslash in the rendered JSON would still leave a textual
+    # ``\\/script`` witness and valid JSON, but json.loads() would preserve a
+    # literal backslash and silently change the FAQ copy. Bind the escape to
+    # its semantic contract: the decoded values must equal the fixture's
+    # original slash-bearing strings exactly.
+    expected_pair = (
+        "What if a question contains </script> ?",
+        "It renders as inert text, both here and inside the FAQPage JSON-LD "
+        "block — </script> must never terminate the ld+json <script> element early.",
+    )
+    faq_pages = [
+        value
+        for value in parsed_blocks
+        if isinstance(value, dict) and value.get("@type") == "FAQPage"
+    ]
+    if len(faq_pages) != 1:
+        failures.append(f"expected one decoded FAQPage object, found {len(faq_pages)}")
+    else:
+        decoded_pairs = [
+            (
+                item.get("name"),
+                item.get("acceptedAnswer", {}).get("text"),
+            )
+            for item in faq_pages[0].get("mainEntity", [])
+            if isinstance(item, dict)
+            and isinstance(item.get("acceptedAnswer"), dict)
+        ]
+        if expected_pair not in decoded_pairs:
+            failures.append(
+                "script-breakout fixture did not round-trip through JSON-LD exactly — "
+                f"expected {expected_pair!r}, decoded {decoded_pairs!r}"
+            )
 
     if failures:
         for line in failures:

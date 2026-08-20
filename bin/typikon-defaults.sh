@@ -21,7 +21,7 @@ set -euo pipefail
 # Pinned Zola version. Bump when typikon's Phase-5 gate validates
 # against a new Zola release. Consumer-side workflows pick this up on
 # their next `themes/typikon/bin/typikon-refresh` invocation.
-: "${ZOLA_VERSION:=0.22.1}"
+: "${ZOLA_VERSION:=0.23.3}"
 
 # Pinned wrangler version. An unpinned `npm install -g wrangler` runs inside
 # the deploy step, whose environment already holds CLOUDFLARE_API_TOKEN — so a

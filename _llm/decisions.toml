@@ -15,8 +15,8 @@ id = "D-zola"
 title = "Use Zola as the static-site engine"
 status = "accepted"
 context = "Fleet web properties need static deployment with no JS build path."
-decision = "Use Zola 0.22.x and Tera templates."
-consequences = "Consumer sites avoid Node/npm in the deploy path."
+decision = "Use Zola 0.23.x and Tera 2 templates."
+consequences = "Site generation avoids Node/npm; temporary deployment checks remain a separate CI concern."
 
 [[decision]]
 id = "D-submodule"

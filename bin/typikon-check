@@ -64,7 +64,11 @@
 #     One JSONL line per stage on stdout:
 #         {"stage": "...", "status": "pass|fail|skip|info", "duration_ms": N, "detail": "..."}
 #     `info` lines are coverage receipts (route/check counts), not verdicts.
-#     Detail surface on stderr (each tool's native output).
+#     Failed-stage detail is replayed to stderr through a bounded, JSON-escaped
+#     line protocol; the full native log remains in the reported local temp path.
+#     The wrapper cannot identify credentials in arbitrary child output, so gate
+#     stages must not receive or print secrets. Generated CI runs them without
+#     repository secrets.
 #
 # Exit codes:
 #     0  every implemented stage passed, nothing was skipped
@@ -132,7 +136,19 @@ run_stage() {
     else
         local rc=$?
         local end=$(date +%s%3N)
-        emit "$stage" "fail" "$((end - start))" "exit $rc; see $LOGDIR/$stage.log"
+        local replay_detail
+        if python3 "$TYPIKON_ROOT/ci/replay-stage-log.py" \
+                --stage "$stage" --root "$ROOT" --exit-code "$rc" \
+                "$LOGDIR/$stage.log" >&2; then
+            replay_detail="bounded diagnostics replayed to stderr"
+        else
+            local replay_rc=$?
+            replay_detail="diagnostic replay failed (helper exit $replay_rc)"
+            printf 'typikon-check: failed-stage replay unavailable (helper exit %d); full log retained at %s\n' \
+                "$replay_rc" "$LOGDIR/$stage.log" >&2
+        fi
+        emit "$stage" "fail" "$((end - start))" \
+            "exit $rc; $replay_detail; full log retained at $LOGDIR/$stage.log"
         return 1
     fi
 }

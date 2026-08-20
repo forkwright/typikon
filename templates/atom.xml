@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 {# Atom 1.0 feed override. Zola's default emits <author><name>Unknown</name>;
    typikon reads the brand author from config.extra.author so feed
    subscribers see a real attribution.
@@ -7,14 +8,13 @@
      config.extra.author.uri  — optional author URL
      page.extra.author        — per-entry override (becomes Person)
 #}
-{%- set author_name = config.extra.author.name | default(value=config.title) -%}
-{%- set author_uri = config.extra.author.uri | default(value=config.base_url) -%}
-{# Section feeds get section.pages; the global feed already receives
-   Zola's site-wide `pages` in context, so leave it untouched here. #}
-{%- if section %}{% set pages = section.pages %}{% endif -%}
-<?xml version="1.0" encoding="UTF-8"?>
+{%- set author_name = config.extra.author?.name | default(value=config.title) -%}
+{%- set author_uri = config.extra.author?.uri | default(value=config.base_url) -%}
+{# Zola supplies `pages` for global, section, and taxonomy feeds after
+   applying its date/render/hidden/include_in_feeds filter, deterministic
+   feed ordering, and feed_limit. Never replace that engine-owned set here. #}
 <feed xmlns="http://www.w3.org/2005/Atom"{% if lang %} xml:lang="{{ lang }}"{% endif %}>
-    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section.title %} - {{ section.title }}{% endif %}</title>
+    <title>{{ config.title }}{% if term %} - {{ term.name }}{% elif section and section.title %} - {{ section.title }}{% endif %}</title>
     {%- if config.description %}
     <subtitle>{{ config.description }}</subtitle>
     {%- endif %}
@@ -32,11 +32,13 @@
        set) is required so an assignment inside the for loop survives
        past that iteration; date(format="%s") | int turns each value
        into an epoch integer because Tera's `>` only compares numbers,
-       never date/string values directly. #}
+       never date/string values directly. Zola serializes an unset
+       `updated` as null, so Tera 2's default filter needs boolean=true
+       to select the dated fallback for that falsey value. #}
     {%- set_global feed_updated_ts = 0 -%}
     {%- set_global feed_updated = "" -%}
     {%- for p in pages -%}
-    {%- set p_updated = p.updated | default(value=p.date) -%}
+    {%- set p_updated = p.updated | default(value=p.date, boolean=true) -%}
     {%- set p_ts = p_updated | date(format="%s") | int -%}
     {%- if p_ts > feed_updated_ts -%}
     {%- set_global feed_updated_ts = p_ts -%}
@@ -47,9 +49,9 @@
     {# No dated entries to derive updated from (e.g. a shop with no
        journal) — fall back to Zola's last_updated, then now(), to keep
        the feed valid. #}
-    {%- set feed_updated = last_updated | default(value=now()) -%}
+    {%- set feed_updated = last_updated | default(value=now(), boolean=true) -%}
     {%- endif -%}
-    <updated>{{ feed_updated | date(format="%+") }}</updated>
+    <updated>{{ feed_updated | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</updated>
     <id>{{ feed_url | safe }}</id>
     <author>
         <name>{{ author_name }}</name>
@@ -58,8 +60,8 @@
     {%- for page in pages %}
     <entry xml:lang="{{ page.lang | default(value=lang) }}">
         <title>{{ page.title }}</title>
-        <published>{{ page.date | date(format="%+") }}</published>
-        <updated>{{ page.updated | default(value=page.date) | date(format="%+") }}</updated>
+        <published>{{ page.date | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</published>
+        <updated>{{ page.updated | default(value=page.date, boolean=true) | date(format="%Y-%m-%dT%H:%M:%S%:z") }}</updated>
         <author>
             <name>{{ page.extra.author | default(value=author_name) }}</name>
         </author>

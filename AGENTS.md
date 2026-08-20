@@ -14,7 +14,7 @@ Typikon is a Zola theme + frontmatter schemas + CI gates for agentic fleet web p
 
 1. [README.md](README.md) — overview, design, usage
 2. [CLAUDE.md](CLAUDE.md) — locked decisions, boundaries
-3. [docs/AGENTIC.md](docs/AGENTIC.md) — agent contract (5 rules)
+3. [docs/AGENTIC.md](docs/AGENTIC.md) — agent contract
 4. [docs/SCHEMAS.md](docs/SCHEMAS.md) — frontmatter field reference
 5. [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) — scaffolder behavior
 
@@ -53,7 +53,7 @@ Consumer sites use typikon as a git submodule under `themes/typikon/` and scaffo
 
 All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 
-- **Static SSG**: Zola 0.22.x. No JavaScript build step in site build path.
+- **Static SSG**: Zola 0.23.x with Tera 2 templates. No JavaScript build step in site build path.
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on inline script/style/handler.
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime.
 - **Push authority**: `origin` is GitHub; no forge remote is configured. forkwright/kanon#3045 owns the typed authority split.

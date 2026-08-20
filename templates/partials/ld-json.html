@@ -19,8 +19,8 @@
 
    Every partials/ld-*.html routes every field value (string, number, or
    array alike -- replace() is a no-op on a value with no "/") through
-   this macro instead of calling json_encode directly, so no future
+   this component instead of calling json_encode directly, so no future
    ld-*.html addition can reintroduce the gap by omission. #}
-{% macro str(value) -%}
-{{- value | json_encode | replace(from="/", to="\/") | safe -}}
-{%- endmacro str %}
+{% component typikon.ldjson.str(value) -%}
+{{- value | json_encode | replace(from="/", to="\\/") | safe -}}
+{%- endcomponent %}

@@ -1,11 +1,11 @@
 {# Template assertions for metadata that must exist before rendering.
    Schema validation should catch these first; throw keeps custom-template
    builds from silently rendering incomplete context. #}
-{% macro required(ok, field, template) -%}
+{% component typikon.assert.required(ok, field, template) -%}
 {%- if not ok -%}
 {{ throw(message=template ~ ": missing required metadata `" ~ field ~ "`") }}
 {%- endif -%}
-{%- endmacro required %}
+{%- endcomponent %}
 
 {# WHY (forkwright/typikon#152): a template that renders both a required
    heading element AND a consumer's markdown content unconditionally can be
@@ -16,8 +16,8 @@
    not frontmatter), so the only fail-closed point is here, at render time.
    Same posture as `required` above: a loud build failure that names the
    collision, never a silently-shipped duplicate heading. #}
-{% macro no_h1(content, template) -%}
-{%- if content is matching("(?i)<h1[ >]") -%}
+{% component typikon.assert.no_h1(content, template) -%}
+{%- if content is matching(pat="(?i)<h1[ >]") -%}
 {{ throw(message=template ~ ": content contains its own <h1> element (a markdown body starting with a single `# ` line), which collides with this page's required heading. Demote it to `##` or lower.") }}
 {%- endif -%}
-{%- endmacro no_h1 %}
+{%- endcomponent %}

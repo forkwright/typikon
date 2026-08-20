@@ -10,7 +10,7 @@ A typikon does not contain the service. It governs how the site enacts the servi
 
 Optimized for agentic operation. Humans should not need to develop here. The substrate ships:
 
-- **Templates** (`templates/`) - Tera templates for base, page, section, journal.
+- **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal.
 - **Schemas** (`schemas/`) - JSON Schema for every content type. Frontmatter must validate before commit.
 - **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.
 - **CI** (`ci/`) - strict gate: build, CSP enforcement, internal + external link integrity, a11y, smoke. No pass = no deploy.

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """check-home-heading — regression test for the home-route <h1> assertion in
 ci/smoke/shared.spec.ts (forkwright/typikon#142), and for the build-time
-guard in templates/partials/assert.html's `no_h1` macro (forkwright/typikon#152).
+guard in templates/partials/assert.html's `typikon.assert.no_h1` component
+(forkwright/typikon#152).
 
 Runs the real `zola build` against ISOLATED COPIES of this theme's
 templates/static/sass/theme.toml (never the live checkout in place, so this
@@ -50,7 +51,7 @@ ZOLA = shutil.which("zola")
 # WHY these exact [extra] fields (not a minimal guess): mirrors
 # examples/sample-blog/config.toml, which is the theme's own proof that
 # this shape builds clean — a hand-trimmed config risks passing for the
-# wrong reason (missing an assert::required field this template doesn't
+# wrong reason (missing a typikon.assert.required field this template does not
 # actually reach) rather than proving the heading behavior under test.
 CONFIG_TOML = """title = "Fixture"
 description = "typikon home-heading regression fixture"

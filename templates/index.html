@@ -20,10 +20,9 @@
      +++
 #}
 {% extends "base.html" %}
-{% import "partials/assert.html" as assert %}
 
-{% block title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="index.html") }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock title %}
-{% block og_title %}{{ assert::required(ok=section.title is defined and section.title, field="section.title", template="index.html") }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock og_title %}
+{% block title %}{{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="index.html" /> }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock title %}
+{% block og_title %}{{ <typikon.assert.required ok={section.title is defined and section.title} field="section.title" template="index.html" /> }}{{ section.extra.seo_title | default(value=section.title) }}{% endblock og_title %}
 
 {% block description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock description %}
 {% block og_description %}{{ section.description | default(value=config.description | default(value="")) }}{% endblock og_description %}
@@ -42,7 +41,7 @@
   {# Preload the home logo so it can race with the rest of the head fetches.
      Stage 3c — only matters on the home route, but this template is only
      used for the home so the conditional is the visit-class itself. #}
-  {%- if section.extra.home_logo is ending_with(".svg") %}
+  {%- if section.extra.home_logo is ending_with(pat=".svg") %}
   <link rel="preload" href="/{{ section.extra.home_logo | safe }}" as="image" type="image/svg+xml">
   {%- else %}
   <link rel="preload" href="/{{ section.extra.home_logo | safe }}" as="image">
@@ -99,7 +98,7 @@
    markdown `# ` line gets a second <h1> from Zola's own leading-heading
    convention, colliding with the sr-only one above -- this fails the
    build loudly instead of shipping a silently-broken heading structure. -#}
-{{ assert::no_h1(content=section.content, template="index.html") }}
+{{ <typikon.assert.no_h1 content={section.content} template="index.html" /> }}
 {{ section.content | safe }}
 {% endblock content %}
 

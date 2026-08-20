@@ -1,21 +1,19 @@
-{# Schema.org/BreadcrumbList JSON-LD as a Tera macro. Both page and section
+{# Schema.org/BreadcrumbList JSON-LD as a Tera 2 component. Both page and section
    contexts call it with their own title/permalink/ancestors.
 
    Usage from page.html / section.html / journal-*.html:
-     {% import "partials/ld-breadcrumb.html" as crumb %}
-     {{ crumb::breadcrumb(title=page.title, permalink=page.permalink, ancestors=page.ancestors) }}
+     {{ <typikon.crumb.breadcrumb config={config} lang={page.lang} title={page.title} permalink={page.permalink} ancestors={page.ancestors} /> }}
 
    Skips emitting any JSON-LD when ancestors is empty (e.g. home page).
 #}
-{% import "partials/ld-json.html" as ldjson %}
-{% macro breadcrumb(title, permalink, ancestors) %}
+{% component typikon.crumb.breadcrumb(config, lang, title, permalink, ancestors) %}
 {%- if ancestors and ancestors | length > 0 %}
 {#- WHY: trailing-slash spelling varies (config.base_url is user-entered,
    ancestor/page permalinks come from Zola); strip the trailing slash before
    comparing so the root is deduplicated regardless of spelling, instead of
    comparing one unnormalized slash form. #}
-{%- set base_key = config.base_url | trim_end_matches(pat="/") -%}
-{%- set page_key = permalink | trim_end_matches(pat="/") -%}
+{%- set base_key = config.base_url | trim_end(pat="/") -%}
+{%- set page_key = permalink | trim_end(pat="/") -%}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -24,35 +22,35 @@
     {
       "@type": "ListItem",
       "position": 1,
-      "name": {{ ldjson::str(value=config.title) }},
-      "item": {{ ldjson::str(value=config.base_url) }}
+      "name": {{ <typikon.ldjson.str value={config.title} /> }},
+      "item": {{ <typikon.ldjson.str value={config.base_url} /> }}
     }
     {%- set position = 2 -%}
     {%- set_global seen = [base_key] -%}
     {%- for ancestor_path in ancestors -%}
-      {%- set ancestor = get_section(path=ancestor_path) -%}
+      {%- set ancestor = get_section(path=ancestor_path, lang=lang) -%}
       {%- if ancestor.title and ancestor.permalink -%}
-        {%- set ancestor_key = ancestor.permalink | trim_end_matches(pat="/") -%}
+        {%- set ancestor_key = ancestor.permalink | trim_end(pat="/") -%}
         {%- if not ancestor_key in seen and ancestor_key != page_key -%},
     {
       "@type": "ListItem",
       "position": {{ position }},
-      "name": {{ ldjson::str(value=ancestor.title) }},
-      "item": {{ ldjson::str(value=ancestor.permalink) }}
+      "name": {{ <typikon.ldjson.str value={ancestor.title} /> }},
+      "item": {{ <typikon.ldjson.str value={ancestor.permalink} /> }}
     }
         {%- set_global position = position + 1 -%}
-        {%- set_global seen = seen | concat(with=ancestor_key) -%}
+        {%- set_global seen = [...seen, ancestor_key] -%}
         {%- endif -%}
       {%- endif -%}
     {%- endfor -%},
     {
       "@type": "ListItem",
       "position": {{ position }},
-      "name": {{ ldjson::str(value=title) }},
-      "item": {{ ldjson::str(value=permalink) }}
+      "name": {{ <typikon.ldjson.str value={title} /> }},
+      "item": {{ <typikon.ldjson.str value={permalink} /> }}
     }
   ]
 }
 </script>
 {%- endif %}
-{% endmacro breadcrumb %}
+{% endcomponent %}

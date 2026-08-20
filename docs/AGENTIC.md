@@ -170,6 +170,35 @@ For a structural change (template, schema, primitive):
 7. on merge: run migration against each consumer, open consumer-side PRs
 ```
 
+### Zola and Tera compatibility boundary
+
+Typikon pins Zola 0.23.3 in `bin/typikon-defaults.sh`; `theme.toml` declares the
+same minimum and the generated CI templates install the matching, hash-verified
+release artifact. Zola 0.23 moved the renderer to Tera 2, so consumer template
+overrides must migrate with the submodule instead of treating the update as an
+isolated version change.
+
+- Define reusable template behavior with a collision-resistant dotted name such
+  as `{% component typikon.assert.required(...) %}` and call it with
+  `{{ <typikon.assert.required ... /> }}`. Components are global and a consumer
+  template can otherwise replace a theme component of the same name silently.
+  Tera 1 `{% macro %}`, `{% import %}`, and `name::call()` syntax is invalid.
+- A component receives only its declared arguments (plus registered functions and
+  filters). Pass `config`, `page`, `section`, or any narrower value explicitly when
+  the component needs it. Do not rely on the caller's ambient template context.
+- Zola 0.23 removed shortcodes. Convert consumer shortcodes to Tera 2 components and
+  update every content call before raising the Zola pin.
+- Replace removed Tera 1 collection filters with Tera 2 expressions such as array
+  spread or slicing, and pass test arguments by keyword (`is matching(pat="...")`).
+
+`ci/check-tera2-contract.py` rejects the known old dialect and proves that the
+theme minimum, Typikon's own gate, generated consumer gates, and artifact hashes
+remain coherent. `ci/check-tera2-rendering.py` builds isolated multilingual and
+author-less fixtures to prove component context, fallbacks, and array-spread
+behavior. The public GitHub fixture gate is still the renderer authority: the
+static check cannot establish that a template compiles or that rendered bytes
+preserve their contract.
+
 ## Starting a new typikon-consuming site
 
 When a new fleet site enters the family, do not fork or copy. Consume the substrate.
@@ -199,9 +228,9 @@ The substrate is design-family neutral. Brand-specific values go in `config.toml
 | `[extra.author]`            | atom feed `<author>` + JSON-LD Article author |
 | `consumer_css`              | list of stylesheet paths, each `<link>`ed after core's own `style.css`, in order (`templates/base.html`'s Consumer stylesheet hook) |
 
-If a brand needs a *visual* override beyond the table above (different scale ratio, different color palette, different type pairing), declare it via `consumer_css` and redeclare the relevant `:root` custom properties in that file. Core's own interactive-state CSS (nav hover, buttons, the home triad mark, FAQ anchors, ...) never hard-codes a hue — it resolves through four semantic tokens, `--accent-1` through `--accent-4`, which default to a neutral `--text-mid` and exist solely for a skin to redeclare. `static/css/skins/leather.css` is the first-party example: it maps those four tokens to Ardent Leatherworks' dye palette and carries that brand's own content-authoring classes (`.dye-entry-*`, `.swatch-*`, `.dye-marks`) — copy its shape, not its colors, for a new skin. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
+If a brand needs a *visual* override beyond the table above (different scale ratio, different color palette, different type pairing), declare it via `consumer_css` and redeclare the relevant `:root` custom properties in that file. Core's own interactive-state CSS never hard-codes a hue. Nav hover, buttons, the home triad mark, FAQ anchors, and similar surfaces resolve through four semantic tokens: `--accent-1` through `--accent-4`. Those tokens default to a neutral `--text-mid` and exist solely for a skin to redeclare. `static/css/skins/leather.css` is the first-party example: it maps those four tokens to Ardent Leatherworks' dye palette and carries that brand's own content-authoring classes (`.dye-entry-*`, `.swatch-*`, `.dye-marks`) — copy its shape, not its colors, for a new skin. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
 
-Beyond styles, `templates/base.html`'s own header comment documents the full design/extension surface (forkwright/typikon#55): a `{% block %}` for head metadata, nav, footer, structured data (JSON-LD), scripts, and page composition, each with a sane default a consumer only overrides when it needs to. A consumer template extends `base.html` and overrides just the block(s) it needs — it does not need to copy the whole file to add a stylesheet, a nav item, or a JSON-LD field.
+Beyond styles, `templates/base.html`'s own header comment documents the full design/extension surface (forkwright/typikon#55). It provides a `{% block %}` for head metadata, nav, footer, structured data (JSON-LD), scripts, and page composition. Each has a sane default that a consumer overrides only when needed. A consumer template extends `base.html` and overrides just the block(s) it needs — it does not need to copy the whole file to add a stylesheet, a nav item, or a JSON-LD field.
 
 ### 3. When to extend typikon vs. override locally
 

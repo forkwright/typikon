@@ -40,7 +40,7 @@
 # sibling files or operator-authored follow-up commits.
 #
 # Environment:
-#     TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.22.1, mirroring
+#     TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.23.3, mirroring
 #                            typikon-init's default)
 #     TYPIKON_PROJECT_NAME   override the auto-derived consumer project
 #                            slug (default: parsed from `git config --get
@@ -64,7 +64,7 @@ re-renders the substituted templates against your consumer config,
 stages the changes, and prints a summary. Does NOT commit.
 
 Environment:
-    TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.22.1)
+    TYPIKON_ZOLA_VERSION   pinned Zola version (default: 0.23.3)
     TYPIKON_PROJECT_NAME   override consumer project slug
                            (default: derived from git origin URL)
 EOF

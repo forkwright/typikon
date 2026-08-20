@@ -8,7 +8,7 @@ index.html's own version of this guard already has a dedicated fixture
 the same two failure modes for the rest of the family — journal-entry.html,
 faq.html, sizing-guide.html, journal-section.html, page.html, and
 section.html — one authoritative `<h1>` sourced from front matter
-(page.title / section.title), guarded by the shared `assert::no_h1` macro
+(page.title / section.title), guarded by the shared `typikon.assert.no_h1` component
 against a markdown body supplying a competing one:
 
 - page.html and section.html previously rendered NO heading of their own
@@ -90,13 +90,13 @@ H1_RE = re.compile(r"<h1[ >]", re.IGNORECASE)
 
 @dataclass(frozen=True)
 class ContentTemplate:
-    template: str  # exact string this theme's `template` frontmatter field + assert::*(template=...) use
+    template: str  # exact string this theme's `template` frontmatter field + typikon.assert.*(template=...) use
     is_section: bool  # section (_index.md under a subdirectory) vs. leaf page (.md)
-    frontmatter_extra: str  # TOML fragment satisfying this template's own assert::required calls
+    frontmatter_extra: str  # TOML fragment satisfying this template's own typikon.assert.required calls
 
 
 # WHY these minimal shapes and no more: each satisfies exactly the
-# assert::required calls its own template makes (verified by reading
+# typikon.assert.required calls its own template makes (verified by reading
 # templates/*.html directly), so a build failure here can only mean the
 # heading behavior under test, never an unrelated missing field.
 CASES = [
