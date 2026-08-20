@@ -42,7 +42,11 @@
    (asserted in the title/og_title blocks above), so sourcing the heading
    from it is a guarantee, not a convention. -#}
 {{ <typikon.assert.required ok={page.title is defined and page.title} field="page.title" template="page.html" /> }}
+{%- if page.extra.greek %}
+<h1 data-greek="{{ page.extra.greek }}"><span>{{ page.title }}</span></h1>
+{%- else %}
 <h1>{{ page.title }}</h1>
+{%- endif %}
 {# Product gallery renders before page content when extra.images is set —
    the operator drops the placeholder <div class="product-images"> from
    markdown when photos arrive and the gallery takes its visual slot. #}

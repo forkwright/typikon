@@ -81,6 +81,10 @@
           "type": "string",
           "description": "Override the brand author for this page. Falls back to config.extra.author.name."
         },
+        "greek": {
+          "type": "string",
+          "description": "Qualified Greek metadata carried by the template-owned page heading."
+        },
         "audience": {
           "type": "string",
           "minLength": 3,

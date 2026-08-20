@@ -63,6 +63,7 @@ Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed 
 4. **Run the gate.** `bin/typikon-check` runs the full CI sequence locally. If it fails, fix; do not push to bypass.
 5. **No inline scripts or styles.** Anywhere. The CSP gate enforces this. Extract to `static/js/` or `static/css/`.
 6. **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema; don't fork the theme.
+7. **Owned headings carry qualified metadata.** Default page and section H1s consume typed `extra.greek`; consumers do not hand-author a replacement H1 to attach that metadata.
 
 ## Boundaries
 

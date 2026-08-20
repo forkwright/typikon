@@ -43,6 +43,14 @@ decision = "Custom templates register in schemas/registry.toml against a consume
 consequences = "Every content type's frontmatter is fully typed and closed, typikon-owned or consumer-owned alike; an invented field fails at validate time, not at render time."
 
 [[decision]]
+id = "D-qualified-heading-metadata"
+title = "Carry qualified metadata on substrate-owned headings"
+status = "accepted"
+context = "Consumers needed qualified Greek text on a page or section title but a hand-authored H1 collides with Typikon's single-heading contract."
+decision = "Type extra.greek in the page and section cores and render it as data-greek on the default template's sole H1."
+consequences = "Consumers preserve qualified heading metadata without shadow templates or duplicate headings."
+
+[[decision]]
 id = "D-strict-csp"
 title = "Enforce strict CSP"
 status = "accepted"

@@ -68,6 +68,7 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Never bypass the CI gate.** No `--no-verify`, no `[skip ci]`, no commit on green failure.
 - **Schema changes are migrations.** Ship a `bin/` migration for incompatible transformations that can preserve truth. A newly required provenance value is the explicit exception: name every blocked consumer, then author the source or intentionally remove the gated fact in a consumer PR; never synthesize provenance.
 - **Schemas and primitives change in typikon, not in consumers.** When two consumer sites disagree on a primitive, parameterize the schema here; do not fork the theme.
+- **Owned headings carry qualified metadata.** Default page and section H1s consume typed `extra.greek`; consumers do not hand-author a replacement H1 to attach that metadata.
 
 ## Dispatch entry points
 

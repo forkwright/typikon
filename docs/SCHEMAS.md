@@ -90,7 +90,7 @@ Top-level pages and section children that aren't journal entries or products. Bu
 
 **Optional core:** `description`, `date`, `updated`, `path`, `template`, `weight`, `draft`, `include_in_feeds`.
 
-**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `audience`, `price`, `price_source`, `stripe_url`, paired `availability`/`availability_source`, and paired `shipping_note`/`shipping_source`.
+**Optional `[extra]`:** `seo_title`, `body_class`, `og_image`, `og_type`, `greek` (qualified alternate-language text carried by the owned H1), `audience`, `price`, `price_source`, `stripe_url`, paired `availability`/`availability_source`, and paired `shipping_note`/`shipping_source`.
 
 **Constraints:**
 - title: ≤80 chars

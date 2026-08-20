@@ -10,7 +10,7 @@ A typikon does not contain the service. It governs how the site enacts the servi
 
 Optimized for agentic operation. Humans should not need to develop here. The substrate ships:
 
-- **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal.
+- **Templates** (`templates/`) - Zola 0.23/Tera 2 templates for base, page, section, journal; default page and section headings preserve qualified `extra.greek` metadata.
 - **Schemas** (`schemas/`) - JSON Schema for every content type. Frontmatter must validate before commit.
 - **Fail-closed commerce** - catalog prices may render without readiness. Checkout and Offer URLs require sourced purchasable availability, and shipping claims require their own source.
 - **Binaries** (`bin/`) - `typikon-init` (scaffolds a consumer site's content and config inline, no separate template directory), `typikon-validate`, `typikon-check`, `typikon-refresh`, `typikon-migrate-template` (skeleton for schema-migration scripts). Idempotent CLIs with JSONL output where applicable.

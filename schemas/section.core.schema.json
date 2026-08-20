@@ -38,7 +38,7 @@
         },
         "greek": {
           "type": "string",
-          "description": "Greek heading attribute (data-greek on <h1>) for the design family's hover pattern."
+          "description": "Qualified Greek metadata carried by the template-owned section heading."
         },
         "body_class": {
           "type": "string",

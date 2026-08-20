@@ -9,8 +9,12 @@ source_docs = [
 
 [state]
 summary = "Typikon is the active fleet Zola 0.23/Tera 2 theme, schema, scaffolding, and gate substrate, consumed by ardent-site and ardent-tools-site through the themes/typikon submodule."
-current_phase = "Zola 0.23.3/Tera 2 substrate active; root-feed ownership and product checkout now fail closed on their typed source contracts."
+current_phase = "Zola 0.23.3/Tera 2 substrate active; feeds, sale readiness, and qualified headings are bound to typed source contracts."
 updated = "2026-08-20"
+
+[[recent]]
+date = "2026-08-20"
+item = "Typed qualified Greek metadata for default page and section headings so consumers retain one substrate-owned H1."
 
 [[recent]]
 date = "2026-08-20"
