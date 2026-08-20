@@ -53,7 +53,7 @@ See `docs/AGENTIC.md` for the agent contract, `docs/SCHEMAS.md` for the frontmat
 
 ## License
 
-AGPL-3.0-or-later. See LICENSE and NOTICE.
+PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). See LICENSE and NOTICE.
 
 Self-hosted fonts under `static/fonts/` are OFL-1.1. See NOTICE for attributions.
 
