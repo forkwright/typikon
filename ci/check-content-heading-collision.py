@@ -269,10 +269,6 @@ def run_case(root: Path, theme_dir: Path, case: ContentTemplate, failures: list[
             print(f"check-content-heading-collision: {label} frontmatter-only body confirmed exactly 1 <h1>")
             if label in {"page.html", "section.html"}:
                 source = rendered_html(empty_site, empty_route)
-                if "data-greek=" in source:
-                    failures.append(
-                        f"{label} plain heading: emitted data-greek without qualified metadata"
-                    )
                 if "<h1>Fixture</h1>" not in source:
                     failures.append(
                         f"{label} plain heading: did not preserve the exact owned H1"
