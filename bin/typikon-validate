@@ -81,9 +81,15 @@ try:
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT202012
-except ImportError:
+except ImportError as exc:
+    missing = exc.name or "unknown"
     print(
-        json.dumps({"error": "jsonschema package required (pip install jsonschema)"}),
+        json.dumps(
+            {
+                "error": f"Python dependency unavailable: {missing}",
+                "requirements": "ci/consumer-python-requirements.lock",
+            }
+        ),
         file=sys.stderr,
     )
     sys.exit(2)

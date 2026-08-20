@@ -41,6 +41,14 @@ bin/typikon-validate <consumer-site-root>
 
 Runs every content file in the consumer site against its appropriate schema. Output is JSONL on stderr. Exit 0 = all valid, exit 1 = any failure.
 
+Generated GitHub gates select the reviewed Python 3.12.14 action runtime before
+installing `themes/typikon/ci/consumer-python-requirements.lock` with hash
+checking. The forge pipeline installs that same lock into an isolated virtual
+environment. Do not replace either path with a floating `pip install --user`:
+runner images can carry an older `jsonschema` without the separately imported
+`referencing` package, and an unconstrained install can treat that incomplete
+runtime as satisfied.
+
 JSONL line shape:
 
 ```json

@@ -115,7 +115,11 @@ jobs:
         # through it, and without it check-font-coverage.py fails at import with
         # 'No module named brotli' — which passed locally, where it was already
         # installed, and failed only in CI.
-        python3 -m pip install --user jsonschema==4.23.0 fonttools==4.62.1 Brotli==1.2.0 PyYAML==6.0.3
+        python3 -m venv --clear .gate-python
+        .gate-python/bin/python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: --require-hashes -r ci/consumer-python-requirements.lock
+        .gate-python/bin/python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: fonttools==4.62.1 Brotli==1.2.0 PyYAML==6.0.3
+        .gate-python/bin/python -m pip check
+        .gate-python/bin/python -I -c 'from jsonschema import Draft202012Validator; from referencing import Registry, Resource; from referencing.jsonschema import DRAFT202012'
 
         LYCHEE_VERSION=0.24.2
         LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
@@ -128,7 +132,7 @@ jobs:
         sudo mv lychee-extract/lychee /usr/local/bin/
         rm -rf lychee.tar.gz lychee-extract
 
-        ci/run-fixtures.sh
+        PATH="$PWD/.gate-python/bin:$PATH" ci/run-fixtures.sh
       clippy_cmd: "true"
       nextest_cmd: "true"
       # WHY empty: no doctest concept outside a Cargo workspace.

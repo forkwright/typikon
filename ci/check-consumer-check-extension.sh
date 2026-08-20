@@ -115,6 +115,8 @@ CONSUMER="$WORK/consumer"
 mkdir -p "$FAKE_TYPIKON/ci" "$FAKE_TYPIKON/bin"
 cp "$GH_TMPL" "$FAKE_TYPIKON/ci/github-workflow.yml.tmpl"
 cp "$TOML_TMPL" "$FAKE_TYPIKON/ci/kanon-ci.toml.tmpl"
+cp "$ROOT/ci/consumer-python-requirements.in" "$FAKE_TYPIKON/ci/consumer-python-requirements.in"
+cp "$ROOT/ci/consumer-python-requirements.lock" "$FAKE_TYPIKON/ci/consumer-python-requirements.lock"
 cp "$ROOT/bin/typikon-refresh" "$FAKE_TYPIKON/bin/typikon-refresh"
 cp "$ROOT/bin/typikon-defaults.sh" "$FAKE_TYPIKON/bin/typikon-defaults.sh"
 chmod +x "$FAKE_TYPIKON/bin/typikon-refresh"
@@ -269,6 +271,14 @@ else
         || fail "rendered ${RENDERED_TOML} lost the 'consumer-checks' stages-array entry"
     grep -qF '[stages.consumer-checks]' "$RENDERED_TOML" \
         || fail "rendered ${RENDERED_TOML} lost the [stages.consumer-checks] block"
+fi
+
+if [[ -f "$RENDERED" && -f "$RENDERED_TOML" ]]; then
+    [[ -f "$CONSUMER/themes/typikon/ci/consumer-python-requirements.lock" ]] \
+        || fail "refreshed theme submodule lost the consumer Python dependency lock"
+    if ! python3 "$ROOT/ci/check-consumer-python-runtime.py" "$RENDERED" "$RENDERED_TOML" >/dev/null; then
+        fail "rendered consumer pipelines lost the locked Python runtime contract"
+    fi
 fi
 
 # ── Part 3 — GitHub: a failing consumer script fails the job, ─────────
