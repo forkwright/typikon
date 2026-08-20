@@ -121,12 +121,18 @@ def make_site(root: Path, scope: str | None) -> Path:
     notes = journal / "notes"
     products = site / "content" / "products"
     empty = site / "content" / "empty"
-    for directory in (notes, products, empty, site / "themes"):
+    for directory in (notes, products, empty, site / "themes", site / "templates"):
         directory.mkdir(parents=True, exist_ok=True)
     (site / "themes" / "typikon").symlink_to(THEME_ROOT, target_is_directory=True)
 
     files = {
         site / "config.toml": config_toml(scope),
+        site / "templates" / "taxonomy_list.html": (
+            "<!doctype html><title>Fixture taxonomy list</title>\n"
+        ),
+        site / "templates" / "taxonomy_single.html": (
+            "<!doctype html><title>Fixture taxonomy term</title>\n"
+        ),
         site / "content" / "_index.md": ROOT,
         journal / "_index.md": JOURNAL,
         journal / "beta.md": journal_entry("Beta", "2026-08-18", "Beta body.", tags=("proof",)),
