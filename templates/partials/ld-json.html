@@ -22,5 +22,5 @@
    this component instead of calling json_encode directly, so no future
    ld-*.html addition can reintroduce the gap by omission. #}
 {% component typikon.ldjson.str(value) -%}
-{{- value | json_encode | replace(from="/", to="\/") | safe -}}
+{{- value | json_encode | replace(from="/", to="\\/") | safe -}}
 {%- endcomponent %}

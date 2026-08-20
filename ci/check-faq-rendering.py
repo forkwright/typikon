@@ -104,9 +104,10 @@ def main(argv: list[str]) -> int:
         failures.append("no application/ld+json script block found on the FAQ page")
 
     saw_escaped_breakout = False
+    parsed_blocks = []
     for i, body in enumerate(ldjson_bodies):
         try:
-            json.loads(body)
+            parsed_blocks.append(json.loads(body))
         except json.JSONDecodeError as exc:
             failures.append(
                 f"application/ld+json block {i} is not valid JSON ({exc}) — an "
@@ -125,6 +126,39 @@ def main(argv: list[str]) -> int:
     # block.
     if not saw_escaped_breakout:
         failures.append("escaped '\\/script' not found in any valid JSON-LD block — fixture content missing")
+
+    # A second backslash in the rendered JSON would still leave a textual
+    # ``\\/script`` witness and valid JSON, but json.loads() would preserve a
+    # literal backslash and silently change the FAQ copy. Bind the escape to
+    # its semantic contract: the decoded values must equal the fixture's
+    # original slash-bearing strings exactly.
+    expected_pair = (
+        "What if a question contains </script> ?",
+        "It renders as inert text, both here and inside the FAQPage JSON-LD "
+        "block — </script> must never terminate the ld+json <script> element early.",
+    )
+    faq_pages = [
+        value
+        for value in parsed_blocks
+        if isinstance(value, dict) and value.get("@type") == "FAQPage"
+    ]
+    if len(faq_pages) != 1:
+        failures.append(f"expected one decoded FAQPage object, found {len(faq_pages)}")
+    else:
+        decoded_pairs = [
+            (
+                item.get("name"),
+                item.get("acceptedAnswer", {}).get("text"),
+            )
+            for item in faq_pages[0].get("mainEntity", [])
+            if isinstance(item, dict)
+            and isinstance(item.get("acceptedAnswer"), dict)
+        ]
+        if expected_pair not in decoded_pairs:
+            failures.append(
+                "script-breakout fixture did not round-trip through JSON-LD exactly — "
+                f"expected {expected_pair!r}, decoded {decoded_pairs!r}"
+            )
 
     if failures:
         for line in failures:
