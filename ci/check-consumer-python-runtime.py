@@ -20,7 +20,26 @@ REQUIREMENTS_LOCK = ROOT / "ci" / "consumer-python-requirements.lock"
 VALIDATOR = ROOT / "bin" / "typikon-validate"
 
 SETUP_PIN = "5fda3b95a4ea91299a34e894583c3862153e4b97"
-PYTHON_VERSION = "3.12.14"
+
+sys.path.insert(0, str(ROOT / "ci"))
+import toollock  # noqa: E402
+
+# Derived, not copied: the version this check expects and the version the
+# templates render are now the same fact read from one file.
+PYTHON_VERSION = toollock.by_name(toollock.load(ROOT / "ci" / "tool-lock.toml"))["python"].version
+
+
+def render_from_lock(path: Path) -> str:
+    """The template as a consumer receives it, with every placeholder resolved."""
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "ci" / "render-template.py"),
+         "--project-name", "fixture", str(path)],
+        capture_output=True, text=True, check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError(f"{path.name} does not render: {completed.stderr.strip()}")
+    return completed.stdout
+
 LOCK_PATH = "themes/typikon/ci/consumer-python-requirements.lock"
 IMPORT_PROBE = (
     "from jsonschema import Draft202012Validator; "
@@ -306,8 +325,13 @@ def main() -> int:
         return 2
     github_path = Path(sys.argv[1]) if len(sys.argv) == 3 else GITHUB_TEMPLATE
     kanon_path = Path(sys.argv[2]) if len(sys.argv) == 3 else KANON_TEMPLATE
-    github = github_path.read_text(encoding="utf-8")
-    kanon = kanon_path.read_text(encoding="utf-8")
+    # WHY rendered rather than raw: these two files are templates, and since
+    # forkwright/typikon#58 their pinned versions are {{ PLACEHOLDERS }} filled
+    # from ci/tool-lock.toml. Asserting against the raw text would check a
+    # placeholder rather than the pin a consumer actually receives, and the
+    # mutants below would mutate a name instead of a value.
+    github = render_from_lock(github_path)
+    kanon = render_from_lock(kanon_path)
     gate = GATE_WORKFLOW.read_text(encoding="utf-8")
     input_source = REQUIREMENTS_IN.read_text(encoding="utf-8")
     lock_source = REQUIREMENTS_LOCK.read_text(encoding="utf-8")

@@ -2,7 +2,19 @@
   "schema_version": 1,
   "components": [
     {
-      "name": "Zola",
+      "name": "lychee",
+      "version": "0.24.2",
+      "purl": "pkg:github/lycheeverse/lychee@0.24.2?arch=x86_64&os=linux",
+      "scope": "required",
+      "license": "Apache-2.0 OR MIT",
+      "hash": {
+        "kind": "external-distribution",
+        "url": "https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
+      }
+    },
+    {
+      "name": "zola",
       "version": "0.23.3",
       "purl": "pkg:github/getzola/zola@0.23.3?arch=x86_64&os=linux",
       "scope": "required",
@@ -11,6 +23,28 @@
         "kind": "external-distribution",
         "url": "https://github.com/getzola/zola/releases/download/v0.23.3/zola-v0.23.3-x86_64-unknown-linux-gnu.tar.gz",
         "sha256": "f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958"
+      }
+    },
+    {
+      "name": "@playwright/test",
+      "version": "1.61.1",
+      "purl": "pkg:npm/%40playwright/test@1.61.1",
+      "scope": "required",
+      "license": "Apache-2.0",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "npm"
+      }
+    },
+    {
+      "name": "Brotli",
+      "version": "1.2.0",
+      "purl": "pkg:pypi/brotli@1.2.0",
+      "scope": "required",
+      "license": "MIT",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "pypi"
       }
     },
     {
@@ -36,6 +70,17 @@
       }
     },
     {
+      "name": "fonttools",
+      "version": "4.62.1",
+      "purl": "pkg:pypi/fonttools@4.62.1",
+      "scope": "required",
+      "license": "MIT",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "pypi"
+      }
+    },
+    {
       "name": "IBM Plex Mono 400 WOFF2",
       "version": "2.004",
       "purl": "pkg:generic/ibm-plex-mono@2.004?file_name=ibm-plex-mono-400.woff2",
@@ -55,6 +100,50 @@
       "hash": {
         "kind": "repository-file",
         "path": "static/fonts/ibm-plex-mono-500.woff2"
+      }
+    },
+    {
+      "name": "node",
+      "version": "22",
+      "purl": "pkg:generic/node@22",
+      "scope": "required",
+      "license": "MIT",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "actions-toolcache"
+      }
+    },
+    {
+      "name": "pa11y-ci",
+      "version": "4.1.1",
+      "purl": "pkg:npm/pa11y-ci@4.1.1",
+      "scope": "required",
+      "license": "LGPL-3.0-only",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "npm"
+      }
+    },
+    {
+      "name": "python",
+      "version": "3.12.14",
+      "purl": "pkg:generic/python@3.12.14",
+      "scope": "required",
+      "license": "PSF-2.0",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "actions-toolcache"
+      }
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "purl": "pkg:pypi/pyyaml@6.0.3",
+      "scope": "required",
+      "license": "MIT",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "pypi"
       }
     },
     {
@@ -99,6 +188,17 @@
       "hash": {
         "kind": "repository-file",
         "path": "static/fonts/spectral-500.woff2"
+      }
+    },
+    {
+      "name": "wrangler",
+      "version": "4.112.0",
+      "purl": "pkg:npm/wrangler@4.112.0",
+      "scope": "required",
+      "license": "MIT OR Apache-2.0",
+      "hash": {
+        "kind": "registry-version-pin",
+        "registry": "npm"
       }
     }
   ]

@@ -250,12 +250,19 @@ fi
 # pipefail, and a grep that matches nothing exits non-zero — which would abort
 # the whole check silently, turning a hardening step into a no-op.
 node_major="$(grep -oE "node-version: '[0-9]+'" "$TMPL" 2>/dev/null | head -1 | grep -oE '[0-9]+' || true)"
+if [[ -z "$node_major" ]]; then
+    # An unrendered template carries {{ NODE_MAJOR }}; resolve it from the lock
+    # rather than from a second copy of the answer.
+    node_major="$(python3 "$(dirname "$0")/toollock.py" --get NODE_MAJOR 2>/dev/null || true)"
+fi
 wrangler_pin="$(grep -oE 'wrangler@[0-9]+\.[0-9]+\.[0-9]+' "$TMPL" 2>/dev/null | head -1 | cut -d@ -f2 || true)"
 if [[ -z "$wrangler_pin" ]]; then
     # The template carries a {{ WRANGLER_VERSION }} placeholder; a rendered
-    # instance carries the literal. Resolve the placeholder from the defaults.
-    defaults="$(dirname "$0")/../bin/typikon-defaults.sh"
-    wrangler_pin="$(grep -oE 'WRANGLER_VERSION:=[0-9.]+' "$defaults" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+    # instance carries the literal. Resolve the placeholder from ci/tool-lock.toml,
+    # which is where the version is written (forkwright/typikon#58) --
+    # bin/typikon-defaults.sh now derives from it and grepping that file would
+    # read a copy of the answer.
+    wrangler_pin="$(python3 "$(dirname "$0")/toollock.py" --get WRANGLER_VERSION 2>/dev/null || true)"
 fi
 if [[ -n "$node_major" && -n "$wrangler_pin" ]]; then
     floor="$(curl -fsS --max-time 10 "https://registry.npmjs.org/wrangler/${wrangler_pin}" 2>/dev/null \

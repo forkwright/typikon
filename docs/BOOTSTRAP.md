@@ -16,8 +16,8 @@ Environment overrides:
 |-----|---------|---------|
 | `TYPIKON_THEME_REPO` | `http://127.0.0.1:7878/forkwright/typikon.git` | forge URL for the `themes/typikon` submodule |
 | `TYPIKON_THEME_REPO_GH` | `git@github.com:forkwright/typikon.git` | GitHub remote URL |
-| `TYPIKON_ZOLA_VERSION` | value in `bin/typikon-defaults.sh` | Zola version substituted into CI templates |
-| `TYPIKON_WRANGLER_VERSION` | value in `bin/typikon-defaults.sh` | wrangler version substituted into CI templates |
+| `TYPIKON_ZOLA_VERSION` | the `zola` entry in `ci/tool-lock.toml` | must equal the locked version, or the run is refused (see below) |
+| `TYPIKON_WRANGLER_VERSION` | the `wrangler` entry in `ci/tool-lock.toml` | must equal the locked version, or the run is refused (see below) |
 
 Behavior:
 
@@ -46,8 +46,8 @@ Environment overrides:
 | Var | Default | Purpose |
 |-----|---------|---------|
 | `TYPIKON_PROJECT_NAME` | basename of `git config remote.origin.url`, `.git` suffix stripped | project slug substituted into CI templates |
-| `TYPIKON_ZOLA_VERSION` | value in `bin/typikon-defaults.sh` (shared with `typikon-init`) | Zola version substituted into CI templates |
-| `TYPIKON_WRANGLER_VERSION` | value in `bin/typikon-defaults.sh` (shared with `typikon-init`) | wrangler version substituted into CI templates |
+| `TYPIKON_ZOLA_VERSION` | the `zola` entry in `ci/tool-lock.toml` (shared with `typikon-init`) | must equal the locked version, or the run is refused (see below) |
+| `TYPIKON_WRANGLER_VERSION` | the `wrangler` entry in `ci/tool-lock.toml` (shared with `typikon-init`) | must equal the locked version, or the run is refused (see below) |
 
 Behavior:
 
@@ -59,6 +59,29 @@ Behavior:
 6. Print a summary (submodule SHA before/after, `PROJECT_NAME`, `ZOLA_VERSION`, what it rendered or skipped) and the staged diffstat.
 
 `typikon-refresh` never commits — it stages and prints a suggested commit message. The operator or agent reviews `git diff --cached` and authors the commit. Idempotent: re-running with no upstream change is a no-op (the re-render is byte-identical, so nothing new gets staged beyond what's already there).
+
+
+### Changing a pinned tool version
+
+`TYPIKON_ZOLA_VERSION` and `TYPIKON_WRANGLER_VERSION` no longer select a version. They are accepted
+only when they match `ci/tool-lock.toml`, and a divergent value aborts the run.
+
+That is deliberate rather than a restriction for its own sake. A version and its integrity value are
+one fact, and an environment variable can carry only half of it: the old behaviour changed the
+download URL while leaving the checksum describing the previous release, which fails the install at
+best and, once someone "fixes" the mismatch by hand, leaves a checksum that no longer guards
+anything. The variables are kept so that a caller passing the current value is not broken, and so
+that a caller passing a different one gets an error naming the right file instead of a confusing
+checksum failure several minutes later.
+
+To change a version, edit `ci/tool-lock.toml` — `version` and `sha256` together — and prove the pair
+against the real artifact:
+
+```
+python3 ci/render-template.py --verify-upstream
+```
+
+Every generated CI surface renders from that file, so there is nothing else to update.
 
 ## Schema migrations
 

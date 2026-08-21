@@ -11,6 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import toollock  # noqa: E402
+
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -110,6 +113,12 @@ def build(root: Path) -> dict[str, object]:
             "run_attempt": int(required_env("GITHUB_RUN_ATTEMPT")),
             "event": "pull_request",
         },
+        # WHY the receipt records versions rather than pointing at the lock:
+        # a receipt is evidence about one run, and a pointer to a mutable file
+        # tells a later reader what the lock says NOW, not what this run used.
+        # forkwright/typikon#58 requires the resolved versions be recorded, and
+        # this is the difference between a receipt and a reference.
+        "tools": toollock.resolved_versions(toollock.load(Path(__file__).resolve().parent / "tool-lock.toml")),
     }
     for value in (
         receipt["consumer"]["base_commit"],

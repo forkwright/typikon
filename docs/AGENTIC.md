@@ -180,9 +180,11 @@ For a structural change (template, schema, primitive):
 
 ### Zola and Tera compatibility boundary
 
-Typikon pins Zola 0.23.3 in `bin/typikon-defaults.sh`; `theme.toml` declares the
-same minimum and the generated CI templates install the matching, hash-verified
-release artifact. Zola 0.23 moved the renderer to Tera 2, so consumer template
+Typikon pins Zola in `ci/tool-lock.toml`, where its version and the SHA-256 of the
+release artifact are one record; `bin/typikon-defaults.sh` and every generated CI
+surface read it from there, and `theme.toml` declares the same minimum. Because
+the version and the checksum are rendered from one entry, bumping one without the
+other is not something the templates can express. Zola 0.23 moved the renderer to Tera 2, so consumer template
 overrides must migrate with the submodule instead of treating the update as an
 isolated version change.
 

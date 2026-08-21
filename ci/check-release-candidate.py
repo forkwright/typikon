@@ -369,23 +369,39 @@ def main() -> int:
 
     candidate.ROOT = SCRIPT.parent.parent
     candidate.component_inventory = blocked_inventory
+
+    # The inventory block used to be unconditional, standing in for the whole of
+    # forkwright/typikon#58. It is now conditional on the thing it stood for, so
+    # this asserts the condition rather than the constant: an inventory missing a
+    # locked tool must still refuse to build a candidate. A test that only proved
+    # "it raises" would keep passing after the raise stopped meaning anything.
+    real_inventory = candidate.validated_component_inventory()
+    locked = {tool.name for tool in candidate.toollock.load(candidate.LOCK_PATH)}
+    listed = {str(item["name"]) for item in real_inventory}
+    if not locked <= listed:
+        raise AssertionError(
+            f"release inventory omits locked tool(s) {sorted(locked - listed)}"
+        )
+
+    victim = sorted(locked)[0]
+    original = candidate.validated_component_inventory
+    candidate.validated_component_inventory = lambda: [
+        item for item in real_inventory if item["name"] != victim
+    ]
     try:
         candidate.component_inventory()
     except candidate.CandidateError as exc:
-        if "forkwright/typikon#58" not in str(exc):
-            raise
+        if victim not in str(exc):
+            raise AssertionError(f"incomplete-inventory refusal did not name {victim}: {exc}")
     else:
-        raise AssertionError("current incomplete release dependency graph did not block")
+        raise AssertionError("an inventory missing a locked tool did not block the candidate")
+    finally:
+        candidate.validated_component_inventory = original
 
-    real_inventory = candidate.validated_component_inventory()
-    if len(real_inventory) != 9:
-        raise AssertionError(
-            f"real release inventory must contain Zola plus eight fonts, found {len(real_inventory)}"
-        )
-    if [item["name"] for item in real_inventory].count("Zola") != 1:
-        raise AssertionError("real release inventory does not contain exactly one Zola")
+    if candidate.component_inventory() != real_inventory:
+        raise AssertionError("the complete inventory no longer builds a candidate")
 
-    print("check-release-candidate: ok (stale bytes and impure commit rejected)")
+    print("check-release-candidate: ok (stale bytes, impure commit, and an SBOM missing a locked tool rejected)")
     return 0
 
 

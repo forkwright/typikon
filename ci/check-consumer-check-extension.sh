@@ -119,6 +119,11 @@ cp "$ROOT/ci/consumer-python-requirements.in" "$FAKE_TYPIKON/ci/consumer-python-
 cp "$ROOT/ci/consumer-python-requirements.lock" "$FAKE_TYPIKON/ci/consumer-python-requirements.lock"
 cp "$ROOT/bin/typikon-refresh" "$FAKE_TYPIKON/bin/typikon-refresh"
 cp "$ROOT/bin/typikon-defaults.sh" "$FAKE_TYPIKON/bin/typikon-defaults.sh"
+# The render path reads ci/tool-lock.toml through ci/toollock.py, so a fake
+# typikon root that omits them cannot render at all (forkwright/typikon#58).
+cp "$ROOT/ci/tool-lock.toml" "$FAKE_TYPIKON/ci/tool-lock.toml"
+cp "$ROOT/ci/toollock.py" "$FAKE_TYPIKON/ci/toollock.py"
+cp "$ROOT/ci/render-template.py" "$FAKE_TYPIKON/ci/render-template.py"
 chmod +x "$FAKE_TYPIKON/bin/typikon-refresh"
 echo 'name = "fake-typikon"' > "$FAKE_TYPIKON/theme.toml"
 

@@ -73,9 +73,12 @@ def check_pattern_witnesses() -> list[str]:
 def check_pin_coherence() -> list[str]:
     failures: list[str] = []
     try:
+        # WHY the lock rather than bin/typikon-defaults.sh: that file now
+        # DERIVES its value from ci/tool-lock.toml (forkwright/typikon#58), so
+        # grepping it would read a copy of the answer instead of the answer.
         default = first_match(
-            r'ZOLA_VERSION:=([0-9]+\.[0-9]+\.[0-9]+)',
-            ROOT / "bin" / "typikon-defaults.sh",
+            r'^version = "([0-9]+\.[0-9]+\.[0-9]+)"$',
+            ROOT / "ci" / "tool-lock.toml",
         )
         own_gate = first_match(
             r"^\s*ZOLA_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$",
@@ -90,31 +93,34 @@ def check_pin_coherence() -> list[str]:
 
     if version_tuple(default) < (0, 23, 0):
         failures.append(
-            f"bin/typikon-defaults.sh: Zola {default} predates the Tera 2 runtime"
+            f"ci/tool-lock.toml: Zola {default} predates the Tera 2 runtime"
         )
     if own_gate != default:
         failures.append(
-            f".github/workflows/gate-attestation.yml pins {own_gate}, default is {default}"
+            f".github/workflows/gate-attestation.yml pins {own_gate}, the lock says {default}"
         )
     if minimum != default:
-        failures.append(f"theme.toml min_version is {minimum}, default is {default}")
+        failures.append(f"theme.toml min_version is {minimum}, the lock says {default}")
 
-    hash_paths = [
-        ROOT / ".github" / "workflows" / "gate-attestation.yml",
-        ROOT / "ci" / "github-workflow.yml.tmpl",
-        ROOT / "ci" / "kanon-ci.toml.tmpl",
-    ]
-    hashes: list[tuple[Path, str]] = []
-    for path in hash_paths:
-        text = path.read_text(encoding="utf-8")
-        match = re.search(r"ZOLA_SHA256(?::|=)\s*([0-9a-f]{64})", text)
-        if not match:
-            failures.append(f"{path.relative_to(ROOT)}: missing 64-hex ZOLA_SHA256")
-            continue
-        hashes.append((path, match.group(1)))
-    if len({value for _, value in hashes}) > 1:
-        detail = ", ".join(f"{path.relative_to(ROOT)}={value}" for path, value in hashes)
-        failures.append(f"Zola artifact hashes disagree: {detail}")
+    # WHY this no longer compares copies of the hash across the templates:
+    # they no longer hold one. Both carry {{ ZOLA_SHA256 }} and are rendered
+    # from ci/tool-lock.toml, so "the copies agree" became unrepresentable
+    # rather than merely true -- which is the point of forkwright/typikon#58.
+    # What remains checkable is that the one surface which CANNOT be generated,
+    # typikon's own gate workflow, still matches the lock.
+    artifact_hash = first_match(r'^sha256 = "([0-9a-f]{64})"$', ROOT / "ci" / "tool-lock.toml")
+    own_gate_hash_path = ROOT / ".github" / "workflows" / "gate-attestation.yml"
+    own_gate_hash = re.search(
+        r"ZOLA_SHA256(?::|=)\s*([0-9a-f]{64})",
+        own_gate_hash_path.read_text(encoding="utf-8"),
+    )
+    if not own_gate_hash:
+        failures.append(f"{own_gate_hash_path.relative_to(ROOT)}: missing 64-hex ZOLA_SHA256")
+    elif own_gate_hash.group(1) != artifact_hash:
+        failures.append(
+            f"{own_gate_hash_path.relative_to(ROOT)} pins Zola sha256 "
+            f"{own_gate_hash.group(1)}, the lock says {artifact_hash}"
+        )
 
     try:
         inventory = json.loads(
@@ -123,12 +129,21 @@ def check_pin_coherence() -> list[str]:
     except (OSError, json.JSONDecodeError) as exc:
         failures.append(f"release/components.json: cannot read Zola inventory: {exc}")
     else:
-        artifact_hash = hashes[0][1] if hashes else ""
         failures.extend(check_inventory_zola_pin(inventory, default, artifact_hash))
 
+    # Both generated surfaces must carry the PLACEHOLDERS, not literals: a
+    # literal reintroduced here is a copy that can drift, which is exactly what
+    # the lock removed.
     for path in (ROOT / "ci" / "github-workflow.yml.tmpl", ROOT / "ci" / "kanon-ci.toml.tmpl"):
-        if "{{ ZOLA_VERSION }}" not in path.read_text(encoding="utf-8"):
-            failures.append(f"{path.relative_to(ROOT)}: missing canonical ZOLA_VERSION placeholder")
+        text = path.read_text(encoding="utf-8")
+        for placeholder in ("{{ ZOLA_VERSION }}", "{{ ZOLA_SHA256 }}"):
+            if placeholder not in text:
+                failures.append(f"{path.relative_to(ROOT)}: missing canonical {placeholder} placeholder")
+        if re.search(r"ZOLA_SHA256(?::|=)\s*[0-9a-f]{64}", text):
+            failures.append(
+                f"{path.relative_to(ROOT)}: carries a literal Zola sha256; it must render "
+                "from ci/tool-lock.toml so the version and the checksum cannot drift apart"
+            )
 
     return failures
 
@@ -143,10 +158,10 @@ def check_inventory_zola_pin(
     rows = [
         row
         for row in inventory["components"]
-        if isinstance(row, dict) and row.get("name") == "Zola"
+        if isinstance(row, dict) and row.get("name") == "zola"
     ]
     if len(rows) != 1:
-        return ["release/components.json: expected exactly one Zola component"]
+        return ["release/components.json: expected exactly one zola component"]
     row = rows[0]
     expected_url = (
         "https://github.com/getzola/zola/releases/download/"
@@ -180,13 +195,18 @@ def check_inventory_pin_witness() -> list[str]:
         return []
     mutated = copy.deepcopy(inventory)
     for row in mutated.get("components", []):
-        if isinstance(row, dict) and row.get("name") == "Zola":
+        if isinstance(row, dict) and row.get("name") == "zola":
             row.get("hash", {})["sha256"] = "0" * 64
-    if not check_inventory_zola_pin(
-        mutated,
-        "0.23.3",
-        "f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958",
-    ):
+    # WHY the expected pair is read from the lock rather than written here: a
+    # witness carrying its own copy of the version and digest is one more place
+    # the fact lives, and it would keep "proving" detection against a pair the
+    # repository no longer uses.
+    try:
+        version = first_match(r'^version = "([0-9]+\.[0-9]+\.[0-9]+)"$', ROOT / "ci" / "tool-lock.toml")
+        digest = first_match(r'^sha256 = "([0-9a-f]{64})"$', ROOT / "ci" / "tool-lock.toml")
+    except ValueError as exc:
+        return [f"cannot read the Zola pin from ci/tool-lock.toml: {exc}"]
+    if not check_inventory_zola_pin(mutated, version, digest):
         return ["internal Zola inventory detector accepted a drifted artifact digest"]
     return []
 

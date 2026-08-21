@@ -38,7 +38,7 @@ stages = [
 [stages.install-zola]
 cmd = """
 set -euo pipefail
-ZOLA_SHA256=f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958
+ZOLA_SHA256={{ ZOLA_SHA256 }}
 curl -L --proto '=https' --tlsv1.2 "https://github.com/getzola/zola/releases/download/v{{ ZOLA_VERSION }}/zola-v{{ ZOLA_VERSION }}-x86_64-unknown-linux-gnu.tar.gz" -o zola.tar.gz
 echo "${ZOLA_SHA256}  zola.tar.gz" | sha256sum -c
 tar -xzf zola.tar.gz
@@ -62,8 +62,8 @@ timeout_secs = 120
 [stages.setup-node-tooling]
 cmd = """
 set -euo pipefail
-LYCHEE_VERSION=0.24.2
-LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+LYCHEE_VERSION={{ LYCHEE_VERSION }}
+LYCHEE_SHA256={{ LYCHEE_SHA256 }}
 # NOT --ignore-scripts here, unlike the wrangler install below. pa11y-ci
 # depends on puppeteer, whose postinstall downloads the Chrome build that
 # pa11y-ci launches. Refusing scripts installs cleanly and even lets
@@ -74,7 +74,7 @@ LYCHEE_SHA256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
 # non-reproducible, and a browser-gate result is only meaningful if
 # the tool that produced it is known. Versions match what the fleet
 # consumer ardent-tools-site already locks in its package.json.
-npm install -g pa11y-ci@4.1.1 @playwright/test@1.61.1
+npm install -g pa11y-ci@{{ PA11Y_CI_VERSION }} @playwright/test@{{ PLAYWRIGHT_VERSION }}
 npx playwright install --with-deps chromium
 curl -L --proto '=https' --tlsv1.2 "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" -o lychee.tar.gz
 echo "${LYCHEE_SHA256}  lychee.tar.gz" | sha256sum -c

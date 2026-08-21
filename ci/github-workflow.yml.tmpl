@@ -65,7 +65,7 @@ jobs:
         env:
           # Pinned per typikon Stage 2a. Refresh when ZOLA_VERSION bumps via:
           #   curl -sL https://github.com/getzola/zola/releases/download/v<X>/zola-v<X>-x86_64-unknown-linux-gnu.tar.gz | sha256sum
-          ZOLA_SHA256: f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958
+          ZOLA_SHA256: {{ ZOLA_SHA256 }}
         run: |
           curl -L --proto '=https' --tlsv1.2 "https://github.com/getzola/zola/releases/download/v{{ ZOLA_VERSION }}/zola-v{{ ZOLA_VERSION }}-x86_64-unknown-linux-gnu.tar.gz" \
             -o zola.tar.gz
@@ -85,7 +85,7 @@ jobs:
         id: python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.12.14'
+          python-version: '{{ PYTHON_VERSION }}'
 
       - name: Install locked Python deps for typikon-validate
         # WHY 2: mirrors ci/kanon-ci.toml.tmpl's install-python-deps timeout_secs=120.
@@ -104,7 +104,7 @@ jobs:
           # wrangler 4.112.0 requires Node >=22; on 20 it refuses to run and the
           # deploy fails AFTER a green build, which reads as a deploy problem
           # rather than a version pairing. Raise both together or neither.
-          node-version: '22'
+          node-version: '{{ NODE_MAJOR }}'
           # setup-node v5 otherwise enables package-manager caching whenever a
           # consumer declares packageManager. Preserve this template's explicit
           # no-cache behavior; installs below are global and have no lockfile
@@ -120,8 +120,8 @@ jobs:
           # lychee pinned to a specific version (releases/latest is non-reproducible).
           # Refresh when LYCHEE_VERSION bumps via:
           #   curl -sL https://github.com/lycheeverse/lychee/releases/download/lychee-v<X>/lychee-x86_64-unknown-linux-gnu.tar.gz | sha256sum
-          LYCHEE_VERSION: 0.24.2
-          LYCHEE_SHA256: 1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+          LYCHEE_VERSION: {{ LYCHEE_VERSION }}
+          LYCHEE_SHA256: {{ LYCHEE_SHA256 }}
         run: |
           # NOT --ignore-scripts here, unlike the wrangler install below. pa11y-ci
           # depends on puppeteer, whose postinstall downloads the Chrome build that
@@ -133,7 +133,7 @@ jobs:
           # non-reproducible, and a browser-gate result is only meaningful if
           # the tool that produced it is known. Versions match what the fleet
           # consumer ardent-tools-site already locks in its package.json.
-          npm install -g pa11y-ci@4.1.1 @playwright/test@1.61.1
+          npm install -g pa11y-ci@{{ PA11Y_CI_VERSION }} @playwright/test@{{ PLAYWRIGHT_VERSION }}
           npx playwright install --with-deps chromium
           curl -L --proto '=https' --tlsv1.2 "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
             -o lychee.tar.gz
