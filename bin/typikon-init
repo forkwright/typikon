@@ -172,11 +172,10 @@ if [[ -e .github/workflows/deploy.yml ]]; then
 elif tracked_in_head ".github/workflows/deploy.yml"; then
     echo "skip   .github/workflows/deploy.yml (removed since the last scaffold commit; not recreated)" >&2
 else
-    sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
-        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
-        -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
-        "$TYPIKON_ROOT/ci/github-workflow.yml.tmpl" \
-        > .github/workflows/deploy.yml
+    python3 "$TYPIKON_ROOT/ci/render-template.py" \
+        --project-name "${SITE_NAME}" \
+        --output .github/workflows/deploy.yml \
+        "$TYPIKON_ROOT/ci/github-workflow.yml.tmpl"
     echo "create .github/workflows/deploy.yml (from ci/github-workflow.yml.tmpl)" >&2
     OWN_OUTPUTS+=(".github/workflows/deploy.yml")
 fi
@@ -186,11 +185,10 @@ if [[ -e .kanon-ci.toml ]]; then
 elif tracked_in_head ".kanon-ci.toml"; then
     echo "skip   .kanon-ci.toml (removed since the last scaffold commit; not recreated)" >&2
 else
-    sed -e "s|{{ PROJECT_NAME }}|${SITE_NAME}|g" \
-        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
-        -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
-        "$TYPIKON_ROOT/ci/kanon-ci.toml.tmpl" \
-        > .kanon-ci.toml
+    python3 "$TYPIKON_ROOT/ci/render-template.py" \
+        --project-name "${SITE_NAME}" \
+        --output .kanon-ci.toml \
+        "$TYPIKON_ROOT/ci/kanon-ci.toml.tmpl"
     echo "create .kanon-ci.toml (from ci/kanon-ci.toml.tmpl)" >&2
     OWN_OUTPUTS+=(".kanon-ci.toml")
 fi

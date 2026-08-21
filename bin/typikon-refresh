@@ -178,11 +178,17 @@ for spec in "${TMPL_TARGETS[@]}"; do
     fi
 
     mkdir -p "$(dirname "$dest_path")"
-    sed -e "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|g" \
-        -e "s|{{ ZOLA_VERSION }}|${ZOLA_VERSION}|g" \
-        -e "s|{{ WRANGLER_VERSION }}|${WRANGLER_VERSION}|g" \
-        "$src_path" \
-        > "$dest_path"
+    # WHY a renderer rather than the sed list this replaced: every
+    # substitution had to be spelled here AND identically in typikon-init, so
+    # adding a placeholder meant two edits that could disagree -- the same
+    # duplication forkwright/typikon#58 is about, one level up. The renderer
+    # derives its substitutions from ci/tool-lock.toml, and refuses to write a
+    # file still carrying an unresolved placeholder rather than emitting a
+    # literal brace sequence into a consumer's workflow.
+    python3 "$TYPIKON_ROOT/ci/render-template.py" \
+        --project-name "${PROJECT_NAME}" \
+        --output "$dest_path" \
+        "$src_path"
     RENDERED+=("$dest")
 done
 

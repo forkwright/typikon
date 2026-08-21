@@ -15,6 +15,11 @@ import sys
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import toollock  # noqa: E402
+
+LOCK_PATH = Path(__file__).resolve().parent / "tool-lock.toml"
+
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ".release-please-manifest.json"
 SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
@@ -217,6 +222,19 @@ def validated_component_inventory() -> list[dict[str, object]]:
                 raise CandidateError(f"{label} external distribution URL is invalid")
             component_type = "application"
             external_distributions += 1
+        elif kind == "registry-version-pin":
+            # WHY a kind with no digest rather than a placeholder hash: npm and
+            # PyPI expose no per-install integrity value a global install can be
+            # pinned to the way an archive checksum pins a download. Recording a
+            # zero or a re-hash of whatever arrived would be a hash in name only,
+            # and an SBOM that cannot be told apart from one carrying a real
+            # digest is worse than one that says plainly which is which.
+            if set(hash_source) != {"kind", "registry"}:
+                raise CandidateError(f"{label} registry pin source is invalid")
+            if hash_source["registry"] not in {"npm", "pypi", "actions-toolcache"}:
+                raise CandidateError(f"{label} has unknown registry {hash_source['registry']!r}")
+            digest = None
+            component_type = "library"
         else:
             raise CandidateError(f"{label} has unknown hash source {kind!r}")
         component = {
@@ -227,8 +245,9 @@ def validated_component_inventory() -> list[dict[str, object]]:
                 "scope": raw["scope"],
                 "purl": purl,
                 "licenses": [{"expression": raw["license"]}],
-                "hashes": [{"alg": "SHA-256", "content": digest}],
             }
+        if digest is not None:
+            component["hashes"] = [{"alg": "SHA-256", "content": digest}]
         if kind == "external-distribution":
             component["externalReferences"] = [
                 {
@@ -249,11 +268,26 @@ def validated_component_inventory() -> list[dict[str, object]]:
 
 
 def component_inventory() -> list[dict[str, object]]:
-    validated_component_inventory()
-    raise CandidateError(
-        "release SBOM dependency graph is incomplete; forkwright/typikon#58 "
-        "must lock every shipped CLI, gate, and deploy dependency before publication"
-    )
+    """The validated inventory, refused unless it covers every locked tool.
+
+    This used to raise unconditionally, citing forkwright/typikon#58: the SBOM
+    listed Zola and the fonts while wrangler, lychee, pa11y-ci, playwright,
+    Python and Node were absent, and a release must not claim a dependency
+    graph it does not have. The block is now conditional on the thing it was
+    standing in for -- ci/tool-lock.toml is the list of what must appear, so a
+    tool added there and forgotten here fails the candidate build rather than
+    shipping an inventory that is quietly short.
+    """
+    inventory = validated_component_inventory()
+    listed = {str(component["name"]) for component in inventory}
+    missing = [tool.name for tool in toollock.load(LOCK_PATH) if tool.name not in listed]
+    if missing:
+        raise CandidateError(
+            "release SBOM does not cover every locked tool; ci/tool-lock.toml "
+            f"declares {', '.join(sorted(missing))} and release/components.json omits "
+            "them. Every shipped CLI, gate, and deploy dependency must appear."
+        )
+    return inventory
 
 
 def iter_components(items: object):

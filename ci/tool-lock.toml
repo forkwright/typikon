@@ -1,0 +1,125 @@
+# tool-lock.toml — the one place a gate tool's version and its integrity value
+# are written (forkwright/typikon#58).
+#
+# ci/render-template.py is the sole reader for the generated surfaces: every
+# {{ PLACEHOLDER }} in ci/*.tmpl resolves from an entry below, so a tool added
+# here becomes available to both pipelines with no second edit. Surfaces that
+# are NOT generated -- .github/workflows/gate-attestation.yml, which is
+# typikon's own workflow rather than a rendered consumer artifact -- are held
+# to this file by ci/check-tool-lock.py instead.
+#
+# WHY version and integrity live in ONE record rather than two fields that
+# happen to sit near each other: the defect this file exists to kill is a
+# version bumped while its checksum is not. When both are read from the same
+# entry that is unrepresentable in a generated surface, and in the one surface
+# that cannot be generated it is a single comparison rather than an invitation
+# to keep four copies mutually consistent and collectively wrong.
+#
+# Bumping a tool: change `version` AND `sha256` together, then run
+# `python3 ci/render-template.py --verify-upstream` to prove the pair by
+# downloading the artifact and hashing it. That check is deliberately not part
+# of the ordinary gate -- it is network-bound and belongs to the act of
+# bumping, not to every run.
+
+schema_version = 1
+
+# ── Downloaded release archives ────────────────────────────────────────────
+# `sha256` is checked by the consuming stage with `sha256sum -c` before the
+# archive is unpacked. `url` carries {version} so the URL and the checksum
+# cannot name different releases.
+
+[[tool]]
+name = "zola"
+kind = "archive"
+version = "0.23.3"
+sha256 = "f07c92607e5745268b576bd325ceef3a582aada253bb64db8d92a8a85303d958"
+url = "https://github.com/getzola/zola/releases/download/v{version}/zola-v{version}-x86_64-unknown-linux-gnu.tar.gz"
+placeholder_version = "ZOLA_VERSION"
+placeholder_sha256 = "ZOLA_SHA256"
+
+[[tool]]
+name = "lychee"
+kind = "archive"
+version = "0.24.2"
+sha256 = "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
+url = "https://github.com/lycheeverse/lychee/releases/download/lychee-v{version}/lychee-x86_64-unknown-linux-gnu.tar.gz"
+placeholder_version = "LYCHEE_VERSION"
+placeholder_sha256 = "LYCHEE_SHA256"
+
+# ── npm global installs ────────────────────────────────────────────────────
+# NOTE, stated rather than implied: npm has no per-package integrity value a
+# global install can be pinned to the way an archive checksum pins a download.
+# An exact version plus --ignore-scripts is the strongest available pin here.
+# `integrity = "registry-version-pin"` records that honestly so a reader can
+# see which entries carry a cryptographic guarantee and which carry a version
+# contract; it is not a hash wearing a different name.
+
+[[tool]]
+name = "pa11y-ci"
+kind = "npm"
+version = "4.1.1"
+integrity = "registry-version-pin"
+placeholder_version = "PA11Y_CI_VERSION"
+
+[[tool]]
+name = "@playwright/test"
+kind = "npm"
+version = "1.61.1"
+integrity = "registry-version-pin"
+placeholder_version = "PLAYWRIGHT_VERSION"
+
+[[tool]]
+name = "wrangler"
+kind = "npm"
+version = "4.112.0"
+integrity = "registry-version-pin"
+placeholder_version = "WRANGLER_VERSION"
+# WHY this one is called out: the deploy step runs with CLOUDFLARE_API_TOKEN in
+# its environment, so an unpinned install would execute arbitrary new code next
+# to a credential that can mutate the live Pages project. --ignore-scripts at
+# the call site is the second half of that; neither is sufficient alone.
+
+# ── Runtimes ───────────────────────────────────────────────────────────────
+# Provisioned by setup-python / setup-node from their toolcaches, whose own
+# integrity comes from the SHA-pinned action rather than from a value here.
+
+[[tool]]
+name = "python"
+kind = "runtime"
+version = "3.12.14"
+integrity = "action-toolcache"
+placeholder_version = "PYTHON_VERSION"
+
+[[tool]]
+name = "node"
+kind = "runtime"
+version = "22"
+integrity = "action-toolcache"
+placeholder_version = "NODE_MAJOR"
+# NOTE: a major only. ci/check-workflow-template.sh separately proves this
+# major satisfies the locked wrangler's `engines.node` floor by asking the npm
+# registry -- the one check here that consults an upstream source rather than
+# another local copy, and worth keeping for exactly that reason.
+
+# ── Gate-only Python packages ──────────────────────────────────────────────
+# Used by typikon's own gate, not by any consumer. Every consumer-facing Python
+# dependency resolves through ci/consumer-python-requirements.lock under
+# --require-hashes, which is a stronger contract than this one.
+
+[[tool]]
+name = "fonttools"
+kind = "pypi"
+version = "4.62.1"
+integrity = "registry-version-pin"
+
+[[tool]]
+name = "Brotli"
+kind = "pypi"
+version = "1.2.0"
+integrity = "registry-version-pin"
+
+[[tool]]
+name = "PyYAML"
+kind = "pypi"
+version = "6.0.3"
+integrity = "registry-version-pin"

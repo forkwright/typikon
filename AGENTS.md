@@ -58,6 +58,7 @@ All decisions are in [CLAUDE.md](CLAUDE.md) under "Locked decisions". Key ones:
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on inline script/style/handler.
 - **Self-hosted fonts**: WOFF2 under `static/fonts/`. Zero external CDN at visitor runtime.
 - **Root Atom ownership**: a consumer may set `extra.feed_source_section` to one canonical `_index.md` path. That owner and every translation use `sort_by = "date"`; missing, empty, or wrongly sorted sources fail while native section/taxonomy feeds remain Zola-owned.
+- **One toolchain lock**: every gate tool's version and its integrity value live together in `ci/tool-lock.toml`, and both generated pipelines render from it. No dependency resolves through `latest`, no checksum is copied into a second file, and a version override that cannot carry its hash is refused rather than honoured. Bump with `python3 ci/render-template.py --verify-upstream`, which hashes the real artifact instead of comparing copies.
 - **Fail-closed checkout**: a catalog price does not imply readiness. Checkout and Offer URLs require sourced purchasable availability; shipping copy requires paired provenance.
 - **Push authority**: `origin` is GitHub; no forge remote is configured. forkwright/kanon#3045 owns the typed authority split.
 - **License**: PolyForm Noncommercial 1.0.0 (`LicenseRef-PolyForm-Noncommercial-1.0.0`). `LICENSE` is authoritative.
