@@ -31,6 +31,7 @@ stages = [
   "playwright",
   "teardown-static-server",
   "consumer-checks",
+  "assert-agent-corpus-boundary",
   "deploy-cloudflare-pages",
 ]
 
@@ -231,6 +232,20 @@ if [ -f ci/consumer-check.sh ]; then
 fi
 """
 timeout_secs = 120
+
+# Agent-corpus boundary (forkwright/typikon#188). Mirrors the hosted pipeline's
+# step, in the same position and for the same reason: the last writer to a
+# rendered tree is upstream of here, and publication is downstream.
+# WARNING: execution order is the `[pipeline] stages` list above, NOT this
+# file's layout — a stage defined here but absent from that list never runs at
+# all. ci/check-artifact-boundary.py asserts both the definition and its
+# position in that list.
+[stages.assert-agent-corpus-boundary]
+cmd = """
+set -euo pipefail
+python3 themes/typikon/ci/validate-artifact-boundary.py --root . public public-local
+"""
+timeout_secs = 60
 
 [stages.deploy-cloudflare-pages]
 cmd = """
