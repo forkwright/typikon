@@ -51,6 +51,12 @@ jobs:
         with:
           submodules: recursive  # Pulls typikon as themes/typikon/
           persist-credentials: false
+          # WHY full history: ci/write-consumer-receipt.py proves the checkout
+          # IS the pull request's synthetic merge by reading its parents. A
+          # shallow clone grafts those away, so `rev-list --parents` returns
+          # none and the receipt cannot be written. A step whose job is to
+          # prove provenance cannot run on a checkout with the provenance cut.
+          fetch-depth: 0
 
       # ── Tooling install ────────────────────────────────────────
       - name: Install Zola
