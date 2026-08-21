@@ -101,7 +101,7 @@ wrap or replace the H1 because `page.html` owns that heading.
 - description: ≤200 chars
 - path: matches `^/[a-z0-9/_-]*/?$`
 - template: matches `^[a-z0-9_-]+\.html$`
-- og_image: ends in `.svg|.png|.jpg|.webp`
+- og_image: ends in `.png|.jpg|.jpeg|.webp` — SVG is refused; the major link-preview consumers do not render it, so an SVG card shows no image while the gate stays green
 
 Setting any commercial fact triggers the product-shaped contract in `page.html`,
 which requires `audience`, `price`, and `price_source`. Those three fields
@@ -172,7 +172,7 @@ Pages under `content/journal/` (excluding `_index.md`), OR any page whose effect
 - extra.components: 5–120 chars (the conceptual-tags line)
 - extra.words: matches `^~?\d+( words)?$`. **Optional override** — `journal-entry.html`/`journal-section.html` render Zola's own `page.word_count`/`entry.word_count` by default (the rendered body's word count, excluding fenced code blocks — see `templates/journal-entry.html`), so the figure cannot drift from the body it describes. Set this only to force a custom string
 - extra.words_source: 3–200 chars. **Required alongside `extra.words`, forbidden without it** (`dependentRequired`, both directions — same pattern as `product.schema.json`'s `availability`/`availability_source`). Not needed for the default derived count, which carries no separate provenance claim
-- extra.og_image: ends in `.svg|.png|.jpg|.webp`
+- extra.og_image: ends in `.png|.jpg|.jpeg|.webp` — SVG is refused; see the page section above
 - extra.figure: ends in `.svg|.png|.jpg|.webp`. Not consumed by typikon's own stock `journal-entry.html` — a consumer shadow template renders it as furniture above the entry body (forkwright/typikon#163)
 - extra.figure_alt: 5–500 chars. **Required whenever `extra.figure` is set** (enforced via `dependentRequired`, not just documented)
 - extra.tier: one of `notes | research`. Not consumed by typikon's own stock `journal-section.html` — a consumer shadow template that groups its listing by tier reads it (forkwright/typikon#163)
