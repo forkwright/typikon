@@ -50,7 +50,7 @@
         },
         "seo_title": { "type": "string", "maxLength": 80 },
         "body_class": { "type": "string", "pattern": "^[a-z][a-z0-9 -]*$" },
-        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(svg|png|jpg|jpeg|webp)$" },
+        "og_image": { "type": "string", "pattern": "^[a-z0-9/_-]+\\.(png|jpg|jpeg|webp)$", "description": "Path under static/ (e.g. 'img/og-cover.png'). get_url() resolves to absolute. SVG is deliberately not accepted: the major link-preview consumers do not render an SVG og:image, so a card configured that way produces no image at all while every gate stays green. Ship a raster." },
         "og_type": { "type": "string", "enum": ["website", "article", "profile"] },
         "author": { "type": "string", "description": "Per-entry author override; falls back to config.extra.author.name." },
         "skip_sitemap": { "type": "boolean", "description": "Exclude this entry from sitemap.xml." },
