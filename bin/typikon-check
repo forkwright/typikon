@@ -464,6 +464,17 @@ else
     require_or_skip "playwright-smoke" "npx not on PATH"
 fi
 
+# Stage 11 — agent-corpus boundary (forkwright/typikon#188). LAST by design:
+# every earlier stage can still write into public/ or public-local/, so this is
+# the only point where the trees asserted are the trees that would ship.
+# WHY not require_or_skip: skipping would report the boundary held on output
+# that was never produced. The checker makes the distinction itself — a
+# consumer declaring nothing passes, an absent tree is an error.
+run_stage "agent-corpus-boundary" \
+    python3 "$TYPIKON_ROOT/ci/validate-artifact-boundary.py" \
+        --root "$ROOT" public public-local \
+    || FAIL=1
+
 if [[ "$FAIL" -eq 1 ]]; then
     exit 1
 elif [[ "$INCOMPLETE" -eq 1 ]]; then

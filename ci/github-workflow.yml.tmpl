@@ -318,6 +318,20 @@ jobs:
         timeout-minutes: 2
         run: bash ci/consumer-check.sh
 
+      # ── Agent-corpus boundary (forkwright/typikon#188) ─────────
+      # POSITION IS LOAD-BEARING: after every stage that can still write into a
+      # rendered tree, and before the receipt records what was evaluated and
+      # before Wrangler publishes it. Moved earlier it would assert a tree that
+      # is not yet final; moved later it would assert one that is already
+      # public. ci/check-artifact-boundary.py fails if this step is removed or
+      # reordered relative to those two neighbours.
+      - name: Assert the agent corpus stayed out of the rendered output
+        timeout-minutes: 1
+        run: |
+          python3 themes/typikon/ci/validate-artifact-boundary.py \
+            --root "$GITHUB_WORKSPACE" \
+            public public-local
+
       # A successful PR run is later eligible for a release-cohort lock only
       # when its exact checkout, workflow, and Typikon gitlink are retained as
       # machine-readable evidence. The job conclusion remains GitHub-owned and
