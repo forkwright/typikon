@@ -20,9 +20,7 @@ This repository is optimized for agentic operation. Humans should not need to de
 typikon/
 ├── templates/              # Tera templates: base, page, section, journal
 ├── static/                 # css (design tokens inline in style.css), js, fonts (self-hosted WOFF2)
-├── sass/                   # reserved, currently empty
 ├── schemas/                # JSON Schema per content type
-├── scaffolds/              # reserved, currently empty — typikon-init scaffolds content inline
 ├── bin/                    # typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
 ├── ci/                     # strict gate config (lychee, pa11y, playwright, csp-enforce, asset-provenance)
 ├── docs/                   # AGENTIC.md, SCHEMAS.md, BOOTSTRAP.md, RELEASING.md

@@ -35,7 +35,6 @@ Structured LLM corpus:
 - [CLAUDE.md](CLAUDE.md): agent contract and locked decisions
 - [schemas/](schemas/): frontmatter contracts
 - Default page and section templates carry qualified `extra.greek` metadata on the single Typikon-owned H1.
-- [scaffolds/](scaffolds/): reserved, currently empty — typikon-init scaffolds content inline
 - [bin/](bin/): typikon-init, typikon-validate, typikon-check, typikon-refresh, typikon-migrate-template
 - [docs/RELEASING.md](docs/RELEASING.md): two-phase candidate, compatibility-lock, credential, rollback, and publication contract
 - [release/compatibility-lock.schema.json](release/compatibility-lock.schema.json): closed v0.6 two-consumer evidence shape
