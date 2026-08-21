@@ -9,9 +9,21 @@
 # Common cases the template ships disabled by default. Uncomment and edit
 # to match the consumer's domain, then commit.
 
-# Apex enforcement — point the wildcard at the canonical apex host.
-# Replace example.com with the consumer's apex.
-# https://www.example.com/* https://example.com/:splat 301
+# Apex enforcement is NOT expressible here. A source field naming a host
+# — `https://www.example.com/* https://example.com/:splat 301` — is
+# accepted by Cloudflare without error and then ignored: the file keeps
+# working for every path rule in it while that one line does nothing.
+# Measured on a live deployment carrying exactly that rule, where
+# `www.<apex>/` returned 200 alongside the apex and `www.<apex>/shop/`
+# redirected to `www.<apex>/products/` rather than leaving the www host,
+# while a sibling path rule in the same file redirected correctly.
+#
+# The silence is the danger: a rule that errored would be fixed, and one
+# that is ignored reads as protection nobody re-checks. ci/validate-deploy-bundle.py
+# therefore rejects a non-'/' source, so this cannot ship undetected.
+#
+# Enforce the apex where the hostname is actually in scope — a zone-level
+# Redirect Rule, or by not attaching the www CNAME to the Pages project.
 
 # Trailing-slash normalization — Cloudflare Pages handles this on its
 # own when files end in /index.html, but explicit rules can be added
