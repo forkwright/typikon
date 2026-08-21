@@ -5,7 +5,7 @@ guard in templates/partials/assert.html's `typikon.assert.no_h1` component
 (forkwright/typikon#152).
 
 Runs the real `zola build` against ISOLATED COPIES of this theme's
-templates/static/sass/theme.toml (never the live checkout in place, so this
+templates/static/theme.toml (never the live checkout in place, so this
 is safe to run concurrently and never leaves the working tree mutated) to
 prove both directions of each of the two failure modes the review of #152
 identified. A check nobody has watched fail is an unverified claim:
@@ -77,7 +77,9 @@ H1_RE = re.compile(r"<h1[ >]", re.IGNORECASE)
 
 
 def copy_theme(dest: Path) -> None:
-    for item in ("templates", "static", "sass", "theme.toml"):
+    # NOTE: sass/ was removed as an empty reservation (forkwright/typikon#99).
+    # The loop still skips anything absent, so a future sass/ needs no edit here.
+    for item in ("templates", "static", "theme.toml"):
         src = THEME_ROOT / item
         if not src.exists():
             continue

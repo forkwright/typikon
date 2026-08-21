@@ -19,7 +19,7 @@
 # adoptions — see forkwright/.github's hybrid-gate.yml header).
 #
 # WHY fmt_cmd/clippy_cmd/nextest_cmd are "true" (no-op): typikon has no
-# Cargo.toml — it is a Zola theme (templates/, sass/, schemas/, bin/ shell
+# Cargo.toml — it is a Zola theme (templates/, static/, schemas/, bin/ shell
 # and Python scripts), not a Rust workspace. There is no fmt/clippy/test
 # split to route into those slots. The full-gate-build job unconditionally
 # installs a Rust toolchain + cargo-nextest regardless of these inputs (the
