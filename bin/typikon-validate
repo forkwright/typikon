@@ -459,6 +459,44 @@ def validate_file(
     return failures
 
 
+def validate_agent_corpus_exposure_contract(root: Path) -> list[dict]:
+    """Type the repository-only agent-corpus declaration (forkwright/typikon#188).
+
+    The field is optional: a consumer that does not set it makes no claim, and
+    that is a legitimate posture rather than an omission. What it may not be is
+    *almost* set. `repository` is the only value the substrate can prove, so any
+    other value — a typo, a plausible-looking `private`, a bool — is rejected
+    here rather than passing config validation and then being silently ignored
+    by ci/validate-artifact-boundary.py at the rendered boundary.
+
+    INVARIANT: whatever this admits, the boundary checker enforces. Both read
+    the same field for the same reason, so the set that validates and the set
+    that is enforced are the same set.
+    """
+    config_path = root / "config.toml"
+    if not config_path.is_file():
+        return []
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [{"file": "config.toml", "pointer": "", "error": f"malformed config.toml: {exc}"}]
+    extra = config.get("extra")
+    declared = extra.get("agent_corpus_exposure") if isinstance(extra, dict) else None
+    if declared is None:
+        return []
+    if declared != "repository":
+        return [{
+            "file": "config.toml",
+            "pointer": "/extra/agent_corpus_exposure",
+            "error": (
+                'agent_corpus_exposure accepts only "repository"; it declares that the '
+                "agent corpus stays in the repository and is enforced against the rendered "
+                "output by ci/validate-artifact-boundary.py. Omit the field to make no claim."
+            ),
+        }]
+    return []
+
+
 def validate_feed_source_contract(root: Path, content_root: Path) -> list[dict]:
     """Require a scoped root-feed owner to expose Zola's native date order.
 
@@ -741,6 +779,7 @@ def main(argv: list[str]) -> int:
 
     files = sorted(content_root.rglob("*.md"))
     contract_failures = validate_feed_source_contract(root, content_root)
+    contract_failures.extend(validate_agent_corpus_exposure_contract(root))
     failures: list[dict] = list(contract_failures)
     for f in files:
         failures.extend(validate_file(

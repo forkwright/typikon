@@ -235,6 +235,7 @@ The substrate is design-family neutral. Brand-specific values go in `config.toml
 | `nav_items`, `footer_links` | navigation structure                        |
 | `[extra.author]`            | atom feed `<author>` + JSON-LD Article author |
 | `feed_source_section`       | optional root Atom owner, e.g. `journal/_index.md` |
+| `agent_corpus_exposure`     | optional; only `"repository"`. Declares — and makes Typikon enforce — that the agent corpus never reaches the rendered site |
 | `consumer_css`              | list of stylesheet paths, each `<link>`ed after core's own `style.css`, in order (`templates/base.html`'s Consumer stylesheet hook) |
 
 If a brand needs a *visual* override beyond the table above (different scale ratio, different color palette, different type pairing), declare it via `consumer_css` and redeclare the relevant `:root` custom properties in that file. Core's own interactive-state CSS never hard-codes a hue. Nav hover, buttons, the home triad mark, FAQ anchors, and similar surfaces resolve through four semantic tokens: `--accent-1` through `--accent-4`. Those tokens default to a neutral `--text-mid` and exist solely for a skin to redeclare. `static/css/skins/leather.css` is the first-party example: it maps those four tokens to Ardent Leatherworks' dye palette and carries that brand's own content-authoring classes (`.dye-entry-*`, `.swatch-*`, `.dye-marks`) — copy its shape, not its colors, for a new skin. **Do not edit typikon's `static/css/style.css`** for one-off site needs — that's a fork by mutation.
@@ -248,6 +249,29 @@ parsed-datetime ordering and prevents its section serializer from omitting
 pages under an incompatible sort key. `include_in_feeds = false` pages and pages bubbled from transparent
 subsections stay out. Native section and taxonomy feeds keep Zola's supplied
 membership.
+
+`agent_corpus_exposure` is the one `extra` field whose value is a promise about
+the *output* rather than the build. Setting it to `"repository"` declares that
+your agent corpus — `llms.txt`, anything under `_llm/` — stays in Git and never
+becomes a public route. Typikon holds you to it: `ci/validate-artifact-boundary.py`
+scans the final `public/` and `public-local/` trees and fails if either would
+publish that corpus. It runs last in `bin/typikon-check`, and in both generated
+pipelines it runs after every stage that can still write to a rendered tree and
+before the consumer receipt and the deploy — so a violation blocks publication
+rather than being discovered on the live site.
+
+Three things it deliberately catches beyond the obvious spelling, because a
+guard keyed to one spelling is a guard on a spelling: any casing (`LLMS.TXT`),
+any depth (`a/b/_llm/facts.toml`), and a symlink that renames the corpus to
+something innocuous (`public/docs -> ../_llm`). What it does not follow is a
+chain of links through a directory outside the scanned trees; that limit is
+stated in the script rather than implied away.
+
+The field is optional and its absence is a legitimate posture, not an omission
+— a site that intends to publish `llms.txt` simply does not set it. What is
+rejected is a value that is *almost* right: `bin/typikon-validate` fails config
+validation on anything other than `"repository"`, so a plausible-looking
+`"private"` cannot pass validation and then be silently ignored at the boundary.
 
 A missing source or one with no eligible direct pages fails the
 build and names the configured path instead of silently reverting to a
