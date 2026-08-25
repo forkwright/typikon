@@ -78,12 +78,20 @@ permissions:
 
 jobs:
   gate:
-    # WHY pinned to a commit SHA, not @main: a mutable branch ref lets the
-    # remote workflow's behavior change under an already-merged typikon
-    # commit. Refresh via:
-    #   gh api repos/forkwright/.github/commits/main --jq '.sha'
-    # and review the diff at forkwright/.github before bumping.
-    uses: forkwright/.github/.github/workflows/hybrid-gate.yml@84a39d3344660e4010c32755b33a6a88912ad929 # main
+    # WHY @main and not a commit SHA, reversing the earlier position here: the
+    # concern that a mutable ref can change behaviour under an already-merged
+    # commit is real, but the mitigation it proposed was a manual refresh that
+    # nobody ran. forkwright/.github publishes no tags, so dependabot has no
+    # version to compare a SHA against and never touches this line -- it simply
+    # freezes. This pin sat far enough behind that the gate failed on a defect
+    # already fixed upstream, and the failure looked like this repo's problem.
+    #
+    # A first-party reusable holding none of our secrets is not the supply-chain
+    # case a SHA pin exists for, and the ci-substrate SPEC settles it: triggers,
+    # permissions and inputs live in the caller, logic is delegated, pin @main.
+    # A floating first-party ref cannot go stale, which is stronger than any
+    # process for keeping it fresh.
+    uses: forkwright/.github/.github/workflows/hybrid-gate.yml@main
     with:
       # WHY empty, not a literal channel: rust-toolchain.toml at the repo
       # root (forkwright/kanon#3489) carries the pin even though this repo
