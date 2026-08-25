@@ -453,8 +453,17 @@ def main() -> int:
         verifier,
         "offline SBOM bundle predicate is not enforced",
     )
+    # WARNING: derive the pin to mutate rather than hardcoding a SHA literal.
+    # release-please-action's exact commit is not itself part of the contract
+    # (only that every action ref is a full SHA, checked generically above) --
+    # a hardcoded SHA here goes stale on the action's next version bump and
+    # the mutant becomes a no-op replace, which reads as the workflow having
+    # regressed rather than as this fixture rotting.
+    release_please_pin = re.search(
+        r"googleapis/release-please-action@([0-9a-f]{40})", release
+    ).group(1)
     reject_mutant(
-        release.replace("16a9c90856f42705d54a6fda1823352bdc62cf38", "v4", 1),
+        release.replace(release_please_pin, "v4", 1),
         candidate,
         verifier,
         "mutable action pin",
