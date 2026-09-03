@@ -45,3 +45,18 @@ permissions:
 jobs:
   heal:
     uses: forkwright/.github/.github/workflows/release-pr-checks.yml@main
+    with:
+      # WHY one name, not the reusable's two-name default: the default
+      # "gate-attestation.yml,security.yml" names the fleet's common shape, but
+      # typikon has no security.yml -- it is a Zola theme with no Cargo.toml,
+      # and the security reusable (cargo-deny + cargo-audit + osv-scanner
+      # against Cargo.lock) has nothing to scan here and no input that skips
+      # itself; the ci-substrate SPEC excludes typikon from that substrate for
+      # exactly this reason. Branch protection on main requires only
+      # "gate / gate", which gate-attestation.yml produces. Naming a workflow
+      # this repo does not have makes the healer's has_run_at probe 404 and the
+      # run exit 1 -- measured on every hourly tick since 2026-09-01 (e.g. run
+      # 33741149318). This scopes the fallback dispatch path only; the approval
+      # path is workflow-agnostic and correct either way. hamma's caller is the
+      # precedent for the override.
+      required_context_workflows: "gate-attestation.yml"
