@@ -406,7 +406,18 @@ def normalize_and_validate_sbom(
             raise CandidateError(
                 f"CycloneDX component lacks a license: {component.get('name')!r}"
             )
-        if not component_has_sha256(component):
+        # WHY the hash rule splits on inventory membership: an inventory
+        # component already carries every digest its hash source can honestly
+        # provide -- validated_component_inventory refuses a repository-file or
+        # external-distribution entry without one, while a registry-version-pin
+        # entry records that no upstream per-install integrity value exists
+        # (ci/tool-lock.toml states the same contract). Demanding a SHA-256 for
+        # those here would require a digest that cannot exist; a component from
+        # any other source still must carry one.
+        if (
+            not component_has_sha256(component)
+            and str(component.get("purl")) not in inventory_purls
+        ):
             raise CandidateError(
                 f"CycloneDX component lacks a SHA-256 hash: {component.get('name')!r}"
             )

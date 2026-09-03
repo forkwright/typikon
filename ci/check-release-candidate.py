@@ -110,6 +110,17 @@ def main() -> int:
                                 "sha256": "1" * 64,
                             },
                         },
+                        {
+                            "name": "Fixture registry pin",
+                            "version": "3.0.0",
+                            "purl": "pkg:npm/fixture-registry-pin@3.0.0",
+                            "scope": "required",
+                            "license": "MIT",
+                            "hash": {
+                                "kind": "registry-version-pin",
+                                "registry": "npm",
+                            },
+                        },
                     ],
                 },
                 indent=2,
@@ -180,7 +191,14 @@ def main() -> int:
         assert {component["purl"] for component in sbom_doc["components"]} == {
             "pkg:generic/fixture-font@1.0.0?file_name=fixture.woff2",
             "pkg:generic/fixture-renderer@2.0.0?arch=x86_64&os=linux",
+            "pkg:npm/fixture-registry-pin@3.0.0",
         }
+        registry_pin = next(
+            component
+            for component in sbom_doc["components"]
+            if component["purl"] == "pkg:npm/fixture-registry-pin@3.0.0"
+        )
+        assert "hashes" not in registry_pin
         dependency_rows = {
             row["ref"]: row["dependsOn"] for row in sbom_doc["dependencies"]
         }
