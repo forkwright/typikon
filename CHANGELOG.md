@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.6.0](https://github.com/forkwright/typikon/compare/v0.5.0...v0.6.0) (2026-09-03)
+
+
+### Features
+
+* bind feed, sale, heading, and workflow contracts ([#185](https://github.com/forkwright/typikon/issues/185)) ([a6600b3](https://github.com/forkwright/typikon/commit/a6600b3e2121e6828528dbfd97799411a5922ce3))
+* **ci:** derive every gate tool version and checksum from one lock ([#194](https://github.com/forkwright/typikon/issues/194)) ([a7285e2](https://github.com/forkwright/typikon/commit/a7285e2c4aaa329ba5382afca1cce633402a1d93))
+* **ci:** enforce the repository-only agent corpus at the rendered boundary ([#193](https://github.com/forkwright/typikon/issues/193)) ([803f998](https://github.com/forkwright/typikon/commit/803f998add0e841ab77feede2bb9a63ae5c4284a))
+* **templates:** migrate to Zola 0.23 and Tera 2 ([#181](https://github.com/forkwright/typikon/issues/181)) ([02e4b09](https://github.com/forkwright/typikon/commit/02e4b097900cbd272815e582d75348c9480501c2))
+
+
+### Bug Fixes
+
+* **ci:** bind consumer validator Python runtime ([#190](https://github.com/forkwright/typikon/issues/190)) ([abe82f1](https://github.com/forkwright/typikon/commit/abe82f11b954528e0cfcfa975efda9ca0d7aca1e))
+* **ci:** give the consumer receipt the history it reads ([#192](https://github.com/forkwright/typikon/issues/192)) ([ba30d9d](https://github.com/forkwright/typikon/commit/ba30d9d1b20b3bc5c799c508237db86fb17f1aff))
+* **ci:** name the sha's real version on every action pin ([#206](https://github.com/forkwright/typikon/issues/206)) ([d1d9b5e](https://github.com/forkwright/typikon/commit/d1d9b5e3b4c4bc07f8aee92fc9f3dea9ee4a3123))
+* **ci:** scope the release-PR healer to typikon's real required contexts ([#207](https://github.com/forkwright/typikon/issues/207)) ([334a9a3](https://github.com/forkwright/typikon/commit/334a9a357938c96d5b82f2e4ea26a352d8a4cb4f))
+* **release:** separate candidate proof from publication ([#189](https://github.com/forkwright/typikon/issues/189)) ([73df3f2](https://github.com/forkwright/typikon/commit/73df3f23f4fbef9d0ff5bf8f8a518040a2013ddf)), closes [#58](https://github.com/forkwright/typikon/issues/58) [#70](https://github.com/forkwright/typikon/issues/70) [#188](https://github.com/forkwright/typikon/issues/188)
+* **release:** stop demanding SHA-256 from honestly unpinned inventory components ([#210](https://github.com/forkwright/typikon/issues/210)) ([2939dff](https://github.com/forkwright/typikon/commit/2939dff9809058e39ad0035b348e41338576d261))
+* **schema:** refuse an og:image format no link-preview consumer renders ([#196](https://github.com/forkwright/typikon/issues/196)) ([373849b](https://github.com/forkwright/typikon/commit/373849b5d354b3802b7da1870521b9e36b5ecc7b))
+* **template:** stop recommending an apex redirect Cloudflare ignores ([#191](https://github.com/forkwright/typikon/issues/191)) ([247a869](https://github.com/forkwright/typikon/commit/247a86965aa68f3610dc3be395283cd9b25dbb42))
+
 ## [0.5.0](https://github.com/forkwright/typikon/compare/v0.4.2...v0.5.0) (2026-08-17)
 
 
