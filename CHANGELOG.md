@@ -18,16 +18,9 @@
 * **ci:** name the sha's real version on every action pin ([#206](https://github.com/forkwright/typikon/issues/206)) ([d1d9b5e](https://github.com/forkwright/typikon/commit/d1d9b5e3b4c4bc07f8aee92fc9f3dea9ee4a3123))
 * **ci:** scope the release-PR healer to typikon's real required contexts ([#207](https://github.com/forkwright/typikon/issues/207)) ([334a9a3](https://github.com/forkwright/typikon/commit/334a9a357938c96d5b82f2e4ea26a352d8a4cb4f))
 * **release:** separate candidate proof from publication ([#189](https://github.com/forkwright/typikon/issues/189)) ([73df3f2](https://github.com/forkwright/typikon/commit/73df3f23f4fbef9d0ff5bf8f8a518040a2013ddf)), closes [#58](https://github.com/forkwright/typikon/issues/58) [#70](https://github.com/forkwright/typikon/issues/70) [#188](https://github.com/forkwright/typikon/issues/188)
-* **release:** stop demanding SHA-256 from honestly unpinned inventory ([2939dff](https://github.com/forkwright/typikon/commit/2939dff9809058e39ad0035b348e41338576d261))
 * **release:** stop demanding SHA-256 from honestly unpinned inventory components ([#210](https://github.com/forkwright/typikon/issues/210)) ([2939dff](https://github.com/forkwright/typikon/commit/2939dff9809058e39ad0035b348e41338576d261))
 * **schema:** refuse an og:image format no link-preview consumer renders ([#196](https://github.com/forkwright/typikon/issues/196)) ([373849b](https://github.com/forkwright/typikon/commit/373849b5d354b3802b7da1870521b9e36b5ecc7b))
 * **template:** stop recommending an apex redirect Cloudflare ignores ([#191](https://github.com/forkwright/typikon/issues/191)) ([247a869](https://github.com/forkwright/typikon/commit/247a86965aa68f3610dc3be395283cd9b25dbb42))
-
-
-### Reverts
-
-* the 0.6.0 release commit ([#182](https://github.com/forkwright/typikon/issues/182)) ([5cbf93a](https://github.com/forkwright/typikon/commit/5cbf93ada0d2327d898988096e7ae562867757cf))
-* the 0.6.0 release commit ([#182](https://github.com/forkwright/typikon/issues/182)) ([#211](https://github.com/forkwright/typikon/issues/211)) ([5cbf93a](https://github.com/forkwright/typikon/commit/5cbf93ada0d2327d898988096e7ae562867757cf))
 
 ## [0.5.0](https://github.com/forkwright/typikon/compare/v0.4.2...v0.5.0) (2026-08-17)
 
