@@ -3,10 +3,13 @@
 Typikon separates release preparation, candidate freezing, consumer evidence,
 and publication. A green theme gate does not by itself authorize a tag.
 
-Publication remains deliberately blocked by forkwright/typikon#58. The current
-component inventory covers the renderer and embedded fonts but not every
-transitive dependency of the shipped `bin/` and `ci/` surfaces. The candidate
-builder refuses to freeze a release until that lock-derived graph is complete.
+Publication was previously blocked by forkwright/typikon#58, which has landed:
+`release/components.json` now covers every tool declared in
+`ci/tool-lock.toml`, including the transitive dependencies of the shipped
+`bin/` and `ci/` surfaces. The candidate builder enforces that completeness —
+`ci/build-release-candidate.py` refuses to freeze a release whose inventory
+omits a locked tool, and `ci/check-release-candidate.py` is the fixture that
+locks the refusal in.
 
 ## Subjects
 
