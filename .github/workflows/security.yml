@@ -1,0 +1,74 @@
+# WHY: the release-PR healer (forkwright/.github release-pr-checks.yml) requires a
+# security.yml context on release heads, and this repo had none — every healer tick
+# 404'd on a nonexistent workflow and the 0.6.0 release PR could never go green.
+# This is typikon's honest security gate, not a stub to satisfy the healer: no Cargo
+# manifests exist here (the cargo audit/deny legs of the Rust repos' security.yml
+# would scan nothing), so the gate covers what this repo actually ships — the
+# uv-locked Python consumer requirements and the tree itself.
+name: Security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # NOTE: daily at 06:41 CST (12:41 UTC). Off-peak minute per the fleet rule
+    # about avoiding :00/:30 crons; sits clear of harmonia's 05:23 CST scan.
+    - cron: "41 12 * * *"
+  workflow_dispatch:
+
+# PROJECT: explicit top-level default deny; job-level permissions grant only what's needed
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  osv-scanner:
+    # WHY: scans the one dependency manifest this repo has — the uv-compiled
+    # Python consumer lock (ci/consumer-python-requirements.lock, requirements
+    # format with hashes) — against the OSV database on every PR and daily,
+    # so newly-published CVEs against pinned consumer deps surface even when
+    # no PR is open.
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    with:
+      scan-args: |-
+        --lockfile=ci/consumer-python-requirements.lock
+        ./
+
+  gitleaks:
+    # WHY: the no-secrets policy must be enforceable from the GitHub side, not
+    # only by local habit. Scans the working tree, not git history: history is
+    # not rewritable; new leaks land in the tree.
+    # WHY binary download, not gitleaks/gitleaks-action: the action requires a
+    # GITLEAKS_LICENSE key for organization repos; the CLI itself is MIT.
+    # Checksum-pinned so a compromised release asset cannot pass silently.
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # PROJECT: security hardening — never expose token to steps
+      - name: Install gitleaks
+        # Pinned to ci/tool-lock.toml (gitleaks entry), not @latest — same
+        # drift discipline ci/check-tool-lock.py enforces on gate-attestation.yml.
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          curl -fsSL --retry 3 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            -o /tmp/gitleaks.tar.gz
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version | grep -qx "${GITLEAKS_VERSION}"
+      - name: gitleaks scan
+        run: /tmp/gitleaks dir . --no-banner --redact --exit-code 1
