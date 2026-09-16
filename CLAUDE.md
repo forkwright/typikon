@@ -36,14 +36,14 @@ typikon/
 
 ## Standards
 
-Follow kanon standards (canonical: `~/dev/kanon/crates/basanos/standards/`). Key docs: `STANDARDS.md`, `TESTING.md`, `SECURITY.md`, `WRITING.md`, `GNOMON.md`.
+Follow kanon standards (canonical: `crates/basanos/standards/` in `forkwright/kanon`). Key docs: `STANDARDS.md`, `TESTING.md`, `SECURITY.md`, `WRITING.md`, `GNOMON.md`.
 
 Web-property-specific standards live alongside as kanon STANDARDS/WEB.md (filed against kanon as a follow-up to typikon v1).
 
 ## Locked decisions
 
 - **Static SSG**: Zola 0.23.x with Tera 2 templates. No JavaScript build step, no Node toolchain, no npm in the site build path.
-- **Dual-CI migration window**: consumer sites scaffold both `.kanon-ci.toml` and `.github/workflows/deploy.yml`. Forge is primary; GitHub is the executable fallback until menos validates the forge deploy path end-to-end. Both templates target the same Cloudflare Pages project and main/master branch semantics.
+- **Dual-CI migration window**: consumer sites scaffold both `.kanon-ci.toml` and `.github/workflows/deploy.yml`. Forge is primary; GitHub is the executable fallback until forge runners validate the forge deploy path end-to-end. Both templates target the same Cloudflare Pages project and main/master branch semantics.
 - **Temporary Node deploy-tool exception**: the consumer deploy gates install npm-based `pa11y`, Playwright, and Wrangler so forge and GitHub stay stage-for-stage equivalent during migration. Revisit when forge has native replacements.
 - **Theme distribution**: git submodule under consumer's `themes/typikon/`. (Zola has no theme registry; submodule is current best practice.)
 - **Strict CSP**: no `unsafe-inline` anywhere. CSP-enforce CI gate fails the build on any inline script, style, or `on*=` handler.

@@ -216,7 +216,7 @@ When a new fleet site enters the family, do not fork or copy. Consume the substr
 ### 1. Scaffold
 
 ```bash
-typikon-init <site-slug> ~/dev/<site-slug>
+typikon-init <site-slug> <destination-path>
 ```
 
 The scaffolder writes `config.toml`, the `themes/typikon` submodule, `_headers`, `_redirects`, the GitHub Actions workflow, a starter `content/_index.md`, and the operator brief at `CLAUDE.md`. The first commit lands automatically. Once the forge repo exists, the operator pushes (`kanon forge init forkwright/<site-slug>`).
